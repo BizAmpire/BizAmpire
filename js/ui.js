@@ -874,6 +874,26 @@ export class UIManager {
     this.showNextDiscoveryQuestion(enc, state, 0);
   }
 
+  // ── Template substitution for question bank placeholders ──
+  _subQText(text, biz) {
+    if (!text || !biz) return text || '';
+    const pain = biz.pain || 'your core challenge';
+    const budget0 = Array.isArray(biz.budget) ? biz.budget[0] : 2000;
+    const impliedCost = '$' + Math.round(budget0 * 0.4).toLocaleString() + '/month';
+    const impliedRevenueLoss = '$' + Math.round(budget0 * 2.5).toLocaleString();
+    const outcome = 'a scalable, consistent system that compounds over time';
+    const painCategory = biz.painCategory || biz.type || 'your industry';
+    return text
+      .replace(/{pain}/g, pain)
+      .replace(/{impliedCost}/g, impliedCost)
+      .replace(/{impliedRevenueLoss}/g, impliedRevenueLoss)
+      .replace(/{outcome}/g, outcome)
+      .replace(/{painCategory}/g, painCategory)
+      .replace(/{bizName}/g, biz.name || 'your business')
+      .replace(/{bizType}/g, biz.type || 'business')
+      .replace(/{owner}/g, biz.owner || 'the owner');
+  }
+
   showNextDiscoveryQuestion(enc, state, questionIdx) {
     this._refreshEncounterHeader(enc);
     const body = document.getElementById('encounter-body');
@@ -902,7 +922,7 @@ export class UIManager {
     body.innerHTML = `
       <div class="dialogue-box">
         <div class="dialogue-speaker">Discovery — ${q.phase.charAt(0).toUpperCase() + q.phase.slice(1)} Question</div>
-        <div class="dialogue-text">${q.question}</div>
+        <div class="dialogue-text">${this._subQText(q.question, biz)}</div>
         <div class="dialogue-sub">
           You (${playerServiceLabel}) → ${biz.owner} at ${biz.name} (${biz.type}) ·
           Framework: <strong style="color:var(--violet)">${q.framework}</strong>
@@ -916,14 +936,14 @@ export class UIManager {
         <button class="choice-btn technique" data-response="good" data-qid="${q.skillTag}">
           <span class="choice-key">1</span>
           <div class="choice-body">
-            <span class="choice-text">${q.goodResponse}</span>
+            <span class="choice-text">${this._subQText(q.goodResponse, biz)}</span>
             <span class="choice-badge">${hasSkill ? `+${q.rapportOnGood} Rapport` : 'Partial effect'}</span>
           </div>
         </button>
         <button class="choice-btn" data-response="bad" data-qid="${q.skillTag}">
           <span class="choice-key">2</span>
           <div class="choice-body">
-            <span class="choice-text">${q.badResponse}</span>
+            <span class="choice-text">${this._subQText(q.badResponse, biz)}</span>
             <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Missed opportunity</span>
           </div>
         </button>

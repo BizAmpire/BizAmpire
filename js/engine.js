@@ -676,9 +676,9 @@ export class BizAmpireEngine {
   }
 
   _updateCompetitors(dt) {
-    const COMP_SPEED = TILE * 1.2; // ~1.2 tiles per second (slightly slower walk)
+    const COMP_SPEED = TILE * 0.8; // ~0.8 tiles per second (slower walk — gives player more time)
     const ARRIVE_DIST = TILE * 0.8; // mark stolen when this close
-    const WANDER_INTERVAL = 12; // seconds before picking a new destination (gives player time to react)
+    const WANDER_INTERVAL = 45; // seconds before picking a new destination (gives player much more time)
 
     this.competitorAgents.forEach(comp => {
       comp.timer += dt;
@@ -724,7 +724,7 @@ export class BizAmpireEngine {
           if (biz.closed || biz.lostToCompetitor || biz.cooldownDays > 0) continue;
           if (biz.warmth > 2) continue; // Player has relationship — harder to poach
           const roll = Math.random();
-          const aggressionChance = comp.aggressionLevel * 0.018; // ~14% max for most aggressive NPC per decision window
+          const aggressionChance = comp.aggressionLevel * 0.006; // ~5% max for most aggressive NPC per decision window
           if (!protected_ && roll < aggressionChance) {
             // Find the building on the map that matches this biz
             const bldg = this.buildings.find(b => b.business === biz);

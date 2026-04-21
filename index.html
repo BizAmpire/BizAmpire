@@ -380,7 +380,7 @@ import { UIManager } from './js/ui.js';
 import { Auth, AuthUI, SaveSystem, initAutoSave, triggerSave } from './js/auth.js';
 
 // Expose data & auth for UI module
-window.__bizampireData = { createInitialState, INDUSTRIES };
+window.__bizampireData = { createInitialState, INDUSTRIES, INDUSTRY_STARTUP_COSTS };
 window.__bizampireAuth = { Auth, AuthUI, SaveSystem, updateTitle: () => { updateTitleAuthBar(); refreshSaveCard().catch(() => {}); } };
 
 // Auth.init() is async — awaited inside boot() below
@@ -633,6 +633,279 @@ async function boot() {
     try { ui.showTitle(); } catch (_) {}
   }
 }
+
+
+// ── Business Portfolio System ──────────────────────────────────
+window.__bizampirePortfolio = (function() {
+  // Each slot: { state: GameState snapshot, created: Date, isActive: bool }
+  const slots = [];
+  let activeIndex = 0;
+
+  // ── Snapshot current engine state ─────────────────────────
+  function _snapshot() {
+    const eng = window.__bizampireEngine;
+    if (!eng) return null;
+    // Deep-copy state to avoid mutation
+    return JSON.parse(JSON.stringify(eng.state));
+  }
+
+  // ── Save active slot ───────────────────────────────────────
+  function _saveActiveSlot() {
+    const snap = _snapshot();
+    if (!snap) return;
+    if (slots[activeIndex]) {
+      slots[activeIndex].state = snap;
+      slots[activeIndex].lastSaved = Date.now();
+    }
+  }
+
+  // ── Switch to a different business slot ───────────────────
+  function switchTo(index) {
+    if (index < 0 || index >= slots.length) return;
+    if (index === activeIndex) { _close(); return; }
+
+    // Save current slot
+    _saveActiveSlot();
+
+    // Switch
+    activeIndex = index;
+    const slot = slots[activeIndex];
+
+    // Re-launch with the saved state
+    _close();
+    window.__bizampireLaunch(slot.state, true);
+  }
+
+  // ── Add a new business slot ────────────────────────────────
+  function add(state) {
+    // Save current engine state to current slot first
+    if (slots.length > 0) _saveActiveSlot();
+
+    slots.push({
+      state: JSON.parse(JSON.stringify(state)),
+      created: Date.now(),
+      lastSaved: Date.now()
+    });
+    activeIndex = slots.length - 1;
+  }
+
+  // ── Calculate combined cash flow ──────────────────────────
+  function _combinedFlow() {
+    let totalRevenue = 0, totalOverhead = 0, totalCash = 0;
+    slots.forEach((slot, i) => {
+      const s = i === activeIndex ? (window.__bizampireEngine?.state || slot.state) : slot.state;
+      totalRevenue  += (s.monthlyRevenue || s.revenue || 0);
+      totalOverhead += (s.monthlyOverhead || s.overhead || 0);
+      totalCash     += (s.cash || 0);
+    });
+    return { totalRevenue, totalOverhead, totalCash, net: totalRevenue - totalOverhead };
+  }
+
+  // ── Format numbers ─────────────────────────────────────────
+  function _fmt(n) { return n >= 1000 ? `$${(n/1000).toFixed(1)}k` : `$${Math.round(n)}`; }
+
+  // ── Render portfolio panel ─────────────────────────────────
+  function show() {
+    // Sync active slot state
+    if (slots.length > 0) _saveActiveSlot();
+
+    const screen = document.getElementById('screen-portfolio');
+    const panel  = document.getElementById('portfolio-panel');
+    if (!screen || !panel) return;
+
+    const flow = _combinedFlow();
+    const eng  = window.__bizampireEngine;
+    const activeState = eng ? eng.state : (slots[activeIndex]?.state || {});
+
+    panel.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-family:var(--font-display);font-size:var(--text-xl);font-weight:800;color:var(--teal)">🏗️ Business Portfolio</div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">${slots.length} business${slots.length !== 1 ? 'es' : ''} · Switch active context or launch new</div>
+        </div>
+        <button onclick="window.__bizampirePortfolio.close()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:4px 8px">&times;</button>
+      </div>
+
+      ${slots.length > 1 ? `
+      <div style="background:rgba(255,255,255,.05);border-radius:12px;padding:var(--s4);display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s3);text-align:center">
+        <div>
+          <div style="font-size:var(--text-lg);font-weight:700;color:var(--teal)">${_fmt(flow.totalCash)}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px">TOTAL CASH</div>
+        </div>
+        <div>
+          <div style="font-size:var(--text-lg);font-weight:700;color:#4ade80">${_fmt(flow.totalRevenue)}<span style="font-size:11px;font-weight:400">/mo</span></div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px">COMBINED REVENUE</div>
+        </div>
+        <div>
+          <div style="font-size:var(--text-lg);font-weight:700;color:${flow.net >= 0 ? '#4ade80' : 'var(--danger)'}">${flow.net >= 0 ? '+' : ''}${_fmt(flow.net)}<span style="font-size:11px;font-weight:400">/mo</span></div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px">NET CASHFLOW</div>
+        </div>
+      </div>` : ''}
+
+      <div style="display:flex;flex-direction:column;gap:var(--s3)">
+        ${slots.map((slot, i) => _renderSlotCard(slot, i)).join('')}
+      </div>
+
+      <div style="border-top:1px solid rgba(255,255,255,.1);padding-top:var(--s4)">
+        <div style="font-size:var(--text-xs);color:var(--text-muted);margin-bottom:var(--s3)">LAUNCH A NEW BUSINESS</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s2)">
+          ${_renderNewBizOptions(activeState)}
+        </div>
+        <div style="margin-top:var(--s3);font-size:10px;color:var(--text-muted)">Startup costs are deducted from <strong style="color:var(--teal)">${activeState.businessName || 'your active business'}</strong> cash ($${_fmt(activeState.cash || 0)} available)</div>
+      </div>
+    `;
+
+    // Show screen (slide up from bottom)
+    screen.classList.remove('hidden');
+    screen.style.display = 'flex';
+    panel.style.transform = 'translateY(100%)';
+    panel.style.transition = 'transform 280ms cubic-bezier(0.16,1,0.3,1)';
+    requestAnimationFrame(() => { panel.style.transform = 'translateY(0)'; });
+  }
+
+  // ── Render a business slot card ────────────────────────────
+  function _renderSlotCard(slot, i) {
+    const s = i === activeIndex ? (window.__bizampireEngine?.state || slot.state) : slot.state;
+    const isActive = i === activeIndex;
+    const revenue  = s.monthlyRevenue || s.revenue || 0;
+    const overhead = s.monthlyOverhead || s.overhead || 0;
+    const net      = revenue - overhead;
+    const industry = (s.businessIndustry?.id || s.businessIndustry || s.industry || 'consulting').toString();
+
+    const INDUSTRY_ICONS = {
+      it:'💻', consulting:'🎯', marketing:'📢', realestate:'🏠',
+      finance:'💰', law:'⚖️', construction:'🏗️', auto:'🚗', health:'🏥'
+    };
+    const icon = INDUSTRY_ICONS[industry] || '🏢';
+
+    return `
+      <div style="background:rgba(255,255,255,${isActive ? '.1' : '.04'});border:1px solid rgba(255,255,255,${isActive ? '.2' : '.08'});border-radius:12px;padding:var(--s4);position:relative">
+        ${isActive ? `<div style="position:absolute;top:10px;right:10px;font-size:9px;background:var(--teal);color:#000;border-radius:4px;padding:2px 6px;font-weight:700">ACTIVE</div>` : ''}
+        <div style="display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s3)">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:20px">${icon}</div>
+          <div>
+            <div style="font-weight:700;font-size:var(--text-sm)">${s.businessName || 'Unknown'}</div>
+            <div style="font-size:10px;color:var(--text-muted);text-transform:capitalize">${s.businessIndustry?.name || industry} · Day ${s.day || 1}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s2);margin-bottom:var(--s3);text-align:center">
+          <div>
+            <div style="font-size:var(--text-sm);font-weight:700;color:var(--teal)">${_fmt(s.cash || 0)}</div>
+            <div style="font-size:9px;color:var(--text-muted)">CASH</div>
+          </div>
+          <div>
+            <div style="font-size:var(--text-sm);font-weight:700;color:#4ade80">${_fmt(revenue)}/mo</div>
+            <div style="font-size:9px;color:var(--text-muted)">REVENUE</div>
+          </div>
+          <div>
+            <div style="font-size:var(--text-sm);font-weight:700;color:${net >= 0 ? '#4ade80' : 'var(--danger)'}">${net >= 0 ? '+' : ''}${_fmt(net)}/mo</div>
+            <div style="font-size:9px;color:var(--text-muted)">NET</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:var(--s2);align-items:center">
+          <div style="flex:1;font-size:10px;color:var(--text-muted)">${s.totalDeals || 0} deals · Rep ${Math.round(s.reputation || 0)}</div>
+          ${!isActive ? `<button onclick="window.__bizampirePortfolio.switchTo(${i})" style="background:var(--teal);color:#000;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">Switch →</button>` : `<span style="font-size:10px;color:var(--teal)">Running</span>`}
+        </div>
+        ${s.trainingDaysLeft > 0 ? `<div style="margin-top:var(--s2);font-size:10px;background:rgba(255,170,0,.15);color:var(--amber);border-radius:6px;padding:4px 8px">📚 ${s.trainingDaysLeft} training days remaining</div>` : ''}
+      </div>
+    `;
+  }
+
+  // ── Render new business launch options ─────────────────────
+  function _renderNewBizOptions(activeState) {
+    const { INDUSTRY_STARTUP_COSTS } = window.__bizampireData || {};
+    if (!INDUSTRY_STARTUP_COSTS) return '<div style="color:var(--text-muted);font-size:11px">Loading...</div>';
+
+    const avoidIndustry = activeState.businessIndustry?.id || activeState.businessIndustry || activeState.industry;
+    const INDUSTRY_LABELS = { it:'IT', consulting:'Consulting', marketing:'Marketing', realestate:'Real Estate', finance:'Finance', law:'Law', construction:'Construction', auto:'Auto', health:'Health' };
+    const INDUSTRY_ICONS2 = { it:'💻', consulting:'🎯', marketing:'📢', realestate:'🏠', finance:'💰', law:'⚖️', construction:'🏗️', auto:'🚗', health:'🏥' };
+
+    // Show 3 random industries (excluding active one)
+    const industries = Object.keys(INDUSTRY_STARTUP_COSTS).filter(k => k !== avoidIndustry);
+    const picks = industries.sort(() => Math.random() - 0.5).slice(0, 3);
+
+    return picks.map(ind => {
+      const cost = INDUSTRY_STARTUP_COSTS[ind];
+      const canAfford = (activeState.cash || 0) >= cost.capitalCost;
+      return `
+        <div onclick="${canAfford ? `window.__bizampirePortfolio.startNewBiz('${ind}')` : ''}"
+             style="border:1px solid rgba(255,255,255,${canAfford ? '.15' : '.06'});border-radius:10px;padding:var(--s3);text-align:center;cursor:${canAfford ? 'pointer' : 'not-allowed'};opacity:${canAfford ? '1' : '.5'};transition:background .15s"
+             onmouseover="${canAfford ? "this.style.background='rgba(255,255,255,.08)'" : ''}"
+             onmouseout="this.style.background='transparent'">
+          <div style="font-size:22px;margin-bottom:var(--s1)">${INDUSTRY_ICONS2[ind] || '🏢'}</div>
+          <div style="font-size:11px;font-weight:700">${INDUSTRY_LABELS[ind] || ind}</div>
+          <div style="font-size:10px;color:var(--teal);margin-top:2px">-$${cost.capitalCost.toLocaleString()}</div>
+          <div style="font-size:9px;color:var(--text-muted)">${cost.trainingDays}d training</div>
+          ${!canAfford ? `<div style="font-size:9px;color:var(--danger);margin-top:2px">Can't afford</div>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ── Close portfolio panel ──────────────────────────────────
+  function _close() {
+    const screen = document.getElementById('screen-portfolio');
+    const panel  = document.getElementById('portfolio-panel');
+    if (!screen) return;
+    if (panel) {
+      panel.style.transform = 'translateY(100%)';
+      setTimeout(() => {
+        screen.classList.add('hidden');
+        screen.style.display = 'none';
+        panel.style.transform = '';
+      }, 280);
+    } else {
+      screen.classList.add('hidden');
+      screen.style.display = 'none';
+    }
+  }
+
+  // ── Start new business (open onboarding flow) ─────────────
+  function startNewBiz(industry) {
+    _close();
+    // Small delay so panel animates out
+    setTimeout(() => {
+      // Save current state
+      _saveActiveSlot();
+
+      // Show the onboarding screen for new business creation
+      const ui = window.__bizampireUI;
+      if (ui) {
+        ui.showOnboarding();
+        // Pre-select the industry if possible
+        setTimeout(() => {
+          const grid = document.querySelector('.industry-grid, #industry-grid');
+          if (grid && industry) {
+            const card = grid.querySelector(`[data-industry="${industry}"]`);
+            if (card) card.click();
+          }
+        }, 200);
+      }
+    }, 300);
+  }
+
+  // ── Hook into __bizampireLaunch to auto-register new businesses
+  const _origLaunch = window.__bizampireLaunch;
+  window.__bizampireLaunch = function(state, isResumed) {
+    if (!isResumed) {
+      // New business launch — add to portfolio
+      add(state);
+    }
+    _origLaunch(state, isResumed);
+  };
+
+  // ── Public API ─────────────────────────────────────────────
+  return {
+    slots,
+    get activeIndex() { return activeIndex; },
+    show,
+    close: _close,
+    switchTo,
+    add,
+    startNewBiz,
+    saveActiveSlot: _saveActiveSlot,
+  };
+})();
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 boot();
