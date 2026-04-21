@@ -344,6 +344,7 @@ export class BizAmpireEngine {
       if (e.key === 'k') this.ui.showSkillTree();
       if (e.key === 'j') this.ui.showJournal();
       if (e.key === 'm') this.ui.showManagement();
+      if (e.key === 'p') window.__bizampirePortfolio?.show();
     }, { signal: ac.signal });
     window.addEventListener('keyup', e => {
       this.keys[e.key.toLowerCase()] = false;
@@ -578,6 +579,13 @@ export class BizAmpireEngine {
   }
 
   async _startEncounter(business) {
+    // Training lock: new business must complete training before taking encounters
+    if (this.state.trainingDaysLeft > 0) {
+      const d = this.state.trainingDaysLeft;
+      this.ui.showToast(`📚 ${this.state.businessName} is still in training. ${d} day${d !== 1 ? 's' : ''} until you can take meetings.`, 'warn');
+      return;
+    }
+
     if (business.cooldownDays > 0) {
       this.ui.showToast(`${business.owner} is still cooling off. Come back in ${business.cooldownDays} day${business.cooldownDays > 1 ? 's' : ''}.`, 'warn');
       return;
@@ -753,6 +761,17 @@ export class BizAmpireEngine {
     this.state.monthTimer++;
     this.state.daysSinceLastDeal++;
 
+    // Training countdown for newly launched businesses
+    if (this.state.trainingDaysLeft > 0) {
+      this.state.trainingDaysLeft--;
+      if (this.state.trainingDaysLeft === 0) {
+        this.ui.showToast(`🎓 ${this.state.businessName} training complete! You can now take meetings.`, 'gold');
+        this.ui.updateHUD(this.state);
+      } else if (this.state.trainingDaysLeft <= 3) {
+        this.ui.showToast(`📚 ${this.state.trainingDaysLeft} training day${this.state.trainingDaysLeft !== 1 ? 's' : ''} left for ${this.state.businessName}.`, 'default');
+      }
+    }
+
     // Decrement cooldowns on all businesses each day
     for (const district of DISTRICTS) {
       for (const biz of district.businesses) {
@@ -808,9 +827,12 @@ export class BizAmpireEngine {
 
       // ── Vendor: referral leads from active vendors ────────────
       this.state.vendors.forEach(v => {
+        v.monthsActive = (v.monthsActive || 0) + 1;
+        if (v.recurring) v.totalSpent = (v.totalSpent || 0) + v.monthlyCost;
         if (Math.random() < v.referralRate) {
-          this._spawnReferralLeads(1, v.referralType);
-          this.ui.showToast(`🤝 ${v.owner} at ${v.bizName} referred you a new lead!`, 'success');
+          v.leadsGenerated = (v.leadsGenerated || 0) + 1;
+          this._spawnReferralLeads(1, v.referralType, v);
+          this.ui.showToast(`🤝 ${v.owner} at ${v.bizName} sent you a referral lead!`, 'success');
         }
       });
 
@@ -836,7 +858,7 @@ export class BizAmpireEngine {
   }
 
   // ── Spawn referral/inbound lead NPCs near player ─────────────
-  _spawnReferralLeads(count, preferredCategory) {
+  _spawnReferralLeads(count, preferredCategory, sourceVendor = null) {
     // Find unlocked, unclosed, not-lost buildings that match the preferred category
     const pool = this.buildings.filter(b => {
       if (!b.business) return false;
@@ -860,6 +882,7 @@ export class BizAmpireEngine {
       if (bld.business) {
         bld.business.warmth = Math.min(3, (bld.business.warmth || 0) + 1);
         bld.business.isReferral = true;   // flag for rendering
+        if (sourceVendor) bld.business.referralVendorId = sourceVendor.bizId;
       }
     });
 
@@ -886,6 +909,12 @@ export class BizAmpireEngine {
   closeDeal(business, revenue, rapport) {
     business.closed = true;
     this.state.totalDeals++;
+
+    // If this prospect was a referral lead, credit the originating vendor
+    if (business.isReferral && business.referralVendorId) {
+      const vendor = this.state.vendors.find(v => v.bizId === business.referralVendorId);
+      if (vendor) vendor.leadsConverted = (vendor.leadsConverted || 0) + 1;
+    }
     this.state.activeClients.push({
       ...business,
       monthlyValue: revenue,
@@ -986,6 +1015,11 @@ export class BizAmpireEngine {
         referralType:   svc.referralType,
         referralCooldown: 0,
         purchasedAt:    this.state.totalDeals,
+        // Performance tracking
+        monthsActive:      0,
+        leadsGenerated:    0,
+        leadsConverted:    0,
+        totalSpent:        svc.oneTime ? svc.cost : 0,  // running total paid
       });
     }
 
@@ -1007,13 +1041,19 @@ export class BizAmpireEngine {
     const fx = svc.effect;
     if (!fx) return;
 
+    // Find the just-pushed vendor record so we can annotate it for reversal
+    const vendorRecord = this.state.vendors.find(
+      v => v.bizId === business.id && v.serviceId === svc.id
+    );
+
     if (fx.warmthBonus) {
-      // Global warmth bonus — apply to all future prospect first approaches
       this.state.vendorWarmthBonus = (this.state.vendorWarmthBonus || 0) + fx.warmthBonus;
+      if (vendorRecord) vendorRecord.warmthBonusApplied = fx.warmthBonus;
     }
     if (fx.overheadReduction) {
       this.state.monthlyOverhead = Math.max(0, this.state.monthlyOverhead - fx.overheadReduction);
       this.state.vendorOverheadReduction = (this.state.vendorOverheadReduction || 0) + fx.overheadReduction;
+      if (vendorRecord) vendorRecord.overheadReductionApplied = fx.overheadReduction;
     }
     if (fx.reputationBonus) {
       this.state.reputation = Math.min(1000, this.state.reputation + fx.reputationBonus);
@@ -1031,8 +1071,8 @@ export class BizAmpireEngine {
       this.state.pendingRapportBonus = (this.state.pendingRapportBonus || 0) + fx.nextEncounterRapportBonus;
     }
     if (fx.playerSpeedBonus) {
-      // Speed is applied in the game loop via state flag
       this.state.hasVehicle = true;
+      if (vendorRecord) vendorRecord.hadVehicle = true;
     }
     if (fx.passiveLeadsPerMonth) {
       this.state.passiveLeadsPerMonth = (this.state.passiveLeadsPerMonth || 0) + fx.passiveLeadsPerMonth;
@@ -1051,6 +1091,48 @@ export class BizAmpireEngine {
     }
     if (fx.employeeCapacityBonus) {
       this.state.employeeCapacity = (this.state.employeeCapacity || 3) + fx.employeeCapacityBonus;
+    }
+  }
+
+  // ── Cancel / Swap vendor ──────────────────────────────────────────
+  cancelVendor(vendorBizId, vendorServiceId) {
+    const idx = this.state.vendors.findIndex(
+      v => v.bizId === vendorBizId && v.serviceId === vendorServiceId
+    );
+    if (idx === -1) return;
+    const v = this.state.vendors[idx];
+
+    // Reverse recurring cost effect on overhead
+    if (v.recurring && v.monthlyCost > 0) {
+      this.state.monthlyOverhead = Math.max(0, this.state.monthlyOverhead - v.monthlyCost);
+    }
+
+    // Reverse warmth bonus
+    if (v.warmthBonusApplied) {
+      this.state.vendorWarmthBonus = Math.max(0, (this.state.vendorWarmthBonus || 0) - v.warmthBonusApplied);
+    }
+
+    // Reverse overhead reduction effect
+    if (v.overheadReductionApplied) {
+      this.state.monthlyOverhead += v.overheadReductionApplied;
+      this.state.vendorOverheadReduction = Math.max(0, (this.state.vendorOverheadReduction || 0) - v.overheadReductionApplied);
+    }
+
+    // Vehicle: only remove if no other vehicle vendor exists
+    if (v.hadVehicle) {
+      const otherVehicle = this.state.vendors.some((ov, oi) => oi !== idx && ov.hadVehicle);
+      if (!otherVehicle) this.state.hasVehicle = false;
+    }
+
+    // Remove vendor record
+    this.state.vendors.splice(idx, 1);
+
+    this.ui.showToast(`🗑️ Cancelled ${v.serviceName} from ${v.bizName}.`, 'warn');
+    this.ui.updateHUD(this.state);
+    // Re-render management if open
+    const mgmtPanel = document.getElementById('management-panel');
+    if (mgmtPanel && mgmtPanel.children.length) {
+      this.ui._renderManagement();
     }
   }
 
@@ -2232,6 +2314,39 @@ export class EncounterEngine {
     this.ui.showOpenerPhase(this.enc, this.state);
   }
 
+  // ── Failure gate ─────────────────────────────────────────────
+  // Called after every rapport mutation. Returns true if the meeting was ended early.
+  _checkEarlyExit(phase) {
+    // Thresholds per phase — later phases are harder to bomb out of
+    const thresholds = {
+      opener:     -1,   // one bad open → they're already suspicious
+      discovery:  -2,   // two wasted discovery questions → they lose patience
+      pitch:      -3,   // bad pitch on top of weak discovery
+      pricing:    -4,   // they'll tolerate a bad price attempt longer
+      objections: -3,
+    };
+    const floor = thresholds[phase] ?? -3;
+    if (this.enc.rapport <= floor) {
+      this._triggerEarlyExit(phase);
+      return true;
+    }
+    return false;
+  }
+
+  _triggerEarlyExit(phase) {
+    const biz = this.biz;
+    // Longer cooldown + cash drain (wasted time, damaged relationship)
+    const cooldown = 10 + (this.state.survivalMode ? 5 : 0);
+    const cashDrain = Math.round(150 + Math.random() * 200); // $150–$350
+    biz.cooldownDays = cooldown;
+    biz.ejectedPhase = phase;  // track where it went wrong for journal
+    this.state.cash   = Math.max(0, this.state.cash - cashDrain);
+    this.state.reputation = Math.max(0, this.state.reputation - 10);
+    this.state.currentEncounter.phase = 'ejected';
+    this.ui.showEjected(biz, phase, cashDrain, cooldown);
+    this.ui.updateHUD(this.state);
+  }
+
   handleOpener(choice) {
     const baseRapport = choice.rapport || 0;
     const bonus = this.flags.didRecon ? 0.5 : 0;
@@ -2240,6 +2355,8 @@ export class EncounterEngine {
     this.flags.openerQuality = this.enc.rapport >= 2 ? 'warm' : 'cold';
 
     if (choice.technique) this.flags.lastTechnique = choice.technique;
+
+    if (this._checkEarlyExit('opener')) return;
 
     this.enc.phase = 'discovery';
     this.ui.showDiscoveryPhase(this.enc, this.state);
@@ -2264,6 +2381,8 @@ export class EncounterEngine {
       this.ui.showToast(`Missed opportunity — ${q.framework}`, 'warn');
     }
 
+    if (this._checkEarlyExit('discovery')) return;
+
     this.flags.spinPhase++;
     const totalSPIN = questions.length;  // use dynamic question count
 
@@ -2286,6 +2405,8 @@ export class EncounterEngine {
     if (responseType === 'technique' && this.state.unlockedSkills.includes('challenger_insight')) {
       this.ui.showToast('🔬 Challenger Insight activated! Rapport +3', 'success');
     }
+
+    if (this._checkEarlyExit('pitch')) return;
 
     this.enc.phase = 'pricing';
     this.ui.showPricingPhase(this.enc, this.state);
@@ -2327,6 +2448,7 @@ export class EncounterEngine {
     this.ui.updatePricingFeedback(feedback, pricingState);
 
     setTimeout(() => {
+      if (this._checkEarlyExit('pricing')) return;
       this.enc.phase = 'objections';
       this._generateObjections();
       this.ui.showObjectionPhase(this.enc, this.state);
@@ -2362,6 +2484,8 @@ export class EncounterEngine {
     if (response.framework) {
       this.ui.showToast(response.framework, effectiveRapport > 0 ? 'success' : 'warn');
     }
+
+    if (this._checkEarlyExit('objections')) return;
 
     this.flags.resolved.push(objectionType);
     const remaining = this.flags.objections.filter(o => !this.flags.resolved.includes(o));

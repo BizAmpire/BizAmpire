@@ -5,7 +5,8 @@
 
 import {
   INDUSTRIES, SKILL_TREE, DISCOVERY_QUESTIONS, OBJECTION_LIBRARY,
-  EMPLOYEE_ARCHETYPES, JOURNAL_PROMPTS, ENCOUNTER_PHASES
+  EMPLOYEE_ARCHETYPES, JOURNAL_PROMPTS, ENCOUNTER_PHASES,
+  INDUSTRY_STARTUP_COSTS, STARTUP_DIFFICULTY_LABELS
 } from './data.js';
 import { EncounterEngine } from './engine.js';
 
@@ -290,22 +291,138 @@ export class UIManager {
   }
 
   _launchGame(dna) {
+    const industryId = dna.industry?.id || 'consulting';
+    const costs = INDUSTRY_STARTUP_COSTS[industryId] || INDUSTRY_STARTUP_COSTS.consulting;
+    const isFirstBusiness = !window.__bizampirePortfolio?.slots?.length;
+
+    if (isFirstBusiness) {
+      // First business: no gating, just launch with reduced starting cash
+      this._executeLaunch(dna, costs, true);
+    } else {
+      // Additional business: show cost modal, deduct from active business cash
+      this._showStartupCostModal(dna, costs);
+    }
+  }
+
+  _showStartupCostModal(dna, costs) {
+    document.getElementById('startup-cost-overlay')?.remove();
+
+    const activeCash = window.__bizampireEngine?.state?.cash ?? 0;
+    const activeName = window.__bizampireEngine?.state?.businessName ?? 'your business';
+    const canAfford  = activeCash >= costs.capitalCost;
+    const diffInfo   = STARTUP_DIFFICULTY_LABELS[costs.difficulty] || STARTUP_DIFFICULTY_LABELS.medium;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'startup-cost-overlay';
+    overlay.style.cssText = `
+      position:fixed;inset:0;z-index:9500;
+      background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:16px`;
+
+    overlay.innerHTML = `
+      <div class="panel" style="max-width:420px;width:100%;padding:28px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:2rem">${dna.industry?.icon || '🏢'}</div>
+          <div>
+            <div style="font-family:var(--font-display);font-size:var(--text-xl);font-weight:700">
+              Launch ${dna.name}
+            </div>
+            <div style="font-size:var(--text-xs);color:var(--text-muted)">${dna.industry?.name} — new business</div>
+          </div>
+          <div style="margin-left:auto;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;
+            background:${diffInfo.color}22;color:${diffInfo.color};border:1px solid ${diffInfo.color}">
+            ${diffInfo.label}
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="panel panel-sm" style="text-align:center;${canAfford ? '' : 'border-color:var(--crimson)'}">
+            <div style="font-size:var(--text-xl);font-weight:700;color:${canAfford ? 'var(--sage)' : 'var(--crimson)'}">
+              -$${costs.capitalCost.toLocaleString()}
+            </div>
+            <div style="font-size:10px;color:var(--text-muted)">Startup Capital</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:4px">from ${activeName}</div>
+          </div>
+          <div class="panel panel-sm" style="text-align:center">
+            <div style="font-size:var(--text-xl);font-weight:700;color:var(--amber)">⏳ ${costs.trainingDays}d</div>
+            <div style="font-size:10px;color:var(--text-muted)">Training Lock</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:4px">before first encounter</div>
+          </div>
+        </div>
+
+        <div class="panel panel-sm" style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:11px;color:var(--text-muted)">
+            <span style="color:var(--crimson)">💰 Capital:</span> ${costs.capitalLabel}
+          </div>
+          <div style="font-size:11px;color:var(--text-muted)">
+            <span style="color:var(--amber)">📚 Training:</span> ${costs.trainingLabel}
+          </div>
+          <div style="font-size:11px;color:var(--text-muted)">
+            <span style="color:var(--violet)">🏢 Overhead:</span> +$${costs.overheadBump.toLocaleString()}/mo above base
+          </div>
+        </div>
+
+        ${!canAfford ? `
+          <div style="background:rgba(255,68,102,0.12);border:1px solid var(--crimson);border-radius:8px;
+            padding:10px 12px;font-size:var(--text-xs);color:var(--crimson)">
+            ⚠️ <strong>${activeName}</strong> only has $${activeCash.toLocaleString()} — you need
+            $${costs.capitalCost.toLocaleString()} to fund this launch.
+            Close more deals first.
+          </div>` : `
+          <div style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.3);border-radius:8px;
+            padding:10px 12px;font-size:var(--text-xs);color:var(--text-muted)">
+            After launch, <strong>${activeName}</strong> will have
+            <strong style="color:var(--sage)">$${(activeCash - costs.capitalCost).toLocaleString()}</strong> remaining.
+          </div>`}
+
+        <div style="display:flex;gap:10px">
+          <button id="scm-cancel" class="btn btn-secondary" style="flex:1">Cancel</button>
+          <button id="scm-confirm" class="btn btn-primary" style="flex:1;${canAfford ? '' : 'opacity:.4;pointer-events:none'}">
+            ${canAfford ? 'Fund & Launch →' : 'Not Enough Cash'}
+          </button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+    document.getElementById('scm-cancel').addEventListener('click', () => overlay.remove());
+    document.getElementById('scm-confirm')?.addEventListener('click', () => {
+      overlay.remove();
+      this._executeLaunch(dna, costs, false);
+    });
+  }
+
+  _executeLaunch(dna, costs, isFirst) {
     const { createInitialState } = window.__bizampireData;
-    const state = createInitialState({
+
+    // Deduct capital from active business (not first)
+    if (!isFirst && window.__bizampireEngine) {
+      window.__bizampireEngine.state.cash -= costs.capitalCost;
+      window.__bizampireEngine.ui.updateHUD(window.__bizampireEngine.state);
+    }
+
+    // Build new state with startup economics baked in
+    const baseState = createInitialState({
       name: dna.name,
       industry: dna.industry,
       description: dna.description,
       personas: dna.personas,
     });
 
-    this.showLoading('Building your city...', 20);
+    if (isFirst) {
+      // First business pays startup cost out of its own starting cash
+      baseState.cash = Math.max(500, baseState.cash - costs.capitalCost);
+    }
+    // Apply training lock and overhead bump regardless
+    baseState.trainingDaysLeft = costs.trainingDays;
+    baseState.monthlyOverhead  = baseState.monthlyOverhead + costs.overheadBump;
+    baseState.startupCost      = costs;  // store for portfolio display
 
+    this.showLoading('Building your city...', 20);
     setTimeout(() => {
       this.showLoading('Populating districts...', 60);
       setTimeout(() => {
         this.showLoading('Briefing your competitors...', 85);
         setTimeout(() => {
-          window.__bizampireLaunch(state);
+          window.__bizampireLaunch(baseState);
         }, 400);
       }, 500);
     }, 300);
@@ -329,6 +446,16 @@ export class UIManager {
     const xpPct = Math.min(100, (state.xp % xpNeeded) / xpNeeded * 100);
     if (this.el.hudXP) this.el.hudXP.textContent = `${state.xp % xpNeeded}/${xpNeeded}`;
     if (this.el.hudXPBar) this.el.hudXPBar.style.width = `${xpPct}%`;
+
+    // Training lock badge on business name
+    const bizNameEl = document.getElementById('hud-biz-name');
+    if (bizNameEl) {
+      if (state.trainingDaysLeft > 0) {
+        bizNameEl.innerHTML = `${state.businessName} <span style="font-size:10px;background:var(--amber);color:#000;border-radius:4px;padding:1px 5px;font-weight:700;vertical-align:middle">📚 ${state.trainingDaysLeft}d</span>`;
+      } else {
+        bizNameEl.textContent = state.businessName;
+      }
+    }
 
     this._updateSkillBar(state);
   }
@@ -1110,6 +1237,115 @@ export class UIManager {
     });
   }
 
+  // ── Early Exit / Ejection Screen ───────────────────────────
+  showEjected(biz, phase, cashDrain, cooldownDays) {
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+
+    const phaseLabels = {
+      opener:     'the opening',
+      discovery:  'discovery',
+      pitch:      'your pitch',
+      pricing:    'the pricing conversation',
+      objections: 'handling objections',
+    };
+    const phaseLabel = phaseLabels[phase] || 'the meeting';
+
+    const phaseCoaching = {
+      opener: [
+        'Cold openers tank rapport fast. Do Market Research first to warm them up.',
+        'Leading with features instead of curiosity signals you\'re not listening.',
+        'Try: "I noticed your business does X — are you finding Y is a challenge?"',
+      ],
+      discovery: [
+        'Discovery is about their pain, not your pitch. Ask more, talk less.',
+        'SPIN Selling: Situation → Problem → Implication → Need-Payoff. You skipped ahead.',
+        'When you stop asking questions, the prospect stops trusting you.',
+      ],
+      pitch: [
+        'A pitch lands when their problem is crystal-clear. You rushed it.',
+        'Challenger Sale: Teach something unexpected. Tailor it to their business. Take control.',
+        'Never pitch until you\'ve heard them say the pain in their own words.',
+      ],
+      pricing: [
+        'Pricing without anchoring is leaving money on the table — and trust.',
+        '$100M Offers: Stack the value first. Price second. Never apologize for your rate.',
+        'If they balk at price, go back to pain — never discount immediately.',
+      ],
+      objections: [
+        'Objections are buying signals. A walkout means you ran out of answers.',
+        'Never Split the Difference: Label the emotion. "It sounds like cost is a real concern."',
+        'Tactical empathy beats logical argument every time in objection handling.',
+      ],
+    };
+    const tips = phaseCoaching[phase] || phaseCoaching.discovery;
+    const tip = tips[Math.floor(Math.random() * tips.length)];
+
+    body.innerHTML = `
+      <div class="outcome-overlay" style="border:2px solid var(--crimson)">
+        <div class="outcome-icon" style="font-size:2.5rem">🚪</div>
+        <div class="outcome-title lose" style="color:var(--crimson)">${biz.owner} ended the meeting early.</div>
+        <div class="outcome-body" style="font-style:italic;color:var(--text-muted)">
+          "${this._getEjectionQuote(phase, biz.owner)}"
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--s3);margin:var(--s4) 0">
+          <div class="panel panel-sm" style="text-align:center;border-color:var(--crimson)">
+            <div style="font-size:var(--text-xl);font-weight:700;color:var(--crimson);">-$${cashDrain.toLocaleString()}</div>
+            <div style="font-size:var(--text-xs);color:var(--text-muted)">Time & opportunity cost</div>
+          </div>
+          <div class="panel panel-sm" style="text-align:center;border-color:var(--amber)">
+            <div style="font-size:var(--text-xl);font-weight:700;color:var(--amber)">${cooldownDays}d</div>
+            <div style="font-size:var(--text-xs);color:var(--text-muted)">Burned — won\'t meet again</div>
+          </div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:var(--s4);text-align:left;margin-bottom:var(--s4)">
+          <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--violet);margin-bottom:var(--s2)">Coach's Corner — Failed at ${phaseLabel}</div>
+          <div style="font-size:var(--text-sm);line-height:1.5">${tip}</div>
+        </div>
+
+        <button class="btn btn-secondary" id="btn-return-city-ejected" style="margin-top:var(--s2);width:100%">Back to City →</button>
+      </div>
+    `;
+
+    document.getElementById('btn-return-city-ejected')?.addEventListener('click', () => {
+      this.closeEncounter();
+    });
+  }
+
+  _getEjectionQuote(phase, ownerName) {
+    const quotes = {
+      opener: [
+        `Look, I'm going to stop you right there — we're not looking for this right now.`,
+        `I appreciate you stopping by, but this isn't a good time. Please don't come back without an appointment.`,
+        `I've heard this pitch before. We're all set.`,
+      ],
+      discovery: [
+        `You're asking a lot of questions that don't seem relevant to us. I've got a business to run.`,
+        `Honestly? I feel like you're fishing for problems we don't have. We're done here.`,
+        `I don't think you understand what we do. This isn't going anywhere.`,
+      ],
+      pitch: [
+        `That pitch had nothing to do with our situation. I'm not interested.`,
+        `You clearly didn't listen to anything I said. Good luck out there.`,
+        `This solution doesn't fit us at all. I need to get back to work.`,
+      ],
+      pricing: [
+        `That number is completely out of range. This conversation is over.`,
+        `You've got to be kidding me. We're not spending that. Have a good day.`,
+        `I feel like you're not being realistic. We're done here.`,
+      ],
+      objections: [
+        `You haven't addressed a single one of my concerns. I'm going to pass.`,
+        `Every answer you gave made me more unsure. We're not moving forward.`,
+        `I've heard enough. This isn't going to work for us.`,
+      ],
+    };
+    const pool = quotes[phase] || quotes.discovery;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
   closeEncounter() {
     this.state.currentEncounter = null;
     this.showScreen('map');
@@ -1386,25 +1622,72 @@ export class UIManager {
     const totalReferralRate = vendors.reduce((s, v) => s + (v.referralRate || 0), 0);
 
     const vendorsHTML = vendors.length > 0
-      ? vendors.map(v => `
-          <div class="employee-card">
-            <div class="employee-avatar">${v.serviceIcon || v.icon || '🏢'}</div>
-            <div class="employee-info">
-              <div class="employee-name">${v.serviceName}</div>
-              <div class="employee-role" style="color:var(--violet)">${v.bizName}</div>
-              <div class="employee-stats">
-                ${v.recurring
-                  ? `<div class="emp-stat">Monthly: <span style="color:var(--crimson)">-$${(v.monthlyCost||0).toLocaleString()}/mo</span></div>`
-                  : `<div class="emp-stat">One-time: <span>Paid</span></div>`}
-                ${v.referralRate > 0
-                  ? `<div class="emp-stat">Referrals: <span style="color:var(--sage)">~${v.referralRate}/mo</span></div>`
-                  : ''}
-              </div>
-              <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--s1)">
-                Purchased ${v.purchasedAt ? new Date(v.purchasedAt).toLocaleDateString() : ''}
+      ? vendors.map(v => {
+          // ── Performance metrics ──────────────────────────────
+          const gen  = v.leadsGenerated  || 0;
+          const conv = v.leadsConverted  || 0;
+          const mos  = v.monthsActive    || 0;
+          const spent = v.totalSpent     || (v.recurring ? (v.monthlyCost || 0) * mos : 0);
+          const rate = gen > 0 ? Math.round((conv / gen) * 100) : null;
+          const rateColor = rate === null ? 'var(--text-muted)'
+                          : rate >= 50   ? 'var(--sage)'
+                          : rate >= 25   ? 'var(--amber)'
+                          :                'var(--crimson)';
+          const rateLabel = rate === null ? 'No data yet' : `${rate}% conversion`;
+
+          // ── Performance bar (visual) ─────────────────────────
+          const barPct = rate !== null ? Math.min(100, rate) : 0;
+          const barColor = rate === null ? 'var(--border)'
+                         : rate >= 50   ? 'var(--sage)'
+                         : rate >= 25   ? 'var(--amber)'
+                         :                'var(--crimson)';
+
+          // ROI: how much revenue this vendor has helped generate (rough: conv * avg deal size)
+          // We just show leads in/out — clean and honest
+          const perfBar = `
+            <div style="margin:var(--s2) 0 var(--s1);font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between">
+              <span>Lead Conversion</span>
+              <span style="color:${rateColor};font-weight:600">${rateLabel}</span>
+            </div>
+            <div style="height:6px;background:var(--surface);border-radius:999px;overflow:hidden">
+              <div style="height:100%;width:${barPct}%;background:${barColor};border-radius:999px;transition:width .4s ease"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:var(--s1)">
+              <span>${gen} lead${gen !== 1 ? 's' : ''} sent</span>
+              <span>${conv} converted</span>
+            </div>`;
+
+          // ── Cancel button (recurring only — one-time services are permanent) ──
+          const cancelBtn = v.recurring ? `
+            <button
+              class="btn btn-secondary"
+              data-cancel-vendor-biz="${v.bizId}"
+              data-cancel-vendor-svc="${v.serviceId}"
+              style="font-size:10px;padding:3px 10px;color:var(--crimson);border-color:var(--crimson);margin-top:var(--s3);width:100%">
+              Cancel Service
+            </button>` : `
+            <div style="font-size:10px;color:var(--text-muted);margin-top:var(--s3);text-align:center">One-time — permanent</div>`;
+
+          return `
+          <div class="employee-card" style="flex-direction:column;align-items:stretch;gap:0">
+            <div style="display:flex;gap:var(--s3);align-items:flex-start">
+              <div class="employee-avatar" style="flex-shrink:0">${v.serviceIcon || v.icon || '🏢'}</div>
+              <div class="employee-info" style="flex:1;min-width:0">
+                <div class="employee-name">${v.serviceName}</div>
+                <div class="employee-role" style="color:var(--violet)">${v.bizName}</div>
+                <div class="employee-stats" style="margin-top:var(--s2)">
+                  ${v.recurring
+                    ? `<div class="emp-stat">Monthly: <span style="color:var(--crimson)">-$${(v.monthlyCost||0).toLocaleString()}/mo</span></div>`
+                    : `<div class="emp-stat">One-time purchase</div>`}
+                  ${mos > 0 ? `<div class="emp-stat">Active: <span>${mos} month${mos !== 1 ? 's' : ''}</span></div>` : ''}
+                  ${spent > 0 ? `<div class="emp-stat">Total paid: <span>$${spent.toLocaleString()}</span></div>` : ''}
+                </div>
               </div>
             </div>
-          </div>`).join('')
+            ${v.referralRate > 0 ? perfBar : '<div style="font-size:10px;color:var(--text-muted);margin-top:var(--s2)">No referral tracking for this service</div>'}
+            ${cancelBtn}
+          </div>`;
+        }).join('')
       : '<div style="font-size:var(--text-sm);color:var(--text-muted)">No vendor services purchased yet. Visit buildings in the city and choose <strong>"Buy Service"</strong> to expand your reach.</div>';
 
     const vendorSummaryHTML = vendors.length > 0 ? `
@@ -1513,6 +1796,62 @@ export class UIManager {
         this.gameEngine.hireEmployee(btn.dataset.hire);
         this._renderManagement();
       });
+    });
+
+    // Cancel vendor buttons
+    panel.querySelectorAll('button[data-cancel-vendor-biz]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const bizId = btn.dataset.cancelVendorBiz;
+        const svcId = btn.dataset.cancelVendorSvc;
+        const vendor = this.state.vendors.find(v => v.bizId === bizId && v.serviceId === svcId);
+        if (!vendor) return;
+        this._showVendorCancelConfirm(vendor, bizId, svcId);
+      });
+    });
+  }
+
+  _showVendorCancelConfirm(vendor, bizId, svcId) {
+    // Remove any existing confirm overlay
+    document.getElementById('vendor-cancel-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'vendor-cancel-overlay';
+    overlay.style.cssText = `
+      position:fixed;inset:0;z-index:9000;
+      background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:var(--s4)`;
+
+    const perfNote = vendor.leadsGenerated > 0
+      ? `This vendor sent ${vendor.leadsGenerated} lead${vendor.leadsGenerated !== 1 ? 's' : ''} and converted ${vendor.leadsConverted || 0} — a ${Math.round(((vendor.leadsConverted||0)/vendor.leadsGenerated)*100)}% rate.`
+      : `This vendor has been active for ${vendor.monthsActive || 0} month${(vendor.monthsActive||0) !== 1 ? 's' : ''} with no referral data yet.`;
+
+    overlay.innerHTML = `
+      <div class="panel" style="max-width:360px;width:100%;padding:var(--s6);text-align:center">
+        <div style="font-size:1.8rem;margin-bottom:var(--s2)">🗑️</div>
+        <div style="font-family:var(--font-display);font-size:var(--text-lg);font-weight:700;margin-bottom:var(--s2)">
+          Cancel ${vendor.serviceName}?
+        </div>
+        <div style="font-size:var(--text-sm);color:var(--text-muted);margin-bottom:var(--s3);line-height:1.5">
+          ${perfNote}
+        </div>
+        <div class="panel panel-sm" style="text-align:left;margin-bottom:var(--s4)">
+          <div style="font-size:var(--text-xs);color:var(--text-muted)">
+            • Stops the <strong style="color:var(--crimson)">$${(vendor.monthlyCost||0).toLocaleString()}/mo</strong> charge<br>
+            • Removes active effects from this service<br>
+            • Re-purchase by visiting <strong>${vendor.bizName}</strong> in the city
+          </div>
+        </div>
+        <div style="display:flex;gap:var(--s3)">
+          <button id="vcco-cancel-no" class="btn btn-secondary" style="flex:1">Keep It</button>
+          <button id="vcco-cancel-yes" class="btn" style="flex:1;background:var(--crimson);border-color:var(--crimson);color:#fff">Yes, Cancel</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById('vcco-cancel-no').addEventListener('click', () => overlay.remove());
+    document.getElementById('vcco-cancel-yes').addEventListener('click', () => {
+      overlay.remove();
+      this.gameEngine.cancelVendor(bizId, svcId);
     });
   }
 

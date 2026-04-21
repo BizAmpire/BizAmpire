@@ -277,6 +277,7 @@
       <button class="btn btn-secondary" onclick="window.__bizampireUI?.showSkillTree()" style="padding:var(--s2) var(--s3);font-size:var(--text-xs)" title="Skill Tree [K]">⚡ Skills</button>
       <button class="btn btn-secondary" onclick="window.__bizampireUI?.showManagement()" style="padding:var(--s2) var(--s3);font-size:var(--text-xs)" title="Management [M]">🏢 Manage</button>
       <button class="btn btn-secondary" onclick="window.__bizampireUI?.showJournal()" style="padding:var(--s2) var(--s3);font-size:var(--text-xs)" title="Field Journal [J]">📓 Journal</button>
+      <button class="btn btn-secondary" onclick="window.__bizampirePortfolio?.show()" style="padding:var(--s2) var(--s3);font-size:var(--text-xs)" title="Business Portfolio [P]">🏗️ Portfolio</button>
       <div class="save-indicator" id="save-indicator" title="Save status">
         <div class="save-dot"></div>
         <span id="save-indicator-text">Saved</span>
@@ -294,7 +295,7 @@
 
   <!-- Controls hint (desktop only) -->
   <div class="controls-hint">
-    WASD / Arrows to move · [E] Approach business · [K] Skills · [J] Journal · [M] Management
+    WASD / Arrows to move · [E] Approach · [K] Skills · [J] Journal · [M] Manage · [P] Portfolio
   </div>
 
   <!-- Virtual joystick (mobile only) -->
@@ -309,6 +310,7 @@
     <button id="btn-mobile-interact" class="mobile-btn mobile-btn-interact">E</button>
     <button id="btn-mobile-skills"   class="mobile-btn mobile-btn-secondary" onclick="window.__bizampireUI?.showSkillTree()">⚡</button>
     <button id="btn-mobile-manage"   class="mobile-btn mobile-btn-secondary" onclick="window.__bizampireUI?.showManagement()">🏢</button>
+    <button id="btn-mobile-portfolio" class="mobile-btn mobile-btn-secondary" onclick="window.__bizampirePortfolio?.show()">🏗️</button>
   </div>
 </div>
 
@@ -351,6 +353,18 @@
 <!-- ══════════════════════════════════════
      SCREEN: VC Event (placeholder)
 ═══════════════════════════════════════ -->
+
+<!-- ══════════════════════════════════════
+     SCREEN: Business Portfolio
+═══════════════════════════════════════ -->
+<div id="screen-portfolio" class="screen hidden" style="align-items:flex-end;justify-content:center;background:rgba(0,0,0,.85)">
+  <div class="panel" id="portfolio-panel" style="
+    width:100%;max-width:640px;max-height:88vh;overflow-y:auto;
+    border-radius:16px 16px 0 0;padding:var(--s6);display:flex;flex-direction:column;gap:var(--s5)">
+    <!-- Dynamically populated -->
+  </div>
+</div>
+
 <div id="screen-vc" class="screen hidden" style="background:rgba(0,0,0,.9)">
   <!-- Dynamically populated on milestone 10 -->
 </div>
@@ -360,7 +374,7 @@
 
 
 <script type="module">
-import { INDUSTRIES, SKILL_TREE, DISTRICTS, MILESTONES, JOURNAL_PROMPTS, createInitialState } from './js/data.js';
+import { INDUSTRIES, SKILL_TREE, DISTRICTS, MILESTONES, JOURNAL_PROMPTS, createInitialState, INDUSTRY_STARTUP_COSTS } from './js/data.js';
 import { BizAmpireEngine, EncounterEngine, TILE, MAP_W, MAP_H } from './js/engine.js';
 import { UIManager } from './js/ui.js';
 import { Auth, AuthUI, SaveSystem, initAutoSave, triggerSave } from './js/auth.js';
@@ -482,7 +496,7 @@ function launchFromSave(saveData) {
       'monthlyRevenue','monthlyOverhead','activeClients','employees',
       'unlockedSkills','unlockedDistricts','milestonesReached','legacyArc',
       'journalEntries','relationshipMap','competitorDeals',
-      'totalXpEarned','survivalMode','playerName','monthTimer','daysSinceLastDeal',
+      'totalXpEarned','survivalMode','playerName','monthTimer','daysSinceLastDeal','trainingDaysLeft','startupCost',
     ];
     for (const f of fields) {
       if (saveData[f] !== undefined) state[f] = saveData[f];

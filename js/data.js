@@ -15,6 +15,95 @@ export const INDUSTRIES = [
   { id: 'consulting',   name: 'Consulting',   icon: '🎯', color: '#fb7185', desc: 'Operations, strategy, HR' },
 ];
 
+// ── Startup costs per industry ───────────────────────────────────────────────
+// capitalCost: deducted from active business cash when launching a new business
+// trainingDays: in-game days before the new business can accept encounters
+// overheadBump: extra monthly overhead added on top of base $800 (licences, tools, space)
+// capitalLabel / trainingLabel: UI-friendly explanations
+export const INDUSTRY_STARTUP_COSTS = {
+  marketing: {
+    capitalCost: 1500,
+    trainingDays: 3,
+    overheadBump: 200,
+    capitalLabel: 'Branding tools, ad accounts, portfolio site',
+    trainingLabel: '3 days — brand positioning & campaign setup',
+    difficulty: 'low',
+  },
+  it: {
+    capitalCost: 2500,
+    trainingDays: 5,
+    overheadBump: 400,
+    capitalLabel: 'Dev tools, cloud licences, hardware, RMM stack',
+    trainingLabel: '5 days — certifications & stack configuration',
+    difficulty: 'medium',
+  },
+  finance: {
+    capitalCost: 3000,
+    trainingDays: 10,
+    overheadBump: 500,
+    capitalLabel: 'Accounting software, E&O insurance, CPA licence fees',
+    trainingLabel: '10 days — regulatory onboarding & compliance review',
+    difficulty: 'high',
+  },
+  law: {
+    capitalCost: 4000,
+    trainingDays: 14,
+    overheadBump: 600,
+    capitalLabel: 'Bar dues, malpractice insurance, case management software',
+    trainingLabel: '14 days — jurisdiction research & client intake setup',
+    difficulty: 'high',
+  },
+  construction: {
+    capitalCost: 6000,
+    trainingDays: 7,
+    overheadBump: 1200,
+    capitalLabel: 'Equipment, materials, bonding, contractor licence',
+    trainingLabel: '7 days — permitting, insurance & crew sourcing',
+    difficulty: 'high',
+  },
+  auto: {
+    capitalCost: 5000,
+    trainingDays: 5,
+    overheadBump: 900,
+    capitalLabel: 'Lift, tools, dealer licence, insurance, inventory',
+    trainingLabel: '5 days — facility setup & parts supplier agreements',
+    difficulty: 'medium',
+  },
+  realestate: {
+    capitalCost: 2000,
+    trainingDays: 7,
+    overheadBump: 300,
+    capitalLabel: 'Licence fees, MLS access, E&O insurance, CRM',
+    trainingLabel: '7 days — market research & listing pipeline setup',
+    difficulty: 'medium',
+  },
+  health: {
+    capitalCost: 8000,
+    trainingDays: 21,
+    overheadBump: 1500,
+    capitalLabel: 'Medical equipment, HIPAA compliance, malpractice insurance',
+    trainingLabel: '21 days — credentialing, payer contracts & clinic setup',
+    difficulty: 'very_high',
+  },
+  consulting: {
+    capitalCost: 800,
+    trainingDays: 2,
+    overheadBump: 100,
+    capitalLabel: 'LLC filing, deck templates, proposal software',
+    trainingLabel: '2 days — niche definition & case study prep',
+    difficulty: 'low',
+  },
+};
+
+// Difficulty label for UI
+export const STARTUP_DIFFICULTY_LABELS = {
+  low:       { label: 'Easy Entry',    color: '#4ade80' },
+  medium:    { label: 'Moderate',      color: '#ffd166' },
+  high:      { label: 'High Barrier',  color: '#fb923c' },
+  very_high: { label: 'Expert Only',   color: '#ff4466' },
+};
+
+
 const BUSINESS_TEMPLATES = {
   tech_row: [
     { name: 'Apex Digital', type: 'Marketing Agency', icon: '📣', size: 'SMB',
