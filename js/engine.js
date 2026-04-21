@@ -634,7 +634,7 @@ export class BizAmpireEngine {
     }
 
     // Resolve prospect category and ICP fit score
-    const playerIndustry = this.state.businessIndustry || 'consulting';
+    const playerIndustry = (this.state.businessIndustry?.id || this.state.businessIndustry || 'consulting').toString();
     const prospectCategory = getProspectCategory(business.type);
     const fitScore = (ICP_FIT_MATRIX[playerIndustry] || {})[prospectCategory] ?? 2;
 

@@ -826,9 +826,10 @@ export class UIManager {
       consulting: 'operations consulting',
     };
 
+    const _indId = state.businessIndustry?.id || state.businessIndustry;
     const choices = [
       {
-        text: `"Hi, I'm ${state.businessName} — we provide ${serviceLabels[state.businessIndustry] || 'business services'} to companies in this area. Do you have 2 minutes?"`,
+        text: `"Hi, I'm ${state.businessName} — we provide ${serviceLabels[_indId] || 'business services'} to companies in this area. Do you have 2 minutes?"`,
         rapport: 0,
         label: 'Generic opener',
         badge: null,
@@ -843,7 +844,7 @@ export class UIManager {
         requiresSkill: 'pattern_interrupt',
       },
       {
-        text: `"Quick question — when it comes to ${serviceLabels[state.businessIndustry] || 'what we do'}, what's your biggest frustration right now with how you're handling it?"`,
+        text: `"Quick question — when it comes to ${serviceLabels[_indId] || 'what we do'}, what's your biggest frustration right now with how you're handling it?"`,
         rapport: biz.warmth >= 1 ? 2 : 0,
         label: warmthLabel === 'cold' ? 'Direct (risky cold)' : 'Direct (warm relationship)',
         badge: warmthLabel !== 'cold' ? 'Relationship Capital' : null,
@@ -917,7 +918,8 @@ export class UIManager {
       law: 'Legal Services', construction: 'Construction', auto: 'Auto/Fleet',
       realestate: 'Real Estate', health: 'Healthcare', consulting: 'Consulting',
     };
-    const playerServiceLabel = serviceLabels[state.businessIndustry] || state.businessName;
+    const _indId2 = state.businessIndustry?.id || state.businessIndustry;
+    const playerServiceLabel = serviceLabels[_indId2] || state.businessName;
 
     body.innerHTML = `
       <div class="dialogue-box">
@@ -984,7 +986,8 @@ export class UIManager {
       realestate: 'real estate & property management', health: 'healthcare services',
       consulting: 'operations consulting',
     };
-    const pitchServiceLabel = pitchServiceLabels[state.businessIndustry] || state.businessDescription || 'services';
+    const _indId3 = state.businessIndustry?.id || state.businessIndustry;
+    const pitchServiceLabel = pitchServiceLabels[_indId3] || state.businessDescription || 'services';
 
     body.innerHTML = `
       <div class="dialogue-box">
