@@ -16,17 +16,10 @@ const MAP_H = 40;
 const PLAYER_SPEED = 3.5;
 
 // ── City Map Generation ──────────────────────────────────────
-// Tile types:
-//   0 = road      (asphalt, walkable)
-//   1 = sidewalk  (concrete, walkable)
-//   2 = building  (blocked)
-//   3 = park/grass (walkable)
-//   4 = water/lake (blocked)
-//   5 = tree       (blocked, drawn as canopy)
-//   6 = parking lot (walkable)
 function generateCityMap() {
   const map = [];
 
+  // Terrain types: 0=road, 1=sidewalk, 2=building, 3=park, 4=water
   for (let y = 0; y < MAP_H; y++) {
     map[y] = [];
     for (let x = 0; x < MAP_W; x++) {
@@ -37,7 +30,7 @@ function generateCityMap() {
     }
   }
 
-  // Sidewalks adjacent to roads
+  // Add sidewalks adjacent to roads
   for (let y = 0; y < MAP_H; y++) {
     for (let x = 0; x < MAP_W; x++) {
       if (map[y][x] === 2) {
@@ -49,69 +42,7 @@ function generateCityMap() {
     }
   }
 
-  // ── Parks ──────────────────────────────────────────────────
-  _carveRect(map,  1,  1,  9, 6, 3);   // top-left
-  _carveRect(map, 42, 26,  9, 6, 3);   // bottom-right
-  _carveRect(map, 33, 12,  6, 5, 3);   // center plaza
-
-  // ── Lakes / ponds inside parks ─────────────────────────────
-  _carveRect(map,  3,  2,  4, 3, 4);   // pond in park 1
-  _carveRect(map, 44, 27,  4, 3, 4);   // pond in park 2
-  _carveRect(map, 35, 13,  2, 2, 4);   // fountain in plaza
-
-  // ── Canal strip (mid-map, horizontal) ──────────────────────
-  for (let x = 17; x <= 28; x++) {
-    if (map[17]?.[x] !== 0) map[17][x] = 4;
-    if (map[18]?.[x] !== 0) map[18][x] = 4;
-  }
-
-  // ── Tree rings around parks ─────────────────────────────────
-  _addTreeRing(map,  1,  1,  9, 6);
-  _addTreeRing(map, 42, 26,  9, 6);
-  _addTreeRing(map, 33, 12,  6, 5);
-
-  // ── Street trees on sidewalk tiles ─────────────────────────
-  const streetTrees = [
-    [2,10],[2,20],[2,30],[7,10],[7,22],[7,30],
-    [11,2],[19,2],[27,2],[34,2],
-    [11,57],[19,57],[27,57],
-    [14,15],[22,15],[14,45],[22,45],
-    [32,35],[38,35],[3,35],[3,44],
-  ];
-  for (const [ty,tx] of streetTrees) {
-    if (ty>=0&&ty<MAP_H&&tx>=0&&tx<MAP_W&&map[ty]?.[tx]===1) map[ty][tx]=5;
-  }
-
-  // ── Parking lots ───────────────────────────────────────────
-  for (const [px,py,pw,ph] of [
-    [6,8,3,2],[17,6,3,2],[27,14,3,2],[38,6,3,2],
-    [50,14,3,2],[7,22,3,2],[17,30,3,2],[38,22,3,2],
-  ]) {
-    for (let dy=0;dy<ph;dy++) for (let dx=0;dx<pw;dx++) {
-      const ty=py+dy,tx=px+dx;
-      if (ty>=0&&ty<MAP_H&&tx>=0&&tx<MAP_W&&(map[ty][tx]===1||map[ty][tx]===2))
-        map[ty][tx]=6;
-    }
-  }
-
   return map;
-}
-
-function _carveRect(map, x, y, w, h, type) {
-  for (let dy=0;dy<h;dy++) for (let dx=0;dx<w;dx++) {
-    const ty=y+dy,tx=x+dx;
-    if (ty>=0&&ty<MAP_H&&tx>=0&&tx<MAP_W&&map[ty][tx]!==0) map[ty][tx]=type;
-  }
-}
-
-function _addTreeRing(map, x, y, w, h) {
-  for (let dx=0;dx<w;dx++) for (let dy=0;dy<h;dy++) {
-    if (dx===0||dx===w-1||dy===0||dy===h-1) {
-      const ty=y+dy,tx=x+dx;
-      if (ty>=0&&ty<MAP_H&&tx>=0&&tx<MAP_W&&(map[ty][tx]===3||map[ty][tx]===1))
-        map[ty][tx]=5;
-    }
-  }
 }
 
 // District building placement
@@ -398,10 +329,6 @@ export class BizAmpireEngine {
     const tx = Math.floor(px / TILE);
     const ty = Math.floor(py / TILE);
     if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return true;
-
-    // Block water (4) and trees (5)
-    const tile = this.map[ty]?.[tx] ?? 2;
-    if (tile === 4 || tile === 5) return true;
 
     // Check buildings
     const pw = 28;
@@ -801,269 +728,77 @@ export class BizAmpireEngine {
   }
 
   _drawGround(ctx) {
-    const T = TILE;
-    const startTX = Math.floor(this.cam.x / T);
-    const startTY = Math.floor(this.cam.y / T);
-    const endTX = Math.min(MAP_W - 1, startTX + Math.ceil(this.canvas.width  / T) + 2);
-    const endTY = Math.min(MAP_H - 1, startTY + Math.ceil(this.canvas.height / T) + 2);
-    const now = Date.now();
+    const startTX = Math.floor(this.cam.x / TILE);
+    const startTY = Math.floor(this.cam.y / TILE);
+    const endTX = Math.min(MAP_W - 1, startTX + Math.ceil(this.canvas.width / TILE) + 1);
+    const endTY = Math.min(MAP_H - 1, startTY + Math.ceil(this.canvas.height / TILE) + 1);
 
     for (let ty = startTY; ty <= endTY; ty++) {
       for (let tx = startTX; tx <= endTX; tx++) {
         if (ty < 0 || tx < 0) continue;
         const tile = this.map[ty]?.[tx] ?? 2;
-        const px = tx * T, py = ty * T;
+        const px = tx * TILE, py = ty * TILE;
 
-        // ── ROAD (0) ──────────────────────────────────────────
         if (tile === 0) {
-          // Base asphalt — slightly varied by position for texture
-          const varA = ((tx * 7 + ty * 13) % 5);
-          const asphalt = varA < 2 ? '#17192c' : varA < 4 ? '#161828' : '#181a2e';
-          ctx.fillStyle = asphalt;
-          ctx.fillRect(px, py, T, T);
-
+          // Road surface - asphalt with slight texture
+          ctx.fillStyle = '#16182a';
+          ctx.fillRect(px, py, TILE, TILE);
+          // Road markings - horizontal roads
+          if (ty % 8 === 4 || ty % 8 === 5) {
+            // Dashed center line
+            if (tx % 6 < 3) {
+              ctx.fillStyle = 'rgba(255,210,0,0.35)';
+              ctx.fillRect(px + 2, py + TILE/2 - 1, TILE - 4, 2);
+            }
+            // Curb highlight at top of road
+            if (ty % 8 === 4) {
+              ctx.fillStyle = 'rgba(255,255,255,0.06)';
+              ctx.fillRect(px, py, TILE, 2);
+            }
+          }
+          // Vertical roads
+          if (tx % 10 === 5 || tx % 10 === 6) {
+            if (ty % 6 < 3) {
+              ctx.fillStyle = 'rgba(255,210,0,0.35)';
+              ctx.fillRect(px + TILE/2 - 1, py + 2, 2, TILE - 4);
+            }
+            if (tx % 10 === 5) {
+              ctx.fillStyle = 'rgba(255,255,255,0.06)';
+              ctx.fillRect(px, py, 2, TILE);
+            }
+          }
+          // Intersection corners
           const isHRoad = ty % 8 === 4 || ty % 8 === 5;
           const isVRoad = tx % 10 === 5 || tx % 10 === 6;
-
           if (isHRoad && isVRoad) {
-            // ── Intersection ──────────────────────────────────
-            ctx.fillStyle = '#1a1c2e';
-            ctx.fillRect(px, py, T, T);
-            // Crosswalk stripes (all 4 sides)
-            ctx.fillStyle = 'rgba(255,255,255,0.10)';
+            ctx.fillStyle = '#1c1e30';
+            ctx.fillRect(px + 4, py + 4, TILE - 8, TILE - 8);
+            // Crosswalk stripes
             for (let s = 0; s < 4; s++) {
-              ctx.fillRect(px + 4 + s * 10, py + 1, 6, 5);     // top
-              ctx.fillRect(px + 4 + s * 10, py + T - 6, 6, 5); // bottom
-              ctx.fillRect(px + 1, py + 4 + s * 10, 5, 6);     // left
-              ctx.fillRect(px + T - 6, py + 4 + s * 10, 5, 6); // right
-            }
-            // Corner curb radii (dark chamfer)
-            ctx.fillStyle = '#12141f';
-            ctx.beginPath(); ctx.arc(px,     py,     3, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(px+T,   py,     3, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(px,     py+T,   3, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(px+T,   py+T,   3, 0, Math.PI*2); ctx.fill();
-          } else if (isHRoad) {
-            // ── Horizontal road ───────────────────────────────
-            // Yellow dashed center line (between row 4 and 5 of each block)
-            if (ty % 8 === 4) {
-              // Top half of road — draw center line on bottom edge of this tile
-              if (tx % 6 < 4) {
-                ctx.fillStyle = 'rgba(255,200,0,0.55)';
-                ctx.fillRect(px + 3, py + T - 2, T - 6, 2);
-              }
-              // White edge line at top
-              ctx.fillStyle = 'rgba(255,255,255,0.18)';
-              ctx.fillRect(px, py + 1, T, 1.5);
-            } else {
-              // Bottom half — white edge line at bottom
-              ctx.fillStyle = 'rgba(255,255,255,0.18)';
-              ctx.fillRect(px, py + T - 2, T, 1.5);
-            }
-          } else if (isVRoad) {
-            // ── Vertical road ─────────────────────────────────
-            if (tx % 10 === 5) {
-              // Left half — dashed center on right edge, white edge on left
-              if (ty % 6 < 4) {
-                ctx.fillStyle = 'rgba(255,200,0,0.55)';
-                ctx.fillRect(px + T - 2, py + 3, 2, T - 6);
-              }
-              ctx.fillStyle = 'rgba(255,255,255,0.18)';
-              ctx.fillRect(px + 1, py, 1.5, T);
-            } else {
-              ctx.fillStyle = 'rgba(255,255,255,0.18)';
-              ctx.fillRect(px + T - 2, py, 1.5, T);
+              ctx.fillStyle = 'rgba(255,255,255,0.12)';
+              ctx.fillRect(px + 4 + s * 10, py + 2, 5, 4);
+              ctx.fillRect(px + 4 + s * 10, py + TILE - 6, 5, 4);
+              ctx.fillRect(px + 2, py + 4 + s * 10, 4, 5);
+              ctx.fillRect(px + TILE - 6, py + 4 + s * 10, 4, 5);
             }
           }
-
-        // ── SIDEWALK (1) ──────────────────────────────────────
         } else if (tile === 1) {
-          // Concrete base — slightly lighter at edges for curb feel
-          ctx.fillStyle = '#1e2136';
-          ctx.fillRect(px, py, T, T);
-
-          // Curb edge highlight (bright line on road-adjacent sides)
-          const adjU = this.map[ty-1]?.[tx], adjD = this.map[ty+1]?.[tx];
-          const adjL = this.map[ty]?.[tx-1], adjR = this.map[ty]?.[tx+1];
-          ctx.fillStyle = 'rgba(255,255,255,0.13)';
-          if (adjU === 0) ctx.fillRect(px, py, T, 2);       // curb top
-          if (adjD === 0) ctx.fillRect(px, py+T-2, T, 2);   // curb bottom
-          if (adjL === 0) ctx.fillRect(px, py, 2, T);       // curb left
-          if (adjR === 0) ctx.fillRect(px+T-2, py, 2, T);   // curb right
-
-          // Concrete slab joint lines (2x2 grid within tile)
-          ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+          // Sidewalk - concrete texture
+          ctx.fillStyle = '#1f2235';
+          ctx.fillRect(px, py, TILE, TILE);
+          // Concrete joint lines
+          ctx.strokeStyle = 'rgba(255,255,255,0.04)';
           ctx.lineWidth = 0.5;
-          ctx.beginPath();
-          ctx.moveTo(px + T/2, py + 2); ctx.lineTo(px + T/2, py + T - 2); // vertical joint
-          ctx.moveTo(px + 2, py + T/2); ctx.lineTo(px + T - 2, py + T/2); // horizontal joint
-          ctx.stroke();
-
-          // Subtle texture flecks
-          const seed = (tx * 31 + ty * 17) % 48;
-          ctx.fillStyle = 'rgba(255,255,255,0.03)';
-          ctx.fillRect(px + (seed % 20) + 4, py + ((seed * 3) % 24) + 4, 2, 2);
-          ctx.fillRect(px + ((seed * 7) % 22) + 4, py + ((seed * 11) % 20) + 4, 2, 2);
-
-        // ── PARK / GRASS (3) ──────────────────────────────────
-        } else if (tile === 3) {
-          // Rich grass base with blade variation
-          const gVar = (tx * 5 + ty * 11) % 4;
-          const grass = ['#1a3d22','#1c4025','#183820','#1f4428'][gVar];
-          ctx.fillStyle = grass;
-          ctx.fillRect(px, py, T, T);
-
-          // Path/walkway through center of large park (visual only)
-          // Subtle lighter patches
-          if ((tx + ty) % 5 === 0) {
-            ctx.fillStyle = 'rgba(255,255,255,0.025)';
-            ctx.fillRect(px + 8, py + 8, T - 16, T - 16);
-          }
-
-          // Grass texture — short strokes
-          ctx.strokeStyle = 'rgba(80,180,80,0.15)';
-          ctx.lineWidth = 1;
-          const bladeSeeds = [(tx*3+ty*7)%T, (tx*11+ty*5)%T, (tx*17+ty*13)%T];
-          for (const bx of bladeSeeds) {
-            const by2 = (bx * 7 + ty * 3) % (T - 8) + 4;
-            ctx.beginPath();
-            ctx.moveTo(px + bx % (T-4) + 2, py + by2);
-            ctx.lineTo(px + bx % (T-4) + 3, py + by2 - 4);
-            ctx.stroke();
-          }
-
-          // Flower dots (sparse, deterministic)
-          if ((tx * 13 + ty * 7) % 11 === 0) {
-            ctx.fillStyle = 'rgba(255,220,60,0.6)';
-            ctx.beginPath();
-            ctx.arc(px + (tx*7)%32 + 8, py + (ty*11)%32 + 8, 1.5, 0, Math.PI*2);
-            ctx.fill();
-          }
-          if ((tx * 17 + ty * 11) % 13 === 0) {
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.beginPath();
-            ctx.arc(px + (tx*13)%30 + 9, py + (ty*7)%30 + 9, 1, 0, Math.PI*2);
-            ctx.fill();
-          }
-
-        // ── WATER / LAKE (4) ──────────────────────────────────
-        } else if (tile === 4) {
-          // Deep water base
-          ctx.fillStyle = '#0d2a4a';
-          ctx.fillRect(px, py, T, T);
-
-          // Animated shimmer (time-based)
-          const shimmerPhase = (now / 1800 + tx * 0.3 + ty * 0.5) % (Math.PI * 2);
-          const shimmerA = 0.05 + Math.sin(shimmerPhase) * 0.04;
-          ctx.fillStyle = `rgba(0,160,220,${shimmerA.toFixed(3)})`;
-          ctx.fillRect(px, py, T, T);
-
-          // Highlight ripple lines
-          const rippleOff = (now / 2400 + tx * 0.4) % T;
-          ctx.strokeStyle = 'rgba(100,200,255,0.12)';
-          ctx.lineWidth = 1;
-          for (let r = 0; r < 3; r++) {
-            const ry = py + ((rippleOff + r * 14) % T);
-            ctx.beginPath();
-            ctx.moveTo(px + 4, ry);
-            ctx.bezierCurveTo(px + T*0.25, ry - 2, px + T*0.75, ry + 2, px + T - 4, ry);
-            ctx.stroke();
-          }
-
-          // Shore edge foam on water-adjacent-to-land tiles
-          const adjU4 = this.map[ty-1]?.[tx], adjD4 = this.map[ty+1]?.[tx];
-          const adjL4 = this.map[ty]?.[tx-1], adjR4 = this.map[ty]?.[tx+1];
-          ctx.fillStyle = 'rgba(180,230,255,0.18)';
-          if (adjU4 !== 4 && adjU4 !== undefined) ctx.fillRect(px, py, T, 3);
-          if (adjD4 !== 4 && adjD4 !== undefined) ctx.fillRect(px, py+T-3, T, 3);
-          if (adjL4 !== 4 && adjL4 !== undefined) ctx.fillRect(px, py, 3, T);
-          if (adjR4 !== 4 && adjR4 !== undefined) ctx.fillRect(px+T-3, py, 3, T);
-
-        // ── TREE CANOPY (5) ───────────────────────────────────
-        } else if (tile === 5) {
-          // Ground underneath (grass or sidewalk)
-          const underTile = (this.map[ty-1]?.[tx]===3||this.map[ty+1]?.[tx]===3||
-                              this.map[ty]?.[tx-1]===3||this.map[ty]?.[tx+1]===3) ? 3 : 1;
-          if (underTile === 3) {
-            ctx.fillStyle = '#183a20';
-          } else {
-            ctx.fillStyle = '#1a1e30';
-          }
-          ctx.fillRect(px, py, T, T);
-
-          // Tree shadow (offset ellipse under canopy)
-          ctx.fillStyle = 'rgba(0,0,0,0.35)';
-          ctx.beginPath();
-          ctx.ellipse(px + T/2 + 3, py + T/2 + 4, T*0.38, T*0.22, 0, 0, Math.PI*2);
-          ctx.fill();
-
-          // Outer canopy (dark green ring)
-          ctx.fillStyle = '#1f5a28';
-          ctx.beginPath();
-          ctx.arc(px + T/2, py + T/2, T*0.42, 0, Math.PI*2);
-          ctx.fill();
-
-          // Mid canopy
-          ctx.fillStyle = '#2d7a38';
-          ctx.beginPath();
-          ctx.arc(px + T/2, py + T/2 - 2, T*0.34, 0, Math.PI*2);
-          ctx.fill();
-
-          // Highlight cluster (top-left lit)
-          ctx.fillStyle = '#3a9a48';
-          ctx.beginPath();
-          ctx.arc(px + T/2 - 4, py + T/2 - 5, T*0.22, 0, Math.PI*2);
-          ctx.fill();
-
-          // Specular top highlight
-          ctx.fillStyle = 'rgba(120,220,100,0.25)';
-          ctx.beginPath();
-          ctx.arc(px + T/2 - 5, py + T/2 - 6, T*0.12, 0, Math.PI*2);
-          ctx.fill();
-
-          // Trunk (tiny, barely visible under canopy)
-          ctx.fillStyle = '#3d2a18';
-          ctx.fillRect(px + T/2 - 2, py + T/2 + 6, 4, 6);
-
-        // ── PARKING LOT (6) ───────────────────────────────────
-        } else if (tile === 6) {
-          // Worn asphalt, lighter than road
-          ctx.fillStyle = '#1c1e2e';
-          ctx.fillRect(px, py, T, T);
-
-          // Parking space lines (white dashes)
-          const pCol = (tx % 3);
-          ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-          ctx.lineWidth = 1;
-          // Vertical bay lines
-          ctx.beginPath();
-          ctx.moveTo(px + 1, py + 4); ctx.lineTo(px + 1, py + T - 4);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(px + T - 1, py + 4); ctx.lineTo(px + T - 1, py + T - 4);
-          ctx.stroke();
-          // Yellow stop line at entry edge
-          if ((ty * 3 + tx) % 3 === 0) {
-            ctx.strokeStyle = 'rgba(255,200,0,0.3)';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.moveTo(px + 3, py + T - 3); ctx.lineTo(px + T - 3, py + T - 3);
-            ctx.stroke();
-          }
-          // Occasional car silhouette
-          if ((tx * 7 + ty * 11) % 9 === 0) {
-            ctx.fillStyle = 'rgba(30,40,60,0.7)';
-            ctx.beginPath();
-            ctx.roundRect(px + 6, py + 8, T - 12, T - 18, 3);
-            ctx.fill();
-            ctx.fillStyle = 'rgba(60,120,180,0.25)';
-            ctx.fillRect(px + 9, py + 10, T - 18, 8); // windshield
-          }
-
-        // ── BUILDING INTERIOR (2) ─────────────────────────────
+          ctx.strokeRect(px + 2, py + 2, TILE - 4, TILE - 4);
+          // Small texture dots
+          ctx.fillStyle = 'rgba(255,255,255,0.02)';
+          ctx.fillRect(px + 8, py + 8, 3, 3);
+          ctx.fillRect(px + 28, py + 20, 3, 3);
+          ctx.fillRect(px + 16, py + 36, 3, 3);
         } else {
-          ctx.fillStyle = '#111323';
-          ctx.fillRect(px, py, T, T);
+          // Empty lot / block interior - dark ground
+          ctx.fillStyle = '#131525';
+          ctx.fillRect(px, py, TILE, TILE);
         }
       }
     }
@@ -1126,23 +861,10 @@ export class BizAmpireEngine {
   _drawBuilding(ctx, bx, by, bw, bh, color, { isLocked, isClosed, isLostToComp, isNearby, biz }) {
     const T = TILE;
 
-    // ── Lot boundary / curb ──────────────────────────
-    // Concrete lot pad — slightly larger than building footprint
-    ctx.fillStyle = '#191b2a';
+    // ── Ground shadow ────────────────────────────────
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.beginPath();
-    ctx.roundRect(bx - 3, by - 3, bw + 6, bh + 6, 5);
-    ctx.fill();
-    // Curb lip highlight
-    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(bx - 3, by - 3, bw + 6, bh + 6, 5);
-    ctx.stroke();
-
-    // ── Drop shadow ──────────────────────────────────
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.beginPath();
-    ctx.roundRect(bx + 6, by + 7, bw, bh, 5);
+    ctx.roundRect(bx + 5, by + 5, bw, bh, 4);
     ctx.fill();
 
     // ── Building state colors ────────────────────────
@@ -1154,14 +876,15 @@ export class BizAmpireEngine {
     } else if (isLostToComp) {
       wallColor = '#2a1016'; roofColor = '#200c10'; borderColor = '#ff4466'; glowColor = '#ff4466';
     } else if (isNearby) {
-      wallColor = color + '30'; roofColor = color + '1a'; borderColor = color; glowColor = color;
+      wallColor = color + '28'; roofColor = color + '18'; borderColor = color; glowColor = color;
     } else {
-      wallColor = color + '14'; roofColor = color + '0c'; borderColor = color + '55'; glowColor = null;
+      wallColor = color + '12'; roofColor = color + '0a'; borderColor = color + '50'; glowColor = null;
     }
 
-    if (glowColor && (isNearby || isClosed || isLostToComp)) {
+    // ── Glow on nearby/status ────────────────────────
+    if (glowColor && (isNearby || isClosed)) {
       ctx.shadowColor = glowColor;
-      ctx.shadowBlur = isNearby ? 20 : 10;
+      ctx.shadowBlur = isNearby ? 18 : 8;
     }
 
     // ── Main wall ────────────────────────────────────
@@ -1175,191 +898,119 @@ export class BizAmpireEngine {
     ctx.shadowBlur = 0;
 
     if (isLocked) {
+      // Locked building — minimal, dark
       this._drawLockedBuilding(ctx, bx, by, bw, bh, color);
       return;
     }
 
-    // ── Roof / parapet band ───────────────────────────
-    ctx.fillStyle = roofColor || (color + '0c');
-    ctx.beginPath();
-    ctx.roundRect(bx + 1, by + 1, bw - 2, T * 0.3, [4, 4, 0, 0]);
-    ctx.fill();
-    // Parapet line
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(bx + 2, by + T * 0.3);
-    ctx.lineTo(bx + bw - 2, by + T * 0.3);
-    ctx.stroke();
+    // ── Roof band ────────────────────────────────────
+    ctx.fillStyle = roofColor || (color + '0a');
+    ctx.fillRect(bx + 2, by + 2, bw - 4, T * 0.35);
 
-    // ── Awning / storefront ───────────────────────────
-    const awningY = by + bh - T * 0.52;
-    const awningH = T * 0.24;
-    const awningColor = isLostToComp ? 'rgba(255,68,102,0.28)' :
-                        isClosed    ? 'rgba(74,222,128,0.20)' :
-                                      (color + '38');
-    ctx.fillStyle = awningColor;
-    ctx.beginPath();
-    ctx.roundRect(bx + 1, awningY, bw - 2, awningH, [0, 0, 2, 2]);
-    ctx.fill();
-    // Awning stripe pattern
-    for (let s = 0; s < 6; s++) {
-      ctx.fillStyle = 'rgba(255,255,255,0.05)';
-      const sw = (bw - 4) / 6;
-      ctx.fillRect(bx + 2 + s * sw, awningY, sw / 2, awningH);
-    }
-    // Awning bottom fringe dots
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    for (let f = 0; f < Math.floor(bw / 8); f++) {
-      ctx.beginPath();
-      ctx.arc(bx + 4 + f * 8, awningY + awningH, 1.5, 0, Math.PI * 2);
-      ctx.fill();
+    // ── Awning / storefront band ─────────────────────
+    const awningY = by + bh - T * 0.55;
+    const awningH = T * 0.22;
+    ctx.fillStyle = isLostToComp ? 'rgba(255,68,102,0.25)' : isClosed ? 'rgba(74,222,128,0.18)' : (color + '30');
+    ctx.fillRect(bx + 1, awningY, bw - 2, awningH);
+    // Awning stripes
+    for (let s = 0; s < 5; s++) {
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      ctx.fillRect(bx + 2 + s * (bw - 4) / 5, awningY, (bw - 4) / 10, awningH);
     }
 
-    // ── Windows ───────────────────────────────────────
-    const winRows = 2;
-    const winCols = bw > T * 2.5 ? 3 : 2;
-    const winW = Math.floor((bw - 12) / winCols) - 3;
-    const winH = Math.floor((awningY - by - T * 0.38) / winRows) - 4;
-    const winStartY = by + T * 0.38;
+    // ── Windows (2 rows) ─────────────────────────────
+    const winRows = 2, winCols = bw > T * 2.5 ? 3 : 2;
+    const winW = Math.floor((bw - 10) / winCols) - 2;
+    const winH = Math.floor((awningY - by - T * 0.4) / winRows) - 3;
+    const winStartY = by + T * 0.42;
 
     for (let r = 0; r < winRows; r++) {
       for (let c = 0; c < winCols; c++) {
-        const wx = bx + 6 + c * ((bw - 12) / winCols) + 1;
-        const wy = winStartY + r * (winH + 5);
-        const lit = ((bx + by + r * 7 + c * 13) % 5) < 3;
+        const wx = bx + 5 + c * ((bw - 10) / winCols) + 1;
+        const wy = winStartY + r * (winH + 4);
+        const lit = ((bx + by + r * 7 + c * 13) % 5) < 3; // deterministic "lights on"
 
-        // Reveal (recessed window inset)
-        ctx.fillStyle = 'rgba(0,0,0,0.55)';
-        ctx.fillRect(wx - 2, wy - 2, winW + 4, winH + 4);
+        // Window frame
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(wx - 1, wy - 1, winW + 2, winH + 2);
 
-        // Glass
-        if (isLostToComp)      ctx.fillStyle = 'rgba(255,68,102,0.15)';
-        else if (isClosed)     ctx.fillStyle = 'rgba(74,222,128,0.22)';
-        else if (lit)          ctx.fillStyle = color + '38';
-        else                   ctx.fillStyle = 'rgba(8,10,20,0.85)';
+        // Window glass
+        if (isLostToComp) {
+          ctx.fillStyle = 'rgba(255,68,102,0.15)';
+        } else if (isClosed) {
+          ctx.fillStyle = 'rgba(74,222,128,0.2)';
+        } else if (lit) {
+          ctx.fillStyle = color + '35';
+        } else {
+          ctx.fillStyle = 'rgba(10,12,24,0.8)';
+        }
         ctx.fillRect(wx, wy, winW, winH);
 
-        // Sill highlight
-        ctx.fillStyle = 'rgba(255,255,255,0.04)';
-        ctx.fillRect(wx, wy + winH, winW, 2);
-
-        // Cross-frame divider
-        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(wx + winW/2, wy); ctx.lineTo(wx + winW/2, wy + winH);
-        ctx.stroke();
-
-        // Reflection glint
+        // Window reflection glint
         if (lit && !isLostToComp) {
-          ctx.fillStyle = 'rgba(255,255,255,0.14)';
-          ctx.fillRect(wx + 1, wy + 1, Math.floor(winW * 0.38), 2);
+          ctx.fillStyle = 'rgba(255,255,255,0.12)';
+          ctx.fillRect(wx + 1, wy + 1, Math.floor(winW * 0.4), 2);
         }
+
+        // Window frame outline
+        ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(wx, wy, winW, winH);
       }
     }
 
     // ── Front door ───────────────────────────────────
-    const doorW = T * 0.3, doorH = T * 0.38;
+    const doorW = T * 0.32, doorH = T * 0.4;
     const doorX = bx + bw / 2 - doorW / 2;
-    const doorY = awningY - doorH + 1;
-    // Door surround
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(doorX - 2, doorY - 1, doorW + 4, doorH + 2);
-    // Door panel
-    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    const doorY = awningY - doorH;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.fillRect(doorX, doorY, doorW, doorH);
-    // Door frame
-    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
     ctx.lineWidth = 0.5;
     ctx.strokeRect(doorX, doorY, doorW, doorH);
-    // Glass panel in door
-    ctx.fillStyle = 'rgba(100,180,255,0.07)';
-    ctx.fillRect(doorX + 2, doorY + 2, doorW - 4, doorH * 0.55);
-    // Handle
-    ctx.fillStyle = color + 'bb';
+    // Door handle
+    ctx.fillStyle = color + 'aa';
     ctx.beginPath();
-    ctx.arc(doorX + doorW * 0.72, doorY + doorH * 0.52, 1.8, 0, Math.PI * 2);
+    ctx.arc(doorX + doorW * 0.7, doorY + doorH * 0.55, 1.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // ── Steps / entrance mat ─────────────────────────
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
-    ctx.fillRect(doorX - 2, doorY + doorH, doorW + 4, 3);
-
-    // ── Street furniture (lamp post on left side of lot) ──
-    // Draw only for buildings with even x-tile index
-    const bTileX = Math.round(bx / T);
-    if (bTileX % 2 === 0 && !isLocked) {
-      const lampX = bx - 5, lampY = by + bh * 0.35;
-      // Post
-      ctx.strokeStyle = 'rgba(200,200,220,0.3)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(lampX, lampY + 14); ctx.lineTo(lampX, lampY);
-      ctx.stroke();
-      // Arm
-      ctx.beginPath();
-      ctx.moveTo(lampX, lampY); ctx.lineTo(lampX + 5, lampY - 3);
-      ctx.stroke();
-      // Light glow
-      ctx.fillStyle = 'rgba(255,220,100,0.5)';
-      ctx.shadowColor = 'rgba(255,220,100,0.8)';
-      ctx.shadowBlur = 8;
-      ctx.beginPath();
-      ctx.arc(lampX + 5, lampY - 3, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    }
-
-    // ── Business sign above awning ────────────────────
-    ctx.fillStyle = color + 'dd';
+    // ── Business sign above awning ───────────────────
+    const signY = awningY - 2;
+    ctx.fillStyle = color + 'cc';
     ctx.font = 'bold 7px "General Sans", sans-serif';
     ctx.textAlign = 'center';
     const signText = biz?.name?.split(' ').slice(0, 2).join(' ') || '';
-    ctx.fillText(signText, bx + bw / 2, awningY - 2);
+    ctx.fillText(signText, bx + bw / 2, signY);
 
-    // ── Business icon on roof band ────────────────────
+    // ── Business icon ────────────────────────────────
     if (biz) {
-      const iconSize = Math.floor(T * 0.40);
+      const iconSize = T * 0.42;
       ctx.font = `${iconSize}px serif`;
       ctx.textAlign = 'center';
-      ctx.fillText(biz.icon, bx + bw / 2, by + T * 0.32);
+      ctx.fillText(biz.icon, bx + bw / 2, by + T * 0.34);
     }
 
-    // ── Status badge ──────────────────────────────────
+    // ── Status overlay ───────────────────────────────
     if (isClosed) {
-      ctx.fillStyle = 'rgba(0,20,10,0.88)';
-      ctx.strokeStyle = '#4ade80';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(bx + bw/2 - 20, by + bh - 12, 40, 11, 3);
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#4ade80';
+      ctx.fillStyle = 'rgba(74,222,128,0.9)';
       ctx.font = 'bold 7px "General Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('✓ CLIENT', bx + bw / 2, by + bh - 4);
     } else if (isLostToComp) {
-      ctx.fillStyle = 'rgba(20,0,5,0.88)';
-      ctx.strokeStyle = '#ff4466';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(bx + bw/2 - 18, by + bh - 12, 36, 11, 3);
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#ff4466';
+      ctx.fillStyle = 'rgba(255,68,102,0.9)';
       ctx.font = 'bold 7px "General Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('✗ TAKEN', bx + bw / 2, by + bh - 4);
     }
 
-    // ── Warmth dot ────────────────────────────────────
+    // ── Warmth dot ───────────────────────────────────
     if (biz && !isClosed && biz.warmth > 0) {
       const dotColors = ['#f5a623', '#ffd166', '#4ade80'];
-      const dc = dotColors[Math.min(biz.warmth - 1, 2)];
-      ctx.fillStyle = dc;
-      ctx.shadowColor = dc;
-      ctx.shadowBlur = 7;
+      ctx.fillStyle = dotColors[Math.min(biz.warmth - 1, 2)];
+      ctx.shadowColor = dotColors[Math.min(biz.warmth - 1, 2)];
+      ctx.shadowBlur = 6;
       ctx.beginPath();
-      ctx.arc(bx + bw - 5, by + 6, 4, 0, Math.PI * 2);
+      ctx.arc(bx + bw - 6, by + 6, 4, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
     }
@@ -1376,23 +1027,17 @@ export class BizAmpireEngine {
 
     // Background
     mc.clearRect(0, 0, mw, mh);
-    mc.fillStyle = '#0e1020';
+    mc.fillStyle = '#0c0d14';
     mc.fillRect(0, 0, mw, mh);
 
-    // Tile-accurate minimap (roads, parks, water, trees)
+    // Road lines (thin grid)
+    mc.strokeStyle = 'rgba(255,255,255,0.06)';
+    mc.lineWidth = 0.5;
     for (let ty = 0; ty < MAP_H; ty++) {
       for (let tx = 0; tx < MAP_W; tx++) {
-        const t = this.map[ty]?.[tx];
-        let col = null;
-        if      (t === 0) col = '#21233a';  // road
-        else if (t === 1) col = '#181a2c';  // sidewalk
-        else if (t === 3) col = '#1a3d20';  // park/grass
-        else if (t === 4) col = '#0d2a48';  // water
-        else if (t === 5) col = '#1f4a25';  // trees
-        else if (t === 6) col = '#1c1e2e';  // parking
-        if (col) {
-          mc.fillStyle = col;
-          mc.fillRect(tx * TILE * scaleX, ty * TILE * scaleY, TILE * scaleX + 0.5, TILE * scaleY + 0.5);
+        if (this.map[ty]?.[tx] === 0) {
+          mc.fillStyle = '#1c1e30';
+          mc.fillRect(tx * TILE * scaleX, ty * TILE * scaleY, TILE * scaleX, TILE * scaleY);
         }
       }
     }
@@ -1659,109 +1304,73 @@ export class BizAmpireEngine {
     const bobY = Math.sin(Date.now() / 600 + idx * 1.3) * -1;
     const oy = bobY;
 
-    // Unique palette per competitor
-    const npcPalettes = [
-      { suit: '#5a0a1e', suitDark: '#420814', hair: '#1a0a30', glow: '#ff4466', nameGlow: 'rgba(255,68,102,0.55)' },
-      { suit: '#1a3a6a', suitDark: '#112a50', hair: '#0a1a0a', glow: '#4488ff', nameGlow: 'rgba(68,136,255,0.55)' },
-      { suit: '#4a1a5a', suitDark: '#360f42', hair: '#2a0a0a', glow: '#cc44ff', nameGlow: 'rgba(200,68,255,0.55)' },
-    ];
-    const pal = npcPalettes[idx % npcPalettes.length];
-
-    // Ground shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
-    ctx.ellipse(px, py + 14, 10, 3.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(px, py + 14, 9, 3, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    // Body — red/competitor color suit
+    ctx.fillStyle = '#5a1020';
+    ctx.beginPath();
+    ctx.roundRect(px - 6, py - 3 + oy, 12, 11, 2);
+    ctx.fill();
+
+    // Collar
+    ctx.fillStyle = '#7a1830';
+    ctx.fillRect(px - 1, py - 3 + oy, 2, 3);
 
     // Legs
-    ctx.fillStyle = '#181828';
+    ctx.fillStyle = '#1a1a2e';
     ctx.beginPath(); ctx.roundRect(px - 4, py + 8 + oy, 3.5, 7, 2); ctx.fill();
     ctx.beginPath(); ctx.roundRect(px + 0.5, py + 8 + oy, 3.5, 7, 2); ctx.fill();
-    // Shoes
-    ctx.fillStyle = '#0a0a14';
-    ctx.beginPath(); ctx.ellipse(px - 2, py + 16 + oy, 3.5, 2, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(px + 2, py + 16 + oy, 3.5, 2, 0, 0, Math.PI*2); ctx.fill();
-
-    // Body suit
-    ctx.fillStyle = pal.suit;
-    ctx.beginPath();
-    ctx.roundRect(px - 7, py - 3 + oy, 14, 12, 2);
-    ctx.fill();
-
-    // Lapels
-    ctx.fillStyle = pal.suitDark;
-    ctx.beginPath();
-    ctx.moveTo(px - 2, py - 3 + oy);
-    ctx.lineTo(px, py + 0 + oy);
-    ctx.lineTo(px + 2, py - 3 + oy);
-    ctx.closePath();
-    ctx.fill();
-
-    // Tie (glowing color)
-    ctx.fillStyle = pal.glow + 'cc';
-    ctx.fillRect(px - 1, py - 1 + oy, 2, 6);
 
     // Arms
-    ctx.fillStyle = pal.suit;
-    ctx.beginPath(); ctx.roundRect(px - 9, py - 1 + oy, 2.5, 8, 1); ctx.fill();
-    ctx.beginPath(); ctx.roundRect(px + 6.5, py - 1 + oy, 2.5, 8, 1); ctx.fill();
-    // Hands
-    ctx.fillStyle = '#c09070';
-    ctx.beginPath(); ctx.arc(px - 8, py + 7.5 + oy, 2, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(px + 8, py + 7.5 + oy, 2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#5a1020';
+    ctx.beginPath(); ctx.roundRect(px - 8, py - 1 + oy, 2.5, 7, 1); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(px + 5.5, py - 1 + oy, 2.5, 7, 1); ctx.fill();
 
-    // Neck
-    ctx.fillStyle = '#b07858';
-    ctx.fillRect(px - 2, py - 5 + oy, 4, 4);
-
-    // Head
-    const skinShades = ['#c07060', '#c88050', '#b86850'];
-    ctx.fillStyle = skinShades[idx % skinShades.length];
+    // Head — slightly different shade per competitor
+    const headShades = ['#c07050', '#b06848', '#d08860'];
+    ctx.fillStyle = headShades[idx % headShades.length];
     ctx.beginPath();
-    ctx.arc(px, py - 13 + oy, 7, 0, Math.PI * 2);
+    ctx.arc(px, py - 13 + oy, 6.5, 0, Math.PI * 2);
     ctx.fill();
 
     // Hair
-    ctx.fillStyle = pal.hair;
+    ctx.fillStyle = '#1a1a2e';
     ctx.beginPath();
-    ctx.arc(px, py - 14 + oy, 7, -Math.PI * 0.9, Math.PI * 0.1);
+    ctx.arc(px, py - 14 + oy, 6.5, -Math.PI * 0.85, Math.PI * 0.05);
     ctx.fill();
 
-    // Menacing eyes with glow
-    ctx.fillStyle = '#1a0a0a';
-    ctx.beginPath(); ctx.arc(px - 2.5, py - 13 + oy, 1.8, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(px + 2.5, py - 13 + oy, 1.8, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = pal.glow;
-    ctx.shadowColor = pal.glow;
-    ctx.shadowBlur = 6;
-    ctx.beginPath(); ctx.arc(px - 2.5, py - 13 + oy, 1, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(px + 2.5, py - 13 + oy, 1, 0, Math.PI*2); ctx.fill();
-    ctx.shadowBlur = 0;
+    // Eyes (menacing)
+    ctx.fillStyle = '#ff4466';
+    ctx.beginPath(); ctx.arc(px - 2, py - 13 + oy, 1.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(px + 2, py - 13 + oy, 1.2, 0, Math.PI * 2); ctx.fill();
 
-    // Aura ring
-    ctx.shadowColor = pal.glow;
-    ctx.shadowBlur = 14;
-    ctx.strokeStyle = pal.nameGlow;
+    // Competitor glow
+    ctx.shadowColor = '#ff4466';
+    ctx.shadowBlur = 12;
+    ctx.strokeStyle = 'rgba(255,68,102,0.25)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(px, py - 2 + oy, 15, 0, Math.PI * 2);
+    ctx.arc(px, py + oy, 14, 0, Math.PI * 2);
     ctx.stroke();
     ctx.shadowBlur = 0;
 
     // Name tag
-    const nameTag = comp.name || ['QuickClose', 'RegionPro', 'Pinnacle'][idx % 3];
-    const shortName = nameTag.split(' ')[0].substring(0, 10);
-    const tagW = Math.min(52, shortName.length * 5.5 + 14);
-    ctx.fillStyle = 'rgba(8,4,16,0.92)';
-    ctx.strokeStyle = pal.nameGlow;
+    const names = ['QuickClose', 'RegionPro', 'Pinnacle'];
+    const nameTag = names[idx % names.length];
+    ctx.fillStyle = 'rgba(40,5,10,0.9)';
+    ctx.strokeStyle = 'rgba(255,68,102,0.5)';
     ctx.lineWidth = 0.8;
     ctx.beginPath();
-    ctx.roundRect(px - tagW/2, py - 32 + oy, tagW, 12, 3);
+    ctx.roundRect(px - 22, py - 30 + oy, 44, 12, 3);
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = pal.glow;
+    ctx.fillStyle = '#ff4466';
     ctx.font = 'bold 7px "General Sans", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(shortName, px, py - 22 + oy);
+    ctx.fillText(nameTag, px, py - 21 + oy);
   }
 
   _drawInteractPrompt(ctx, bld) {
