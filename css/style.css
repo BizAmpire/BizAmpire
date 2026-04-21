@@ -104,8 +104,8 @@ img, canvas { display: block; max-width: 100%; }
   top: 0; left: 0;
   width: 100vw;
   height: 100vh;
-  /* Don't let CSS constrain the canvas element dimensions */
   max-width: none !important;
+  z-index: 1;  /* below all UI screens */
 }
 
 /* ── Panel utility ───────────────────────────────────────── */
@@ -260,12 +260,13 @@ img, canvas { display: block; max-width: 100%; }
 .screen {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(28,18,8,0.95);
   backdrop-filter: blur(4px);
+  pointer-events: auto;  /* screens always capture all clicks */
 }
 .screen.hidden { display: none; }
 

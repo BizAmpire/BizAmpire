@@ -78,9 +78,53 @@ function generateCityMap() {
     [11,57],[19,57],[27,57],
     [14,15],[22,15],[14,45],[22,45],
     [32,35],[38,35],[3,35],[3,44],
+    // Extra street trees
+    [2,15],[2,25],[2,35],[2,45],[2,50],
+    [7,15],[7,25],[7,35],[7,45],
+    [15,2],[23,2],[31,2],[38,2],
+    [15,57],[23,57],[31,57],[38,57],
+    [12,10],[12,20],[12,30],[12,40],[12,50],
+    [20,10],[20,20],[20,30],[20,40],[20,50],
+    [28,10],[28,20],[28,30],[28,40],[28,50],
+    [35,10],[35,20],[35,30],[35,40],[35,50],
   ];
   for (const [ty,tx] of streetTrees) {
     if (ty>=0&&ty<MAP_H&&tx>=0&&tx<MAP_W&&map[ty]?.[tx]===1) map[ty][tx]=5;
+  }
+
+  // ── Interior trees scattered in block areas (Pokémon style) ───────
+  const interiorTrees = [
+    [2,2],[2,3],[3,7],[3,8],[6,2],[6,3],
+    [2,12],[2,13],[3,16],[6,13],[6,14],
+    [2,22],[3,25],[3,26],[6,22],[6,23],
+    [2,32],[3,36],[6,33],[6,37],
+    [2,42],[3,46],[2,48],[6,43],[6,47],
+    [2,52],[3,55],[6,53],
+    [10,2],[10,3],[11,7],[10,8],
+    [10,12],[11,14],[10,16],
+    [10,22],[10,23],[11,26],
+    [10,32],[10,36],[11,37],
+    [10,42],[10,43],[11,47],
+    [16,2],[17,3],[16,7],
+    [16,12],[17,16],[16,14],
+    [16,22],[16,26],[17,24],
+    [16,42],[17,46],[16,44],
+    [16,52],[17,54],
+    [24,2],[24,3],[25,7],
+    [24,12],[25,14],[24,16],
+    [24,22],[24,26],[25,24],
+    [24,32],[25,34],[24,36],
+    [24,42],[24,46],[25,44],
+    [24,52],[25,55],
+    [32,2],[32,3],[33,7],
+    [32,12],[33,14],[32,16],
+    [32,22],[32,26],[33,24],
+    [32,32],[33,34],[32,36],
+    [32,42],[32,46],[33,44],
+    [32,52],[33,54],
+  ];
+  for (const [ty,tx] of interiorTrees) {
+    if (ty>=0&&ty<MAP_H&&tx>=0&&tx<MAP_W&&map[ty]?.[tx]===2) map[ty][tx]=5;
   }
 
   // ── Parking lots ───────────────────────────────────────────
@@ -1037,8 +1081,9 @@ export class BizAmpireEngine {
 
         // ── TREE CANOPY ───────────────────────────────────────
         } else if (tile === 5) {
-          // Ground underneath
-          ctx.fillStyle = (this.map[ty+1]?.[tx]===3||this.map[ty]?.[tx+1]===3) ? C.grassDk : '#1a1e30';
+          // Ground underneath — always grass since everything is green
+          const treeGroundV = (tx + ty) % 2;
+          ctx.fillStyle = treeGroundV === 0 ? '#488a30' : '#387820';
           ctx.fillRect(px, py, T, T);
 
           // Pixel-art tree: 3-layer hard-edged circles, no blur
@@ -1097,17 +1142,35 @@ export class BizAmpireEngine {
             ctx.strokeRect(px + 6, py + 6, T - 12, T - 16);
           }
 
-        // ── BUILDING LOT / ALLEY (tile=2) ────────────────────
+        // ── BUILDING LOT (tile=2) ─────────────────────────────
+        // Rendered as GRASS — Pokémon FireRed style: world is green,
+        // buildings sit on the grass, no dark block zones
         } else {
-          // Render as concrete-coloured lot space — same as sidewalk but darker
-          // This breaks up the "giant dark block" visual
-          const alt = (tx + ty) % 2;
-          ctx.fillStyle = alt ? '#16192a' : '#131624';
+          // Checkerboard grass (same as park tile, just slightly darker hue)
+          const v2 = (tx + ty) % 2;
+          ctx.fillStyle = v2 === 0 ? '#488a30' : '#387820';
           ctx.fillRect(px, py, T, T);
-          // Subtle grout lines so it reads as individual tiles
-          ctx.fillStyle = 'rgba(255,255,255,0.025)';
-          ctx.fillRect(px, py, T, 1);
-          ctx.fillRect(px, py, 1, T);
+
+          // Subtle darker grass detail / blade marks
+          if ((tx * 5 + ty * 9) % 7 === 0) {
+            ctx.fillStyle = '#2d6818';
+            ctx.fillRect(px + (tx*7)%34 + 5,  py + (ty*11)%34 + 5,  2, 4);
+            ctx.fillRect(px + (tx*13)%34 + 12, py + (ty*7)%34 + 10,  2, 4);
+          }
+          // Occasional lighter blade
+          if ((tx * 11 + ty * 3) % 11 === 0) {
+            ctx.fillStyle = '#60aa38';
+            ctx.fillRect(px + (tx*9)%30 + 8,  py + (ty*13)%30 + 6,  2, 3);
+          }
+          // Scattered tiny flowers
+          if ((tx * 7 + ty * 17) % 23 === 0) {
+            ctx.fillStyle = '#f8e040';
+            ctx.fillRect(px + (tx*11)%32 + 8, py + (ty*7)%32 + 8, 3, 3);
+          }
+          if ((tx * 19 + ty * 5) % 29 === 0) {
+            ctx.fillStyle = '#f8a0c0';
+            ctx.fillRect(px + (tx*7)%28 + 12, py + (ty*11)%28 + 14, 3, 3);
+          }
         }
       }
     }
@@ -1429,7 +1492,7 @@ export class BizAmpireEngine {
 
     // Background
     mc.clearRect(0, 0, mw, mh);
-    mc.fillStyle = '#0e1020';
+    mc.fillStyle = '#3a6e22';  // warm grass green base
     mc.fillRect(0, 0, mw, mh);
 
     // Tile-accurate minimap (roads, parks, water, trees)
@@ -1437,12 +1500,13 @@ export class BizAmpireEngine {
       for (let tx = 0; tx < MAP_W; tx++) {
         const t = this.map[ty]?.[tx];
         let col = null;
-        if      (t === 0) col = '#21233a';  // road
-        else if (t === 1) col = '#181a2c';  // sidewalk
-        else if (t === 3) col = '#1a3d20';  // park/grass
-        else if (t === 4) col = '#0d2a48';  // water
-        else if (t === 5) col = '#1f4a25';  // trees
-        else if (t === 6) col = '#1c1e2e';  // parking
+        if      (t === 0) col = '#706050';  // road — warm grey
+        else if (t === 1) col = '#a89870';  // sidewalk — warm cream
+        else if (t === 2) col = '#3a6e22';  // grass block — green
+        else if (t === 3) col = '#4a8a28';  // park/grass — brighter green
+        else if (t === 4) col = '#2858a8';  // water — blue
+        else if (t === 5) col = '#285820';  // trees — dark green
+        else if (t === 6) col = '#585048';  // parking — dark asphalt
         if (col) {
           mc.fillStyle = col;
           mc.fillRect(tx * TILE * scaleX, ty * TILE * scaleY, TILE * scaleX + 0.5, TILE * scaleY + 0.5);
