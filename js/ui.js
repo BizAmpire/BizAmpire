@@ -14,16 +14,12 @@ function pluralize(str) {
   if (!str) return str;
   const s = str.trim();
   const low = s.toLowerCase();
-  // Ends in -cy → -cies (Agency → Agencies)
-  if (low.endsWith('cy')) return s.slice(0, -2) + 'ies';
-  // Ends in -sy → -sies (courtesy: uncommon but handled)
-  // Ends in -s, -sh, -ch, -x, -z → -es (Business → Businesses)
+  // Consonant + y → -ies (Agency→Agencies, Company→Companies)
+  if (/[^aeiou]y$/i.test(s)) return s.slice(0, -1) + 'ies';
+  // Ends in -s, -sh, -ch, -x, -z → -es (Business→Businesses)
   if (/(?:s|sh|ch|x|z)$/i.test(s)) return s + 'es';
   // Ends in -fe → -ves
   if (low.endsWith('fe')) return s.slice(0, -2) + 'ves';
-  // Ends in consonant + y → -ies
-  if (/[^aeiou]y$/i.test(s)) return s.slice(0, -1) + 'ies';
-  // Default → add s
   return s + 's';
 }
 
@@ -448,9 +444,9 @@ export class UIManager {
         <div style="padding:var(--s3) var(--s4);background:rgba(155,114,248,0.06);border:1px solid rgba(155,114,248,0.2);border-radius:var(--r-md);font-size:var(--text-sm);font-style:italic;color:var(--text-muted);margin-top:var(--s2);">
           "The best salespeople know more about the customer's business than the customer." — Challenger Sale
         </div>
-        <div style="display:flex;gap:var(--s3);margin-top:var(--s4);">
-          <button class="btn btn-primary" id="btn-complete-recon">✓ Brief Complete — Start Approach (+1 Rapport)</button>
-          <button class="btn btn-secondary" id="btn-skip-recon">Skip Recon — Go in Cold</button>
+        <div style="display:flex;flex-wrap:wrap;gap:var(--s3);margin-top:var(--s4);">
+          <button class="btn btn-primary" id="btn-complete-recon" style="flex:1;min-width:180px">✓ Brief Complete — +1 Rapport</button>
+          <button class="btn btn-secondary" id="btn-skip-recon" style="flex:1;min-width:140px">Skip Recon</button>
         </div>
       </div>
     `;
@@ -538,8 +534,8 @@ export class UIManager {
                 data-choice='${JSON.stringify({rapport: c.rapport, technique: c.technique})}'
                 ${locked ? 'disabled' : ''}>
           <span class="choice-key">${i+1}</span>
-          <span class="choice-text">${c.text}</span>
-          <div>
+          <div class="choice-body">
+            <span class="choice-text">${c.text}</span>
             ${c.badge ? `<span class="choice-badge">${c.badge}</span>` : ''}
             ${locked ? `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">🔒 Needs ${c.requiresSkill.replace(/_/g,' ')}</span>` : ''}
           </div>
@@ -597,13 +593,17 @@ export class UIManager {
       <div class="choices">
         <button class="choice-btn technique" data-response="good" data-qid="${q.skillTag}">
           <span class="choice-key">1</span>
-          <span class="choice-text">${q.goodResponse.replace('{impliedCost}', `$${Math.round(biz.budget[0] * 0.5).toLocaleString()}/month`).replace('{impliedRevenueLoss}', `$${biz.budget[0].toLocaleString()}+`).replace('{pain}', _painLower).replace('{outcome}', biz.outcome || 'sustainable, scalable growth without the operational drag')}</span>
+          <div class="choice-body">
+            <span class="choice-text">${q.goodResponse.replace('{impliedCost}', `$${Math.round(biz.budget[0] * 0.5).toLocaleString()}/month`).replace('{impliedRevenueLoss}', `$${biz.budget[0].toLocaleString()}+`).replace('{pain}', _painLower).replace('{outcome}', biz.outcome || 'sustainable, scalable growth without the operational drag')}</span>
           <span class="choice-badge">${hasSkill ? `+${q.rapportOnGood} Rapport` : 'Partial effect'}</span>
+          </div>
         </button>
         <button class="choice-btn" data-response="bad" data-qid="${q.skillTag}">
           <span class="choice-key">2</span>
-          <span class="choice-text">${q.badResponse}</span>
+          <div class="choice-body">
+            <span class="choice-text">${q.badResponse}</span>
           <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Missed opportunity</span>
+          </div>
         </button>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:var(--s3)">
@@ -643,19 +643,25 @@ export class UIManager {
       <div class="choices">
         <button class="choice-btn" data-pitch="bad">
           <span class="choice-key">1</span>
-          <span class="choice-text">"We're ${businessName} and we provide ${state.businessDescription || 'solutions for businesses like yours'}. We've been in business for 3 years and our clients see real results."</span>
+          <div class="choice-body">
+            <span class="choice-text">"We're ${businessName} and we provide ${state.businessDescription || 'solutions for businesses like yours'}. We've been in business for 3 years and our clients see real results."</span>
           <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Feature-led pitch</span>
+          </div>
         </button>
         <button class="choice-btn technique" data-pitch="good">
           <span class="choice-key">2</span>
-          <span class="choice-text">"Based on what you told me — ${biz.pain || 'your growth challenge'} — I help businesses like yours solve exactly that. Not with promises, but with a specific outcome: ${state.businessDescription || 'measurable results that compound over time'}. That's what we should talk about."</span>
+          <div class="choice-body">
+            <span class="choice-text">"Based on what you told me — ${biz.pain || 'your growth challenge'} — I help businesses like yours solve exactly that. Not with promises, but with a specific outcome: ${state.businessDescription || 'measurable results that compound over time'}. That's what we should talk about."</span>
           <span class="choice-badge">StoryBrand — outcome-led</span>
+          </div>
         </button>
         ${hasChallenger ? `
         <button class="choice-btn technique" data-pitch="technique">
           <span class="choice-key">3</span>
-          <span class="choice-text">"Most ${pluralize(biz.type)} I work with think the problem is ${biz.pain?.split(' ').slice(0,5).join(' ')}... but what's really happening underneath is a systems gap. Here's what top performers in your space do differently to pull ahead."</span>
+          <div class="choice-body">
+            <span class="choice-text">"Most ${pluralize(biz.type)} I work with think the problem is ${biz.pain?.split(' ').slice(0,5).join(' ')}... but what's really happening underneath is a systems gap. Here's what top performers in your space do differently to pull ahead."</span>
           <span class="choice-badge" style="color:var(--violet)">🔬 Challenger Insight</span>
+          </div>
         </button>
         ` : ''}
       </div>
@@ -758,13 +764,11 @@ export class UIManager {
                     data-objection="${objectionType}" data-response="${key}"
                     ${locked ? 'disabled' : ''}>
               <span class="choice-key">${i+1}</span>
-              <div style="flex:1">
-                <div class="choice-text">${c.text.replace('{impliedCost}', `$${Math.round(biz.budget[0]*0.5).toLocaleString()}/month`).replace('{impliedAnnual}', `$${(biz.budget[0]*0.5*12).toLocaleString()}`).replace('{price}', enc.stateFlags?.price ? `$${enc.stateFlags.price.toLocaleString()}/mo` : 'our fee')}</div>
-                ${c.framework ? `<div style="font-size:var(--text-xs);color:var(--violet);margin-top:var(--s1)">${c.framework}</div>` : ''}
-              </div>
-              <div>
+              <div class="choice-body">
+                <span class="choice-text">${c.text.replace('{impliedCost}', `$${Math.round(biz.budget[0]*0.5).toLocaleString()}/month`).replace('{impliedAnnual}', `$${(biz.budget[0]*0.5*12).toLocaleString()}`).replace('{price}', enc.stateFlags?.price ? `$${enc.stateFlags.price.toLocaleString()}/mo` : 'our fee')}</span>
+                ${c.framework ? `<span class="choice-badge" style="color:var(--violet);background:rgba(155,114,248,0.1)">${c.framework}</span>` : ''}
                 <span class="choice-badge ${c.rapport <= 0 ? 'style="color:var(--crimson);background:rgba(255,68,102,.1)"' : ''}">${c.label}</span>
-                ${locked ? `<div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">🔒 Requires ${c.skillRequired?.replace(/_/g,' ')}</div>` : ''}
+                ${locked ? `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">🔒 Requires ${c.skillRequired?.replace(/_/g,' ')}</span>` : ''}
               </div>
             </button>
           `;
@@ -805,18 +809,24 @@ export class UIManager {
       <div class="choices">
         <button class="choice-btn technique" data-close="close_direct">
           <span class="choice-key">1</span>
-          <span class="choice-text">"Based on everything we discussed, I'd love to move forward. Can we get started this month for $${price.toLocaleString()}/mo?"</span>
+          <div class="choice-body">
+            <span class="choice-text">"Based on everything we discussed, I'd love to move forward. Can we get started this month for $${price.toLocaleString()}/mo?"</span>
           <span class="choice-badge">Direct Close — then silence</span>
+          </div>
         </button>
         <button class="choice-btn technique" data-close="pilot_offer">
           <span class="choice-key">2</span>
-          <span class="choice-text">"What if we do a 30-day pilot — reduced scope, specific metrics. If we hit them, we scale. No risk on your end."</span>
+          <div class="choice-body">
+            <span class="choice-text">"What if we do a 30-day pilot — reduced scope, specific metrics. If we hit them, we scale. No risk on your end."</span>
           <span class="choice-badge">Lean Startup — MVP Pilot</span>
+          </div>
         </button>
         <button class="choice-btn" data-close="schedule_followup">
           <span class="choice-key">3</span>
-          <span class="choice-text">"I don't want to rush you. Can we schedule a follow-up this week to get your questions answered?"</span>
+          <div class="choice-body">
+            <span class="choice-text">"I don't want to rush you. Can we schedule a follow-up this week to get your questions answered?"</span>
           <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Soft close — lower odds</span>
+          </div>
         </button>
       </div>
     `;
@@ -1082,6 +1092,7 @@ export class UIManager {
     const panel = document.getElementById('management-panel');
     if (!panel || !this.state) return;
     const state = this.state;
+    const screen = document.getElementById('screen-management');
     const canHire = state.totalDeals >= 5;
 
     const clientsHTML = state.activeClients.length > 0
@@ -1106,7 +1117,7 @@ export class UIManager {
             <div class="employee-avatar">${e.icon}</div>
             <div class="employee-info">
               <div class="employee-name">${e.name}</div>
-              <div class="employee-role">${e.name}</div>
+              <div class="employee-role">${e.role || e.description || e.id?.replace(/_/g,' ')}</div>
               <div class="employee-stats">
                 <div class="emp-stat">Cost: <span>$${e.cost?.toLocaleString()}/mo</span></div>
                 <div class="emp-stat">Reliability: <span>${e.reliability}/5</span></div>
@@ -1196,8 +1207,6 @@ export class UIManager {
         this._renderManagement();
       });
     });
-
-    const screen = document.getElementById('screen-management');
   }
 
   // ── Meta-Game Events ───────────────────────────────────────
@@ -1230,12 +1239,7 @@ export class UIManager {
     }, 4000);
   }
 
-  updateDebug(data) {
-    if (!this.el.debug) return;
-    this.el.debug.style.display = 'block';
-    this.el.debug.textContent =
-      `FPS:${Math.round(data.fps)} Frame:${data.frameTime?.toFixed(1)}ms\n` +
-      `Cam:(${Math.round(data.cam?.x)},${Math.round(data.cam?.y)}) Player:(${Math.round(data.player?.x)},${Math.round(data.player?.y)})\n` +
-      `Nearby: ${data.nearby}`;
+  updateDebug(_data) {
+    // Debug overlay disabled in production
   }
 }

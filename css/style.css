@@ -278,7 +278,7 @@ img, canvas { display: block; max-width: 100%; }
 }
 .title-logo {
   font-family: var(--font-display);
-  font-size: var(--text-hero);
+  font-size: clamp(2rem, 8vw, 5rem);
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -645,6 +645,8 @@ img, canvas { display: block; max-width: 100%; }
   color: var(--text);
   transition: all var(--ease-ui);
   cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
 }
 .choice-btn:hover {
   background: rgba(0,212,200,0.07);
@@ -659,16 +661,26 @@ img, canvas { display: block; max-width: 100%; }
   min-width: 16px;
   font-weight: 700;
   padding-top: 2px;
+  flex-shrink: 0;
 }
-.choice-text { flex: 1; line-height: 1.5; }
+/* Text + badge stack vertically so badge never breaks the text column */
+.choice-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 0;
+}
+.choice-text { line-height: 1.5; word-break: break-word; }
 .choice-badge {
+  display: inline-flex;
+  align-self: flex-start;
   font-size: var(--text-xs);
   padding: 2px var(--s2);
   border-radius: var(--r-full);
   background: rgba(155,114,248,0.15);
   color: var(--violet);
   white-space: nowrap;
-  margin-top: 2px;
 }
 
 /* Pricing slider section */
@@ -1098,10 +1110,32 @@ img, canvas { display: block; max-width: 100%; }
 
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 600px) {
-  .encounter-arena { padding: 0 var(--s3); }
-  .skill-tree-panel, .journal-panel { padding: var(--s6) var(--s4); }
+  /* Encounter */
+  .encounter-arena {
+    padding: 0 var(--s2);
+    overflow-y: auto;
+    /* leave room for HUD strip at top */
+    max-height: calc(100dvh - 56px);
+    /* extra bottom padding for natural scroll space */
+    padding-bottom: var(--s10);
+  }
+  /* Panels */
+  .skill-tree-panel { padding: var(--s5) var(--s3); }
+  .journal-panel    { padding: var(--s5) var(--s3); }
+  /* Onboarding */
   .industry-grid { grid-template-columns: repeat(3, 1fr); }
-  .recon-intel { grid-template-columns: 1fr; }
+  .recon-intel   { grid-template-columns: 1fr; }
+  /* Recon buttons — stack on mobile */
+  #btn-complete-recon, #btn-skip-recon {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+  /* Dialogue text slightly smaller on very small phones */
+  .dialogue-text { font-size: var(--text-sm); }
+  /* Outcome rewards — tighter */
+  .outcome-rewards { gap: var(--s2); }
+  .outcome-icon { font-size: 48px; }
 }
 
 /* ── Auth Modal ──────────────────────────────────────────── */
@@ -1260,6 +1294,27 @@ img, canvas { display: block; max-width: 100%; }
   .controls-hint { display: none; }
   .joystick-zone { display: flex; }
   .mobile-actions { display: flex; }
+  /* Larger close buttons for touch targets */
+  #btn-close-skills,
+  #btn-close-journal,
+  #btn-close-mgmt {
+    padding: var(--s3) var(--s5) !important;
+    font-size: var(--text-sm) !important;
+    min-width: 56px;
+    min-height: 44px;
+  }
+  /* Choices: bigger tap targets */
+  .choice-btn {
+    padding: var(--s4) var(--s4);
+    min-height: 52px;
+  }
+  /* Encounter Leave button: full-width for easy tap */
+  #btn-exit-encounter {
+    width: 100%;
+    padding: var(--s3) !important;
+    text-align: center;
+    justify-content: center;
+  }
 }
 
 /* Joystick */
@@ -1333,11 +1388,57 @@ img, canvas { display: block; max-width: 100%; }
 @media (pointer: coarse) {
   .hud-top {
     padding: var(--s2) var(--s3);
-    gap: var(--s2);
+    gap: var(--s1);
     flex-wrap: wrap;
+    min-height: unset;
   }
+  /* Compact stat labels — hide text label, keep value */
+  .hud-stat-label { display: none; }
+  .hud-stat { gap: var(--s1); }
+  /* Meter bars slightly shorter on mobile */
+  .meter { width: 52px; }
   /* Hide desktop skill/manage/journal buttons — replaced by mobile-actions */
   .hud-top .btn { display: none; }
   /* Keep save indicator visible */
   .save-indicator { display: flex !important; }
+  /* Business name: truncate so it doesn't wrap */
+  #hud-biz-name {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--text-xs) !important;
+  }
+  /* Minimap — move to top-right corner on mobile so joystick doesn't overlap */
+  #minimap {
+    bottom: auto;
+    top: 50px;  /* just below HUD bar */
+    right: var(--s3);
+    width: 90px;
+    height: 90px;
+  }
+  /* Skill bar — hide on mobile (no keyboard shortcuts) */
+  #skill-bar { display: none; }
+  /* Encounter: full screen sheet on mobile */
+  #screen-encounter {
+    align-items: stretch;
+    justify-content: flex-start;
+    padding-bottom: 0;
+  }
+  /* Recon buttons: stack on mobile */
+  .recon-panel > div:last-child {
+    flex-direction: column;
+  }
+  /* Pricing range: bigger touch target */
+  .pricing-range { height: 8px; }
+  .pricing-range::-webkit-slider-thumb { width: 26px; height: 26px; }
+  /* Management: 3-col grid → 1-col on mobile */
+  #management-panel > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Management: max-height taller for panel content */
+  .skill-tree-panel {
+    max-height: 92vh;
+  }
+  /* Phase track: hide labels on very small screens */
 }
