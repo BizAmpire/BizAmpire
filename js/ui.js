@@ -361,6 +361,123 @@ export class UIManager {
   }
 
   // ── Encounter Screens ──────────────────────────────────────
+  // ── Approach Choice: Sell vs Buy ───────────────────────────
+  showApproachChoice(business, state, { canSell, services, onSell, onBuy }) {
+    this._activeEncounterBiz = business;
+    this.showScreen('encounter');
+    const arena = document.getElementById('encounter-arena');
+    if (!arena) return;
+
+    const cash = state.cash || 0;
+    const alreadyOwned = (svcId) => state.vendors?.some(v => v.bizId === business.id && v.serviceId === svcId);
+
+    const servicesHTML = services.map(svc => {
+      const owned = alreadyOwned(svc.id);
+      const canAfford = cash >= svc.cost;
+      const locked = owned && svc.oneTime;
+      return `
+        <div style="display:flex;align-items:flex-start;gap:var(--s3);padding:var(--s3) var(--s4);
+                    background:${locked ? 'rgba(255,255,255,0.03)' : 'var(--surface)'};
+                    border:1px solid ${locked ? 'var(--border)' : 'rgba(155,114,248,0.25)'};
+                    border-radius:var(--r-md);margin-bottom:var(--s2);opacity:${locked ? '.5' : '1'}">
+          <div style="font-size:1.4rem;flex-shrink:0">${svc.icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:var(--text-sm);color:var(--text)">${svc.name}</div>
+            <div style="font-size:var(--text-xs);color:var(--text-muted);margin:2px 0 6px">${svc.effectDesc}</div>
+            <div style="display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap">
+              <span style="font-size:var(--text-xs);font-weight:700;color:${canAfford && !locked ? 'var(--sage)' : 'var(--crimson)'}">
+                $${svc.cost.toLocaleString()}${svc.oneTime ? ' one-time' : '/mo'}
+              </span>
+              <span style="font-size:var(--text-xs);color:var(--text-muted)">
+                🤝 Referral rate: ${Math.round(svc.referralRate * 100)}%/mo
+              </span>
+              ${owned ? '<span style="font-size:var(--text-xs);color:var(--violet)">✓ Active</span>' : ''}
+            </div>
+          </div>
+          <button class="btn btn-primary btn-buy-svc"
+                  data-svc-id="${svc.id}"
+                  style="flex-shrink:0;font-size:var(--text-xs);padding:var(--s2) var(--s3);white-space:nowrap"
+                  ${locked || !canAfford ? 'disabled' : ''}>
+            ${locked ? 'Owned' : !canAfford ? 'No Cash' : 'Buy'}
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    arena.innerHTML = `
+      <div class="encounter-header">
+        <div class="prospect-info">
+          <div class="prospect-avatar">${business.icon}</div>
+          <div>
+            <div class="prospect-name">${business.name}</div>
+            <div class="prospect-title">${business.owner} · ${business.type}</div>
+          </div>
+        </div>
+        <div style="font-size:var(--text-xs);color:var(--text-muted);text-align:right">
+          Cash: <strong style="color:var(--sage)">$${cash.toLocaleString()}</strong>
+        </div>
+      </div>
+      <div id="encounter-body">
+        <div class="dialogue-box" style="margin-bottom:var(--s4)">
+          <div class="dialogue-speaker">${business.owner}</div>
+          <div class="dialogue-text">“Hey, what brings you in? You here to pitch me something, or are you looking for what we offer?”</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--s3);margin-bottom:var(--s4)">
+          <button class="btn ${canSell ? 'btn-primary' : 'btn-secondary'}" id="btn-approach-sell"
+                  ${!canSell ? 'disabled' : ''}
+                  style="padding:var(--s4);font-size:var(--text-sm);display:flex;flex-direction:column;gap:4px;height:auto;text-align:left">
+            <span style="font-size:1.2rem">💼</span>
+            <strong>Sell to Them</strong>
+            <span style="font-size:var(--text-xs);font-weight:400;color:${canSell ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)'}">
+              ${canSell ? 'Start a discovery encounter' : '✓ Already a client'}
+            </span>
+          </button>
+          <button class="btn btn-secondary" id="btn-approach-buy"
+                  style="padding:var(--s4);font-size:var(--text-sm);display:flex;flex-direction:column;gap:4px;height:auto;text-align:left;border-color:rgba(155,114,248,0.4)">
+            <span style="font-size:1.2rem">🛒</span>
+            <strong>Buy from Them</strong>
+            <span style="font-size:var(--text-xs);font-weight:400;color:var(--text-muted)">Become a client, get referrals</span>
+          </button>
+        </div>
+
+        <div id="vendor-services-panel" style="display:none">
+          <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;
+                      color:var(--text-muted);margin-bottom:var(--s3)">
+            Services from ${business.name}
+          </div>
+          ${servicesHTML}
+        </div>
+
+        <div style="margin-top:var(--s3);text-align:center">
+          <button class="btn btn-secondary btn-sm" id="btn-approach-leave"
+                  style="font-size:var(--text-xs);padding:var(--s2) var(--s4)">Leave</button>
+        </div>
+      </div>
+    `;
+
+    // Sell button
+    document.getElementById('btn-approach-sell')?.addEventListener('click', () => {
+      try { onSell(); } catch(e) { console.error('[BizAmpire] onSell error:', e); }
+    });
+
+    // Buy button — toggle the services panel
+    const svcPanel = document.getElementById('vendor-services-panel');
+    document.getElementById('btn-approach-buy')?.addEventListener('click', () => {
+      if (svcPanel) svcPanel.style.display = svcPanel.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Individual service purchase buttons
+    arena.querySelectorAll('.btn-buy-svc').forEach(btn => {
+      btn.addEventListener('click', () => {
+        try { onBuy(btn.dataset.svcId); } catch(e) { console.error('[BizAmpire] onBuy error:', e); }
+      });
+    });
+
+    // Leave
+    document.getElementById('btn-approach-leave')?.addEventListener('click', () => this.closeEncounter());
+  }
+
   showEncounter(business, state) {
     this._activeEncounterBiz = business;
     const enc = state.currentEncounter;
@@ -1263,6 +1380,91 @@ export class UIManager {
       </div>
     `;
 
+    // ── Vendor tab HTML ────────────────────────────────────────
+    const vendors = state.vendors || [];
+    const totalVendorCost = vendors.filter(v => v.recurring).reduce((s, v) => s + (v.monthlyCost || 0), 0);
+    const totalReferralRate = vendors.reduce((s, v) => s + (v.referralRate || 0), 0);
+
+    const vendorsHTML = vendors.length > 0
+      ? vendors.map(v => `
+          <div class="employee-card">
+            <div class="employee-avatar">${v.serviceIcon || v.icon || '🏢'}</div>
+            <div class="employee-info">
+              <div class="employee-name">${v.serviceName}</div>
+              <div class="employee-role" style="color:var(--violet)">${v.bizName}</div>
+              <div class="employee-stats">
+                ${v.recurring
+                  ? `<div class="emp-stat">Monthly: <span style="color:var(--crimson)">-$${(v.monthlyCost||0).toLocaleString()}/mo</span></div>`
+                  : `<div class="emp-stat">One-time: <span>Paid</span></div>`}
+                ${v.referralRate > 0
+                  ? `<div class="emp-stat">Referrals: <span style="color:var(--sage)">~${v.referralRate}/mo</span></div>`
+                  : ''}
+              </div>
+              <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--s1)">
+                Purchased ${v.purchasedAt ? new Date(v.purchasedAt).toLocaleDateString() : ''}
+              </div>
+            </div>
+          </div>`).join('')
+      : '<div style="font-size:var(--text-sm);color:var(--text-muted)">No vendor services purchased yet. Visit buildings in the city and choose <strong>"Buy Service"</strong> to expand your reach.</div>';
+
+    const vendorSummaryHTML = vendors.length > 0 ? `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s3);margin-bottom:var(--s4)">
+        <div class="panel panel-sm" style="text-align:center">
+          <div style="font-size:var(--text-xl);font-family:var(--font-display);font-weight:700;color:var(--violet)">${vendors.length}</div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted)">Services Active</div>
+        </div>
+        <div class="panel panel-sm" style="text-align:center">
+          <div style="font-size:var(--text-xl);font-family:var(--font-display);font-weight:700;color:var(--crimson)">-$${totalVendorCost.toLocaleString()}</div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted)">Vendor Overhead/mo</div>
+        </div>
+        <div class="panel panel-sm" style="text-align:center">
+          <div style="font-size:var(--text-xl);font-family:var(--font-display);font-weight:700;color:var(--sage)">~${totalReferralRate}/mo</div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted)">Referral Leads</div>
+        </div>
+      </div>` : '';
+
+    // ── Tab system ─────────────────────────────────────────────
+    const activeTab = this._mgmtActiveTab || 'overview';
+
+    const tabBtnStyle = (id) => `
+      padding:var(--s2) var(--s4);font-size:var(--text-xs);border-radius:6px;border:1px solid;
+      cursor:pointer;font-family:var(--font-body);font-weight:600;
+      background:${activeTab===id ? 'var(--violet)' : 'transparent'};
+      color:${activeTab===id ? '#fff' : 'var(--text-muted)'};
+      border-color:${activeTab===id ? 'var(--violet)' : 'var(--border)'}`;
+
+    const overviewContent = `
+      <div>
+        <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--s3)">Active Clients (${state.activeClients.length})</div>
+        ${clientsHTML}
+      </div>
+      <div style="margin-top:var(--s4)">
+        <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--s3)">Team (${state.employees.length})</div>
+        ${employeesHTML}
+      </div>
+      <div style="margin-top:var(--s4)">
+        <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--s3)">Available Hires</div>
+        ${hirableHTML}
+      </div>`;
+
+    const vendorsContent = `
+      ${vendorSummaryHTML}
+      <div>
+        <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--s3)">Purchased Services (${vendors.length})</div>
+        ${vendorsHTML}
+      </div>
+      ${state.vendorWarmthBonus > 0 || state.vendorOverheadReduction > 0 || state.monthlyTaxCredit > 0 ? `
+      <div style="margin-top:var(--s4)">
+        <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--s3)">Active Effects</div>
+        <div class="panel panel-sm" style="display:flex;flex-direction:column;gap:var(--s2)">
+          ${state.vendorWarmthBonus > 0 ? `<div style="font-size:var(--text-sm)">🤝 +${state.vendorWarmthBonus} Rapport Bonus on encounters</div>` : ''}
+          ${state.vendorOverheadReduction > 0 ? `<div style="font-size:var(--text-sm)">⚡ ${(state.vendorOverheadReduction*100).toFixed(0)}% Overhead Reduction</div>` : ''}
+          ${state.monthlyTaxCredit > 0 ? `<div style="font-size:var(--text-sm)">💰 $${state.monthlyTaxCredit.toLocaleString()} Monthly Tax Credit</div>` : ''}
+          ${state.hasVehicle ? '<div style="font-size:var(--text-sm)">🚗 Company Vehicle — +40% Movement Speed</div>' : ''}
+          ${state.creditLine > 0 ? `<div style="font-size:var(--text-sm)">🏦 $${state.creditLine.toLocaleString()} Credit Line Available</div>` : ''}
+        </div>
+      </div>` : ''}`;
+
     panel.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between">
         <div style="font-family:var(--font-display);font-size:var(--text-xl);font-weight:700">Management Hub</div>
@@ -1284,23 +1486,26 @@ export class UIManager {
         </div>
       </div>
 
-      <div>
-        <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--s3)">Active Clients (${state.activeClients.length})</div>
-        ${clientsHTML}
+      <div style="display:flex;gap:var(--s2);border-bottom:1px solid var(--border);padding-bottom:var(--s3)">
+        <button id="mgmt-tab-overview" style="${tabBtnStyle('overview')}" data-tab="overview">📊 Overview</button>
+        <button id="mgmt-tab-vendors" style="${tabBtnStyle('vendors')}" data-tab="vendors">🤝 Vendors ${vendors.length > 0 ? `<span style="background:var(--violet);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px;margin-left:4px">${vendors.length}</span>` : ''}</button>
       </div>
-      <div>
-        <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--s3)">Team (${state.employees.length})</div>
-        ${employeesHTML}
-      </div>
-      <div>
-        <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--s3)">Available Hires</div>
-        ${hirableHTML}
+
+      <div id="mgmt-tab-content">
+        ${activeTab === 'vendors' ? vendorsContent : overviewContent}
       </div>
     `;
 
     document.getElementById('btn-close-mgmt')?.addEventListener('click', () => {
       screen?.classList.add('hidden');
       screen && (screen.style.display = 'none');
+    });
+
+    panel.querySelectorAll('button[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this._mgmtActiveTab = btn.dataset.tab;
+        this._renderManagement();
+      });
     });
 
     panel.querySelectorAll('button[data-hire]').forEach(btn => {

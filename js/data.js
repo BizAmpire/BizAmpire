@@ -822,7 +822,7 @@ export function createInitialState(businessSetup) {
 
     // City state
     currentDistrict: null,
-    unlockedDistricts: ['tech_row'],  // Start with one
+    unlockedDistricts: ['tech_row', 'downtown', 'professional_park', 'industrial', 'medical_mile', 'retail_strip'],  // All districts open from start
     districts: JSON.parse(JSON.stringify(DISTRICTS)),
 
     // Progress
@@ -841,5 +841,298 @@ export function createInitialState(businessSetup) {
     // Meta
     gamePhase: 'city',     // city | encounter | skill_tree | journal | management
     currentEncounter: null,
+
+    // Vendor system
+    vendors: [],           // { bizId, bizName, bizType, icon, service, purchasedAt, referralCooldown }
+    vendorWarmthBonus: 0,  // cumulative warmth bonus from marketing vendors
+    vendorOverheadReduction: 0, // monthly overhead reduction from ops vendors
   };
+}
+
+// ── Vendor Services Catalog ──────────────────────────────────
+// Maps business type → array of purchasable services
+// Each service has: id, name, cost, oneTime, effect, effectDesc, referralRate, referralType
+export const VENDOR_CATALOG = {
+
+  // ── Legal ────────────────────────────────────────────────
+  'Law Firm': [
+    {
+      id: 'business_contract',
+      name: 'Business Contract Package',
+      cost: 1500,
+      oneTime: true,
+      effectDesc: 'Unlocks enterprise prospects (Mid-Market & above) who require formal contracts before engaging.',
+      effect: { unlockEnterprise: true },
+      referralRate: 0.35,   // 35% chance per month of sending a referral lead
+      referralType: 'office_professional',
+      icon: '📄',
+    },
+    {
+      id: 'llc_setup',
+      name: 'LLC Formation',
+      cost: 800,
+      oneTime: true,
+      effectDesc: 'Legitimizes your business. +10 warmth on every first approach for the rest of the game.',
+      effect: { warmthBonus: 10 },
+      referralRate: 0.25,
+      referralType: 'office_professional',
+      icon: '🏛️',
+    },
+  ],
+
+  // ── Accounting ───────────────────────────────────────────
+  'CPA Firm': [
+    {
+      id: 'monthly_bookkeeping',
+      name: 'Monthly Bookkeeping',
+      cost: 400,
+      oneTime: false,   // recurring monthly cost
+      effectDesc: 'Adds cash flow report to Management screen. Reduces monthly overhead by $200 through tax optimization.',
+      effect: { overheadReduction: 200, unlockCashflowReport: true },
+      referralRate: 0.3,
+      referralType: 'financial_services',
+      icon: '📊',
+    },
+    {
+      id: 'tax_strategy',
+      name: 'Annual Tax Strategy',
+      cost: 1200,
+      oneTime: true,
+      effectDesc: '+$500 cash back at end of each in-game month (tax efficiency). One-time setup.',
+      effect: { monthlyTaxCredit: 500 },
+      referralRate: 0.2,
+      referralType: 'financial_services',
+      icon: '🧾',
+    },
+  ],
+
+  // ── Marketing ────────────────────────────────────────────
+  'Marketing Agency': [
+    {
+      id: 'brand_package',
+      name: 'Brand Identity Package',
+      cost: 2000,
+      oneTime: true,
+      effectDesc: '+15 warmth on ALL future cold approaches. Prospects recognize your brand before you speak.',
+      effect: { warmthBonus: 15 },
+      referralRate: 0.4,
+      referralType: 'tech_company',
+      icon: '🎨',
+    },
+    {
+      id: 'ad_campaign',
+      name: 'Local Ad Campaign',
+      cost: 800,
+      oneTime: false,
+      effectDesc: 'Generates 1-2 inbound leads per month. Leads walk toward you on the map.',
+      effect: { passiveLeadsPerMonth: 2 },
+      referralRate: 0.3,
+      referralType: 'retail_food',
+      icon: '📣',
+    },
+  ],
+
+  // ── Insurance ────────────────────────────────────────────
+  'Insurance Brokerage': [
+    {
+      id: 'business_insurance',
+      name: 'Business Liability Insurance',
+      cost: 600,
+      oneTime: false,
+      effectDesc: 'Required by some Mid-Market prospects. Reduces lost deal penalties by 50%.',
+      effect: { lostDealPenaltyReduction: 0.5, unlockInsuredProspects: true },
+      referralRate: 0.25,
+      referralType: 'financial_services',
+      icon: '🛡️',
+    },
+  ],
+
+  // ── Financial Advisory ───────────────────────────────────
+  'Financial Advisory': [
+    {
+      id: 'business_credit',
+      name: 'Business Line of Credit',
+      cost: 500,   // setup fee
+      oneTime: true,
+      effectDesc: 'Borrow up to $5,000 against future revenue. Removes cash floor in survival mode for 60 days.',
+      effect: { creditLine: 5000 },
+      referralRate: 0.2,
+      referralType: 'financial_services',
+      icon: '💳',
+    },
+  ],
+
+  // ── HR Consulting ─────────────────────────────────────────
+  'HR Consulting': [
+    {
+      id: 'hiring_process',
+      name: 'Hiring Process Design',
+      cost: 900,
+      oneTime: true,
+      effectDesc: 'Unlocks higher-quality employee hires. All future hires get +1 reliability.',
+      effect: { hireQualityBonus: 1, unlockSkill: 'hiring_protocol' },
+      referralRate: 0.2,
+      referralType: 'office_professional',
+      icon: '👥',
+    },
+  ],
+
+  // ── Management Consulting ─────────────────────────────────
+  'Management Consulting': [
+    {
+      id: 'ops_audit',
+      name: 'Operations Audit',
+      cost: 1800,
+      oneTime: true,
+      effectDesc: 'Reduces monthly overhead by $300. Unlocks Lean Operations skill.',
+      effect: { overheadReduction: 300, unlockSkill: 'lean_operations' },
+      referralRate: 0.3,
+      referralType: 'office_professional',
+      icon: '🔍',
+    },
+  ],
+
+  // ── General Contractor ───────────────────────────────────
+  'General Contractor': [
+    {
+      id: 'office_buildout',
+      name: 'Office Buildout',
+      cost: 3000,
+      oneTime: true,
+      effectDesc: 'Establishes a physical HQ. Increases employee capacity by 2. +reputation 50.',
+      effect: { reputationBonus: 50, employeeCapacityBonus: 2 },
+      referralRate: 0.25,
+      referralType: 'trades_contractor',
+      icon: '🏗️',
+    },
+  ],
+
+  // ── Car Dealership ───────────────────────────────────────
+  'Car Dealership': [
+    {
+      id: 'fleet_vehicle',
+      name: 'Company Vehicle',
+      cost: 2500,
+      oneTime: true,
+      effectDesc: 'Expand your prospect radius by 40%. Reach farther buildings faster on the map.',
+      effect: { playerSpeedBonus: 0.4, prospectRadiusBonus: 0.4 },
+      referralRate: 0.15,
+      referralType: 'auto_services',
+      icon: '🚘',
+    },
+  ],
+
+  // ── Auto Repair ──────────────────────────────────────────
+  'Auto Repair Shop': [
+    {
+      id: 'fleet_maintenance',
+      name: 'Fleet Maintenance Plan',
+      cost: 300,
+      oneTime: false,
+      effectDesc: 'Keeps your vehicle running. Required to maintain Car Dealership speed bonus.',
+      effect: { maintainSpeedBonus: true },
+      referralRate: 0.15,
+      referralType: 'auto_services',
+      icon: '🔧',
+    },
+  ],
+
+  // ── Medical / Wellness ───────────────────────────────────
+  'Wellness Center': [
+    {
+      id: 'team_wellness',
+      name: 'Team Wellness Plan',
+      cost: 500,
+      oneTime: false,
+      effectDesc: 'Eliminates employee burnout events. +1 skill point immediately.',
+      effect: { preventBurnout: true, skillPoints: 1 },
+      referralRate: 0.2,
+      referralType: 'healthcare',
+      icon: '🧘',
+    },
+  ],
+
+  // ── Coffee Shop ──────────────────────────────────────────
+  'Coffee Shop': [
+    {
+      id: 'client_lunch',
+      name: 'Client Meeting (Coffee)',
+      cost: 50,
+      oneTime: false,   // can buy multiple times
+      effectDesc: '+2 rapport on your very next encounter. Stacks up to 3 times.',
+      effect: { nextEncounterRapportBonus: 2 },
+      referralRate: 0.1,
+      referralType: 'retail_food',
+      icon: '☕',
+    },
+  ],
+
+  // ── Real Estate ──────────────────────────────────────────
+  'Real Estate Agency': [
+    {
+      id: 'office_lease',
+      name: 'Upgraded Office Lease',
+      cost: 1000,
+      oneTime: true,
+      effectDesc: 'Prestige address. +20 warmth with Financial and Legal prospects. +reputation 30.',
+      effect: { warmthBonus: 20, warmthFilter: ['financial_services','office_professional'], reputationBonus: 30 },
+      referralRate: 0.3,
+      referralType: 'real_estate',
+      icon: '🏡',
+    },
+  ],
+
+  // ── Manufacturing / Industrial ───────────────────────────
+  'Manufacturing': [
+    {
+      id: 'custom_materials',
+      name: 'Custom Branded Materials',
+      cost: 700,
+      oneTime: true,
+      effectDesc: '+10 warmth with Trades & Industrial prospects. Signals you understand their world.',
+      effect: { warmthBonus: 10, warmthFilter: ['trades_contractor'] },
+      referralRate: 0.2,
+      referralType: 'trades_contractor',
+      icon: '🏭',
+    },
+  ],
+
+  // ── Pharmacy ─────────────────────────────────────────────
+  'Independent Pharmacy': [
+    {
+      id: 'health_benefits',
+      name: 'Employee Health Benefits',
+      cost: 600,
+      oneTime: false,
+      effectDesc: 'Reduces employee error events by 50%. Required to hire senior staff.',
+      effect: { preventBurnout: true, unlockSeniorHire: true },
+      referralRate: 0.15,
+      referralType: 'healthcare',
+      icon: '💊',
+    },
+  ],
+
+  // ── Electrical Contractor ────────────────────────────────
+  'Electrical Contractor': [
+    {
+      id: 'office_setup',
+      name: 'Office Tech Setup',
+      cost: 1200,
+      oneTime: true,
+      effectDesc: 'Professional workspace setup. -$150/mo overhead. Unlocks remote work capability.',
+      effect: { overheadReduction: 150 },
+      referralRate: 0.2,
+      referralType: 'trades_contractor',
+      icon: '⚡',
+    },
+  ],
+};
+
+// ── Vendor helpers ────────────────────────────────────────────
+export function getVendorServices(bizType) {
+  return VENDOR_CATALOG[bizType] || [];
+}
+
+export function isVendorEligible(bizType) {
+  return !!(VENDOR_CATALOG[bizType]?.length);
 }

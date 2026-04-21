@@ -7,7 +7,7 @@ import {
   DISTRICTS, SKILL_TREE, ENCOUNTER_PHASES, OBJECTION_LIBRARY,
   DISCOVERY_QUESTIONS, MILESTONES, JOURNAL_PROMPTS,
   COMPETITORS, EMPLOYEE_ARCHETYPES, createInitialState,
-  getProspectCategory
+  getProspectCategory, getVendorServices, isVendorEligible
 } from './data.js';
 import {
   ICP_FIT_MATRIX, FIT_DIALOGUE
@@ -461,7 +461,7 @@ export class BizAmpireEngine {
       dx *= 0.707; dy *= 0.707;
     }
 
-    const speed = PLAYER_SPEED * TILE;
+    const speed = (PLAYER_SPEED + (this.state.hasVehicle ? PLAYER_SPEED * 0.4 : 0)) * TILE;
     const nx = this.player.x + dx * speed * dt;
     const ny = this.player.y + dy * speed * dt;
 
@@ -582,10 +582,6 @@ export class BizAmpireEngine {
       this.ui.showToast(`${business.owner} is still cooling off. Come back in ${business.cooldownDays} day${business.cooldownDays > 1 ? 's' : ''}.`, 'warn');
       return;
     }
-    if (business.closed) {
-      this.ui.showToast(`${business.name} is already a client!`, 'success');
-      return;
-    }
     if (business.lostToCompetitor) {
       this.ui.showToast(`${business.name} signed with a competitor. You waited too long.`, 'danger');
       return;
@@ -595,6 +591,37 @@ export class BizAmpireEngine {
     const district = DISTRICTS.find(d => d.businesses.some(b => b.id === business.id));
     if (district && !this.state.unlockedDistricts.includes(district.id)) {
       this.ui.showToast(`${district.name} is locked. Build more reputation first.`, 'warn');
+      return;
+    }
+
+    // If vendor-eligible, show Sell vs Buy choice first
+    const vendorServices = getVendorServices(business.type);
+    const isVendor = vendorServices.length > 0;
+    const alreadyClient = business.closed;
+
+    if (isVendor) {
+      // Show the approach modal — player picks Sell or Buy
+      this.ui.showApproachChoice(business, this.state, {
+        canSell: !alreadyClient,
+        services: vendorServices,
+        onSell: () => this._beginSellEncounter(business),
+        onBuy:  (svcId) => this.purchaseVendorService(business, svcId),
+      });
+      return;
+    }
+
+    if (alreadyClient) {
+      this.ui.showToast(`${business.name} is already a client!`, 'success');
+      return;
+    }
+
+    await this._beginSellEncounter(business);
+  }
+
+  // ── Separated so Sell path can be called from approach choice ─
+  async _beginSellEncounter(business) {
+    if (business.closed) {
+      this.ui.showToast(`${business.name} is already a client!`, 'success');
       return;
     }
 
@@ -620,7 +647,7 @@ export class BizAmpireEngine {
     this.state.currentEncounter = {
       business,
       phase: 'recon',
-      rapport: fitScore === 1 ? -1 : 0,  // rapport penalty for weak-fit prospects
+      rapport: (fitScore === 1 ? -1 : 0) + (this.state.pendingRapportBonus || 0),  // rapport penalty for weak-fit; bonus from coffee meetings etc
       stateFlags: {
         didRecon: false,
         openerQuality: 'cold',
@@ -636,6 +663,7 @@ export class BizAmpireEngine {
         resolved: [],
       },
     };
+    this.state.pendingRapportBonus = 0;  // consume the coffee bonus
     this.ui.showEncounter(business, this.state);
   }
 
@@ -756,6 +784,36 @@ export class BizAmpireEngine {
         this.ui.showToast(`📡 Traction: ${passiveCount} inbound leads this month!`, 'gold');
       }
 
+      // ── Vendor: recurring costs ───────────────────────────────
+      const recurringVendors = this.state.vendors.filter(v => v.recurring);
+      recurringVendors.forEach(v => {
+        this.state.cash -= v.monthlyCost;
+      });
+      if (recurringVendors.length > 0) {
+        const totalRecurring = recurringVendors.reduce((s, v) => s + v.monthlyCost, 0);
+        this.ui.showToast(`💸 Vendor payments: -$${totalRecurring.toLocaleString()}/mo (${recurringVendors.length} service${recurringVendors.length > 1 ? 's' : ''})`, 'default');
+      }
+
+      // ── Vendor: tax credit ─────────────────────────────────
+      if (this.state.monthlyTaxCredit > 0) {
+        this.state.cash += this.state.monthlyTaxCredit;
+        this.ui.showToast(`🧾 Tax strategy credit: +$${this.state.monthlyTaxCredit.toLocaleString()}`, 'gold');
+      }
+
+      // ── Vendor: passive ad leads ────────────────────────────
+      if (this.state.passiveLeadsPerMonth > 0) {
+        this.ui.showToast(`📣 Ad campaign: ${this.state.passiveLeadsPerMonth} inbound lead${this.state.passiveLeadsPerMonth > 1 ? 's' : ''} heading your way!`, 'gold');
+        this._spawnReferralLeads(this.state.passiveLeadsPerMonth, 'retail_food');
+      }
+
+      // ── Vendor: referral leads from active vendors ────────────
+      this.state.vendors.forEach(v => {
+        if (Math.random() < v.referralRate) {
+          this._spawnReferralLeads(1, v.referralType);
+          this.ui.showToast(`🤝 ${v.owner} at ${v.bizName} referred you a new lead!`, 'success');
+        }
+      });
+
       // Survival mode
       if (this.state.cash < this.state.monthlyOverhead * 2) {
         this.state.survivalMode = true;
@@ -774,6 +832,40 @@ export class BizAmpireEngine {
     if (this.state.employees.length > 0 && Math.random() < 0.04) {
       const emp = this.state.employees[Math.floor(Math.random() * this.state.employees.length)];
       this._triggerEmployeeEvent(emp);
+    }
+  }
+
+  // ── Spawn referral/inbound lead NPCs near player ─────────────
+  _spawnReferralLeads(count, preferredCategory) {
+    // Find unlocked, unclosed, not-lost buildings that match the preferred category
+    const pool = this.buildings.filter(b => {
+      if (!b.business) return false;
+      const biz = b.business;
+      if (biz.closed || biz.lostToCompetitor || biz.cooldownDays > 0) return false;
+      const cat = getProspectCategory ? getProspectCategory(biz.type) : null;
+      return !preferredCategory || cat === preferredCategory;
+    });
+
+    // Fallback: any open building if nothing matches the category
+    const fallbackPool = pool.length > 0 ? pool : this.buildings.filter(b =>
+      b.business && !b.business.closed && !b.business.lostToCompetitor
+    );
+
+    const chosen = [...fallbackPool]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, count);
+
+    chosen.forEach(bld => {
+      // Give the building a temporary "lead incoming" warmth boost so player knows
+      if (bld.business) {
+        bld.business.warmth = Math.min(3, (bld.business.warmth || 0) + 1);
+        bld.business.isReferral = true;   // flag for rendering
+      }
+    });
+
+    // If we have a referral lead, pulse the HUD
+    if (chosen.length > 0) {
+      this.ui.showToast(`📌 Referral lead warming up: ${chosen.map(b => b.business?.name).join(', ')}`, 'success');
     }
   }
 
@@ -852,6 +944,113 @@ export class BizAmpireEngine {
     }
     if (event === 'acquisition') {
       setTimeout(() => this.ui.showAcquisitionOffer(this.state), 2000);
+    }
+  }
+
+  // ── Vendor purchase ────────────────────────────────────────────
+  purchaseVendorService(business, serviceId) {
+    const services = getVendorServices(business.type);
+    const svc = services.find(s => s.id === serviceId);
+    if (!svc) return;
+
+    // Check cash
+    if (this.state.cash < svc.cost) {
+      this.ui.showToast(`Not enough cash. You need $${svc.cost.toLocaleString()}.`, 'danger');
+      return;
+    }
+
+    // Check if already purchased (one-time only)
+    const alreadyOwned = this.state.vendors.some(v => v.bizId === business.id && v.serviceId === svc.id);
+    if (alreadyOwned && svc.oneTime) {
+      this.ui.showToast(`You already have ${svc.name}.`, 'warn');
+      return;
+    }
+
+    // Deduct cost
+    this.state.cash -= svc.cost;
+
+    // Record vendor relationship
+    if (!alreadyOwned) {
+      this.state.vendors.push({
+        bizId:          business.id,
+        bizName:        business.name,
+        bizType:        business.type,
+        icon:           business.icon,
+        owner:          business.owner,
+        serviceId:      svc.id,
+        serviceName:    svc.name,
+        serviceIcon:    svc.icon,
+        recurring:      !svc.oneTime,
+        monthlyCost:    svc.oneTime ? 0 : svc.cost,
+        referralRate:   svc.referralRate,
+        referralType:   svc.referralType,
+        referralCooldown: 0,
+        purchasedAt:    this.state.totalDeals,
+      });
+    }
+
+    // Apply the effect immediately
+    this._applyVendorEffect(svc, business);
+
+    // Feedback
+    this.ui.showToast(`✅ Purchased: ${svc.name} from ${business.name}`, 'success');
+    this.ui.updateHUD(this.state);
+    this.ui.closeEncounter();
+
+    // Show a short debrief
+    setTimeout(() => {
+      this.ui.showToast(`🤝 ${business.owner} says: “Glad to have you as a client. I’ll keep you in mind if anyone needs what you do.”`, 'default');
+    }, 1200);
+  }
+
+  _applyVendorEffect(svc, business) {
+    const fx = svc.effect;
+    if (!fx) return;
+
+    if (fx.warmthBonus) {
+      // Global warmth bonus — apply to all future prospect first approaches
+      this.state.vendorWarmthBonus = (this.state.vendorWarmthBonus || 0) + fx.warmthBonus;
+    }
+    if (fx.overheadReduction) {
+      this.state.monthlyOverhead = Math.max(0, this.state.monthlyOverhead - fx.overheadReduction);
+      this.state.vendorOverheadReduction = (this.state.vendorOverheadReduction || 0) + fx.overheadReduction;
+    }
+    if (fx.reputationBonus) {
+      this.state.reputation = Math.min(1000, this.state.reputation + fx.reputationBonus);
+    }
+    if (fx.skillPoints) {
+      this.state.skillPoints += fx.skillPoints;
+    }
+    if (fx.unlockSkill) {
+      if (!this.state.unlockedSkills.includes(fx.unlockSkill)) {
+        this.state.unlockedSkills.push(fx.unlockSkill);
+        this.ui.showToast(`⚡ Skill unlocked: ${fx.unlockSkill.replace(/_/g,' ')}`, 'gold');
+      }
+    }
+    if (fx.nextEncounterRapportBonus) {
+      this.state.pendingRapportBonus = (this.state.pendingRapportBonus || 0) + fx.nextEncounterRapportBonus;
+    }
+    if (fx.playerSpeedBonus) {
+      // Speed is applied in the game loop via state flag
+      this.state.hasVehicle = true;
+    }
+    if (fx.passiveLeadsPerMonth) {
+      this.state.passiveLeadsPerMonth = (this.state.passiveLeadsPerMonth || 0) + fx.passiveLeadsPerMonth;
+    }
+    if (fx.monthlyTaxCredit) {
+      this.state.monthlyTaxCredit = (this.state.monthlyTaxCredit || 0) + fx.monthlyTaxCredit;
+    }
+    if (fx.creditLine) {
+      this.state.creditLine = (this.state.creditLine || 0) + fx.creditLine;
+    }
+    if (fx.unlockEnterprise) {
+      this.state.enterpriseUnlocked = true;
+    }
+    if (fx.preventBurnout) {
+      this.state.burnoutPrevented = true;
+    }
+    if (fx.employeeCapacityBonus) {
+      this.state.employeeCapacity = (this.state.employeeCapacity || 3) + fx.employeeCapacityBonus;
     }
   }
 
