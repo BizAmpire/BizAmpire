@@ -320,6 +320,9 @@
       <button class="btn btn-secondary" onclick="window.__bizampireUI?.showManagement()" style="padding:var(--s2) var(--s3);font-size:var(--text-xs)" title="Management [M]">🏢 Manage</button>
       <button class="btn btn-secondary" onclick="window.__bizampireUI?.showJournal()" style="padding:var(--s2) var(--s3);font-size:var(--text-xs)" title="Field Journal [J]">📓 Journal</button>
       <button class="btn btn-secondary" onclick="window.__bizampirePortfolio?.show()" style="padding:var(--s2) var(--s3);font-size:var(--text-xs)" title="Business Portfolio [P]">🏗️ Portfolio</button>
+      <button class="btn btn-secondary" id="btn-exit-to-title"
+        style="padding:var(--s2) var(--s3);font-size:var(--text-xs);border-color:rgba(200,64,48,0.35);color:var(--text-muted)"
+        title="Save &amp; Exit to Main Menu">🚪 Menu</button>
       <div class="save-indicator" id="save-indicator" title="Save status">
         <div class="save-dot"></div>
         <span id="save-indicator-text">Saved</span>
@@ -337,7 +340,7 @@
 
   <!-- Controls hint (desktop only) -->
   <div class="controls-hint">
-    WASD / Arrows to move · [E] Approach · [K] Skills · [J] Journal · [M] Manage · [P] Portfolio
+    WASD / Arrows to move · [E] Approach building · [K] Skills · [J] Journal · [M] Manage · [P] Portfolio · [Esc] Menu
   </div>
 
   <!-- Virtual joystick (mobile only) -->
@@ -349,10 +352,11 @@
 
   <!-- Mobile action buttons -->
   <div id="mobile-actions" class="mobile-actions">
-    <button id="btn-mobile-interact" class="mobile-btn mobile-btn-interact">E</button>
-    <button id="btn-mobile-skills"   class="mobile-btn mobile-btn-secondary" onclick="window.__bizampireUI?.showSkillTree()">⚡</button>
-    <button id="btn-mobile-manage"   class="mobile-btn mobile-btn-secondary" onclick="window.__bizampireUI?.showManagement()">🏢</button>
-    <button id="btn-mobile-portfolio" class="mobile-btn mobile-btn-secondary" onclick="window.__bizampirePortfolio?.show()">🏗️</button>
+    <button id="btn-mobile-interact" class="mobile-btn mobile-btn-interact" title="Approach building [E]"><span style="font-size:16px">🚪</span><span style="font-size:8px;display:block;letter-spacing:.04em">ENTER</span></button>
+    <button id="btn-mobile-skills"   class="mobile-btn mobile-btn-secondary" onclick="window.__bizampireUI?.showSkillTree()"   title="Skill Tree"   ><span style="font-size:16px">⚡</span><span style="font-size:8px;display:block;letter-spacing:.04em">SKILLS</span></button>
+    <button id="btn-mobile-manage"   class="mobile-btn mobile-btn-secondary" onclick="window.__bizampireUI?.showManagement()" title="Management"  ><span style="font-size:16px">🏢</span><span style="font-size:8px;display:block;letter-spacing:.04em">MANAGE</span></button>
+    <button id="btn-mobile-portfolio" class="mobile-btn mobile-btn-secondary" onclick="window.__bizampirePortfolio?.show()"  title="Portfolio"   ><span style="font-size:16px">🏗️</span><span style="font-size:8px;display:block;letter-spacing:.04em">BIZS</span></button>
+    <button id="btn-mobile-exit"     class="mobile-btn mobile-btn-secondary"                                                  title="Exit to Menu" ><span style="font-size:16px">🔙</span><span style="font-size:8px;display:block;letter-spacing:.04em">MENU</span></button>
   </div>
 </div>
 
@@ -636,6 +640,74 @@ window.__bizampireLaunch = function(state, isResumed = false) {
 
   // Save shortly after launch
   setTimeout(() => triggerSave(state), 2500);
+
+  // ── Exit-to-menu overlay ────────────────────────────────────
+  // Build once, reuse across sessions
+  if (!document.getElementById('exit-to-menu-overlay')) {
+    const ov = document.createElement('div');
+    ov.id = 'exit-to-menu-overlay';
+    ov.style.cssText = `
+      display:none;position:fixed;inset:0;z-index:8000;
+      background:rgba(0,0,0,0.75);align-items:center;justify-content:center;
+      padding:var(--s4);backdrop-filter:blur(4px)`;
+    ov.innerHTML = `
+      <div class="panel" style="max-width:340px;width:100%;padding:var(--s6);text-align:center;display:flex;flex-direction:column;gap:var(--s4)">
+        <div style="font-size:2rem">🚪</div>
+        <div style="font-family:var(--font-display);font-size:var(--text-lg);font-weight:700">Exit to Main Menu?</div>
+        <div style="font-size:var(--text-xs);color:var(--text-muted);line-height:1.6">
+          Your game is saved automatically. You can continue from where you left off next time.
+        </div>
+        <div style="display:flex;gap:var(--s3)">
+          <button id="btn-exit-cancel"
+            style="flex:1;padding:var(--s3);font-size:var(--text-xs);font-weight:600;
+                   background:var(--surface);border:1px solid var(--border);color:var(--text);
+                   border-radius:var(--r-md);cursor:pointer">
+            ← Keep Playing
+          </button>
+          <button id="btn-exit-confirm"
+            style="flex:1;padding:var(--s3);font-size:var(--text-xs);font-weight:700;
+                   background:var(--crimson);border:1px solid var(--crimson);color:#fff;
+                   border-radius:var(--r-md);cursor:pointer">
+            Save &amp; Exit
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+
+    document.getElementById('btn-exit-cancel').onclick  = () => { ov.style.display = 'none'; };
+    document.getElementById('btn-exit-confirm').onclick = async () => {
+      ov.style.display = 'none';
+      const eng = window.__bizampireEngine;
+      if (eng) await triggerSave(eng.state);
+      location.reload(); // cleanest reset — returns to title on reload
+    };
+  }
+
+  const showExitOverlay = () => {
+    document.getElementById('exit-to-menu-overlay').style.display = 'flex';
+  };
+
+  // Desktop HUD button
+  const exitBtn = document.getElementById('btn-exit-to-title');
+  if (exitBtn) exitBtn.onclick = showExitOverlay;
+
+  // Mobile button
+  const mobileExitBtn = document.getElementById('btn-mobile-exit');
+  if (mobileExitBtn) mobileExitBtn.onclick = showExitOverlay;
+
+  // Escape key shortcut
+  document.addEventListener('keydown', function _escExit(e) {
+    if (e.key === 'Escape' && window.__bizampireEngine) {
+      // Only trigger if no other panel is open
+      const panels = ['screen-skills','screen-journal','screen-management','screen-portfolio'];
+      const anyOpen = panels.some(id => {
+        const el = document.getElementById(id);
+        return el && el.style.display !== 'none' && !el.classList.contains('hidden');
+      });
+      if (!anyOpen) showExitOverlay();
+    }
+  });
+  // ─────────────────────────────────────────────────────────────
 
   if (isResumed) {
     setTimeout(() => ui.showToast(`💾 Welcome back to ${state.businessName}! Progress restored.`, 'success'), 500);
