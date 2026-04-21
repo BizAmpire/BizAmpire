@@ -151,7 +151,7 @@ export class BizAmpireEngine {
       this.keys[e.key.toLowerCase()] = false;
     }, { signal: ac.signal });
 
-    // Touch/click for buildings
+    // Touch/click on canvas for building interaction (desktop)
     this.canvas.addEventListener('click', e => {
       const rect = this.canvas.getBoundingClientRect();
       const wx = (e.clientX - rect.left) * (this.canvas.width / rect.width) + this.cam.x;
@@ -161,6 +161,66 @@ export class BizAmpireEngine {
         this._startEncounter(bld.business);
       }
     }, { signal: ac.signal });
+
+    // ── Virtual joystick (mobile) ─────────────────────────────
+    this._joystick = { active: false, dx: 0, dy: 0 };
+    const base  = document.getElementById('joystick-base');
+    const knob  = document.getElementById('joystick-knob');
+    const zone  = document.getElementById('joystick-zone');
+
+    if (base && knob) {
+      const RADIUS = 31; // max knob travel (base 110px, knob 48px → (110-48)/2 ≈ 31)
+
+      const onMove = (cx, cy) => {
+        const rect = base.getBoundingClientRect();
+        const ox = cx - (rect.left + rect.width  / 2);
+        const oy = cy - (rect.top  + rect.height / 2);
+        const dist = Math.sqrt(ox * ox + oy * oy);
+        const clamped = Math.min(dist, RADIUS);
+        const angle   = Math.atan2(oy, ox);
+        const kx = Math.cos(angle) * clamped;
+        const ky = Math.sin(angle) * clamped;
+
+        knob.style.transform = `translate(calc(-50% + ${kx}px), calc(-50% + ${ky}px))`;
+
+        // Normalise to -1..1, apply dead-zone of 15%
+        const norm = clamped / RADIUS;
+        const dead = 0.15;
+        const effective = norm < dead ? 0 : (norm - dead) / (1 - dead);
+        this._joystick.dx = effective * Math.cos(angle);
+        this._joystick.dy = effective * Math.sin(angle);
+      };
+
+      const onEnd = () => {
+        this._joystick.active = false;
+        this._joystick.dx = 0;
+        this._joystick.dy = 0;
+        knob.style.transform = 'translate(-50%, -50%)';
+      };
+
+      base.addEventListener('touchstart', e => {
+        e.preventDefault();
+        this._joystick.active = true;
+        onMove(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: false, signal: ac.signal });
+
+      base.addEventListener('touchmove', e => {
+        e.preventDefault();
+        onMove(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: false, signal: ac.signal });
+
+      base.addEventListener('touchend',    onEnd, { signal: ac.signal });
+      base.addEventListener('touchcancel', onEnd, { signal: ac.signal });
+    }
+
+    // Mobile interact button
+    const mobileInteract = document.getElementById('btn-mobile-interact');
+    if (mobileInteract) {
+      mobileInteract.addEventListener('touchstart', e => {
+        e.preventDefault();
+        this._tryInteract();
+      }, { passive: false, signal: ac.signal });
+    }
   }
 
   start() {
@@ -188,14 +248,20 @@ export class BizAmpireEngine {
   }
 
   update(dt) {
-    // Player movement
+    // Player movement — keyboard + virtual joystick
     let dx = 0, dy = 0;
     if (this.keys['a'] || this.keys['arrowleft'])  dx -= 1;
     if (this.keys['d'] || this.keys['arrowright']) dx += 1;
     if (this.keys['w'] || this.keys['arrowup'])    dy -= 1;
     if (this.keys['s'] || this.keys['arrowdown'])  dy += 1;
 
-    if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+    // Joystick overrides keyboard if active
+    if (this._joystick?.active) {
+      dx = this._joystick.dx;
+      dy = this._joystick.dy;
+    } else if (dx !== 0 && dy !== 0) {
+      dx *= 0.707; dy *= 0.707;
+    }
 
     const speed = PLAYER_SPEED * TILE;
     const nx = this.player.x + dx * speed * dt;

@@ -1239,3 +1239,105 @@ img, canvas { display: block; max-width: 100%; }
 .save-card-info { flex: 1; text-align: left; }
 .save-card-name { font-weight: 600; font-size: var(--text-sm); color: var(--teal); }
 .save-card-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* ── Mobile Controls ─────────────────────────────────────── */
+.controls-hint {
+  position: absolute;
+  bottom: calc(var(--s4) + 160px);
+  left: 50%; transform: translateX(-50%);
+  font-size: 10px; color: var(--text-faint);
+  white-space: nowrap; text-align: center;
+  pointer-events: none;
+}
+
+/* Only show joystick on touch devices */
+.joystick-zone,
+.mobile-actions {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .controls-hint { display: none; }
+  .joystick-zone { display: flex; }
+  .mobile-actions { display: flex; }
+}
+
+/* Joystick */
+.joystick-zone {
+  position: absolute;
+  bottom: var(--s8);
+  left: var(--s8);
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  touch-action: none;
+  user-select: none;
+}
+.joystick-base {
+  width: 110px; height: 110px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.15);
+  position: relative;
+  touch-action: none;
+}
+.joystick-knob {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: rgba(0,212,200,0.7);
+  border: 2px solid rgba(0,212,200,0.9);
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  transition: background 80ms;
+  pointer-events: none;
+}
+
+/* Mobile action buttons */
+.mobile-actions {
+  position: absolute;
+  bottom: var(--s8);
+  right: var(--s6);
+  flex-direction: column;
+  gap: var(--s3);
+  align-items: center;
+  z-index: 10;
+}
+.mobile-btn {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08);
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 80ms, transform 80ms;
+}
+.mobile-btn:active { background: rgba(255,255,255,0.2); transform: scale(0.93); }
+.mobile-btn-interact {
+  width: 64px; height: 64px;
+  background: rgba(0,212,200,0.2);
+  border-color: rgba(0,212,200,0.6);
+  font-size: 14px;
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+}
+.mobile-btn-interact:active { background: rgba(0,212,200,0.4); }
+
+/* ── Mobile HUD adjustments ─────────────────────────────── */
+@media (pointer: coarse) {
+  .hud-top {
+    padding: var(--s2) var(--s3);
+    gap: var(--s2);
+    flex-wrap: wrap;
+  }
+  /* Hide desktop skill/manage/journal buttons — replaced by mobile-actions */
+  .hud-top .btn { display: none; }
+  /* Keep save indicator visible */
+  .save-indicator { display: flex !important; }
+}
