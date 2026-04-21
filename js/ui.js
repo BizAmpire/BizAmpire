@@ -5,6 +5,7 @@
 
 import {
   INDUSTRIES, SKILL_TREE, DISCOVERY_QUESTIONS, OBJECTION_LIBRARY,
+  generateDiscoveryQuestions,
   EMPLOYEE_ARCHETYPES, JOURNAL_PROMPTS, ENCOUNTER_PHASES
 } from './data.js';
 import { EncounterEngine } from './engine.js';
@@ -500,25 +501,32 @@ export class UIManager {
   _renderOpenerChoices(biz, state) {
     const warmthLabel = ['cold','familiar','warm','advocate'][biz.warmth] || 'cold';
     const hasPatternInterrupt = state.unlockedSkills.includes('pattern_interrupt');
+    const serviceLabels = {
+      it: 'IT & managed services', marketing: 'marketing & lead generation',
+      finance: 'accounting & financial advisory', law: 'legal services',
+      construction: 'construction & renovations', auto: 'auto & fleet services',
+      realestate: 'real estate & property management', health: 'healthcare services',
+      consulting: 'operations consulting',
+    };
 
     const choices = [
       {
-        text: `"Hi, I'm ${state.businessName}. I help businesses like yours — do you have 2 minutes?"`,
+        text: `"Hi, I'm ${state.businessName} — we provide ${serviceLabels[state.businessIndustry] || 'business services'} to companies in this area. Do you have 2 minutes?"`,
         rapport: 0,
         label: 'Generic opener',
         badge: null,
         technique: null,
       },
       {
-        text: `"I noticed you have a ${biz.type}. I work specifically with ${pluralize(biz.type)} in this area on ${biz.pain?.split(' ').slice(0,5).join(' ')}... — mind if I ask one question?"`,
+        text: `"I work with ${pluralize(biz.type)} specifically on ${biz.pain?.split(' ').slice(0,6).join(' ')}... I've helped a few businesses in this district with exactly that — mind if I ask one quick question?"`,
         rapport: 1,
-        label: 'Industry-specific opener',
+        label: 'Pain-specific opener',
         badge: 'Targeted',
         technique: 'Pattern Interrupt',
         requiresSkill: 'pattern_interrupt',
       },
       {
-        text: `"What's the biggest growth challenge you're dealing with right now?"`,
+        text: `"Quick question — when it comes to ${serviceLabels[state.businessIndustry] || 'what we do'}, what's your biggest frustration right now with how you're handling it?"`,
         rapport: biz.warmth >= 1 ? 2 : 0,
         label: warmthLabel === 'cold' ? 'Direct (risky cold)' : 'Direct (warm relationship)',
         badge: warmthLabel !== 'cold' ? 'Relationship Capital' : null,
@@ -554,37 +562,36 @@ export class UIManager {
     const body = document.getElementById('encounter-body');
     if (!body) return;
 
-    const q = DISCOVERY_QUESTIONS[questionIdx];
-    if (!q) return;
+    // Use pre-generated questions from encounter stateFlags (set when encounter starts)
+    // This ensures the same questions are shown each step rather than regenerating
+    const questions = enc.stateFlags?.generatedQuestions ||
+      generateDiscoveryQuestions(state.businessIndustry || 'consulting', enc.business);
+    const q = questions[questionIdx];
+    if (!q) {
+      // No more questions — advance to pitch
+      if (window.__bizampireEngine) window.__bizampireEngine.encounterEngine?.handleDiscovery('_advance', 'good');
+      return;
+    }
 
     const biz = enc.business;
     const hasSkill = state.unlockedSkills.includes(q.skillTag);
-    const _painLower = (biz.pain || 'this challenge').charAt(0).toLowerCase() + (biz.pain || 'this challenge').slice(1);
-    // Derive an outcome by flipping the pain into a positive — use biz.outcome if defined, else build from pain
-    const _outcome = biz.outcome || (() => {
-      const p = biz.pain || '';
-      if (p.includes('churn') || p.includes('leaving') || p.includes('retention')) return 'a measurable drop in churn and clients who stay and refer others';
-      if (p.includes('pipeline') || p.includes('lead') || p.includes('referral')) return 'a predictable, repeatable pipeline that fills itself';
-      if (p.includes('margin') || p.includes('price') || p.includes('cheaper') || p.includes('cost')) return 'higher-margin work and clients who compete on value, not price';
-      if (p.includes('scale') || p.includes('time') || p.includes('ops') || p.includes('billing')) return 'systems that let you scale without adding headcount';
-      if (p.includes('growth') || p.includes('traffic') || p.includes('converting') || p.includes('footfall')) return 'consistent, compounding growth with a clear attribution trail';
-      if (p.includes('compliance') || p.includes('process') || p.includes('error')) return 'clean processes that cut overhead and eliminate costly mistakes';
-      return 'a business that runs profitably without depending on you for every decision';
-    })();
-    const personalizedQ = q.question
-      .replace('{painCategory}', _painLower)
-      .replace('{pain}', _painLower)
-      .replace('{outcome}', _outcome)
-      .replace('{impliedCost}', `$${Math.round(biz.budget[0] * 0.5).toLocaleString()}/month`)
-      .replace('{impliedRevenueLoss}', `$${biz.budget[0].toLocaleString()}+`);
+
+    // Player service label for UI context
+    const serviceLabels = {
+      it: 'IT Services', marketing: 'Marketing', finance: 'Accounting/Finance',
+      law: 'Legal Services', construction: 'Construction', auto: 'Auto/Fleet',
+      realestate: 'Real Estate', health: 'Healthcare', consulting: 'Consulting',
+    };
+    const playerServiceLabel = serviceLabels[playerIndustry] || state.businessName;
 
     body.innerHTML = `
       <div class="dialogue-box">
-        <div class="dialogue-speaker">Discovery Phase — ${q.phase.charAt(0).toUpperCase() + q.phase.slice(1)} Question</div>
-        <div class="dialogue-text">${personalizedQ}</div>
+        <div class="dialogue-speaker">Discovery — ${q.phase.charAt(0).toUpperCase() + q.phase.slice(1)} Question</div>
+        <div class="dialogue-text">${q.question}</div>
         <div class="dialogue-sub">
+          You (${playerServiceLabel}) → ${biz.owner} at ${biz.name} (${biz.type}) ·
           Framework: <strong style="color:var(--violet)">${q.framework}</strong>
-          ${!hasSkill ? ` · <span style="color:var(--amber)">⚡ Unlock "${q.skillTag.replace(/_/g,' ')}" for full power</span>` : ''}
+          ${!hasSkill ? ` · <span style="color:var(--amber)">⚡ Unlock "${q.skillTag.replace(/_/g,' ')}" for full effect</span>` : ''}
         </div>
       </div>
       <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0;text-transform:uppercase;letter-spacing:.08em">
@@ -594,15 +601,15 @@ export class UIManager {
         <button class="choice-btn technique" data-response="good" data-qid="${q.skillTag}">
           <span class="choice-key">1</span>
           <div class="choice-body">
-            <span class="choice-text">${q.goodResponse.replace('{impliedCost}', `$${Math.round(biz.budget[0] * 0.5).toLocaleString()}/month`).replace('{impliedRevenueLoss}', `$${biz.budget[0].toLocaleString()}+`).replace('{pain}', _painLower).replace('{outcome}', biz.outcome || 'sustainable, scalable growth without the operational drag')}</span>
-          <span class="choice-badge">${hasSkill ? `+${q.rapportOnGood} Rapport` : 'Partial effect'}</span>
+            <span class="choice-text">${q.goodResponse}</span>
+            <span class="choice-badge">${hasSkill ? `+${q.rapportOnGood} Rapport` : 'Partial effect'}</span>
           </div>
         </button>
         <button class="choice-btn" data-response="bad" data-qid="${q.skillTag}">
           <span class="choice-key">2</span>
           <div class="choice-body">
             <span class="choice-text">${q.badResponse}</span>
-          <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Missed opportunity</span>
+            <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Missed opportunity</span>
           </div>
         </button>
       </div>
@@ -632,6 +639,14 @@ export class UIManager {
     const hasValueStack = state.unlockedSkills.includes('value_stack');
     const hasChallenger = state.unlockedSkills.includes('challenger_insight');
     const businessName = state.businessName;
+    const pitchServiceLabels = {
+      it: 'IT & managed services', marketing: 'marketing services',
+      finance: 'accounting & financial advisory', law: 'legal services',
+      construction: 'construction services', auto: 'auto & fleet services',
+      realestate: 'real estate & property management', health: 'healthcare services',
+      consulting: 'operations consulting',
+    };
+    const pitchServiceLabel = pitchServiceLabels[state.businessIndustry] || state.businessDescription || 'services';
 
     body.innerHTML = `
       <div class="dialogue-box">
@@ -644,14 +659,14 @@ export class UIManager {
         <button class="choice-btn" data-pitch="bad">
           <span class="choice-key">1</span>
           <div class="choice-body">
-            <span class="choice-text">"We're ${businessName} and we provide ${state.businessDescription || 'solutions for businesses like yours'}. We've been in business for 3 years and our clients see real results."</span>
+            <span class="choice-text">"We're ${businessName}. We provide ${pitchServiceLabel} to businesses like ${biz.name}. We've helped similar companies and our clients see real results."</span>
           <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Feature-led pitch</span>
           </div>
         </button>
         <button class="choice-btn technique" data-pitch="good">
           <span class="choice-key">2</span>
           <div class="choice-body">
-            <span class="choice-text">"Based on what you told me — ${biz.pain || 'your growth challenge'} — I help businesses like yours solve exactly that. Not with promises, but with a specific outcome: ${state.businessDescription || 'measurable results that compound over time'}. That's what we should talk about."</span>
+            <span class="choice-text">"Based on what you told me — ${biz.pain || 'your growth challenge'} — that's exactly the problem our ${pitchServiceLabel} solves. We don't just deliver a service; we deliver a specific outcome: ${state.businessDescription || 'measurable results that compound'}. That's what I'd like to explore with you."</span>
           <span class="choice-badge">StoryBrand — outcome-led</span>
           </div>
         </button>
@@ -659,7 +674,7 @@ export class UIManager {
         <button class="choice-btn technique" data-pitch="technique">
           <span class="choice-key">3</span>
           <div class="choice-body">
-            <span class="choice-text">"Most ${pluralize(biz.type)} I work with think the problem is ${biz.pain?.split(' ').slice(0,5).join(' ')}... but what's really happening underneath is a systems gap. Here's what top performers in your space do differently to pull ahead."</span>
+            <span class="choice-text">"Most ${pluralize(biz.type)} I work with think ${biz.pain?.split(' ').slice(0,5).join(' ')}... is the main problem. But in my experience delivering ${pitchServiceLabel}, what's really underneath it is a systems gap. Here's what the top performers in your space are doing differently."</span>
           <span class="choice-badge" style="color:var(--violet)">🔬 Challenger Insight</span>
           </div>
         </button>
@@ -987,17 +1002,11 @@ export class UIManager {
     this._renderJournal();
     screen.classList.remove('hidden');
     screen.style.display = 'flex';
-
-    document.getElementById('btn-close-journal')?.addEventListener('click', () => {
-      screen.classList.add('hidden');
-      screen.style.display = 'none';
-    }, { once: true });
   }
 
   showJournalPrompt(prompts, context) {
     const screen = document.getElementById('screen-journal');
     if (!screen || !this.state) return;
-
     const prompt = prompts[Math.floor(Math.random() * prompts.length)];
     this._renderJournal(prompt, context);
     screen.classList.remove('hidden');
@@ -1066,6 +1075,13 @@ export class UIManager {
     });
 
     document.getElementById('btn-skip-journal')?.addEventListener('click', () => {
+      const screen = document.getElementById('screen-journal');
+      screen?.classList.add('hidden');
+      screen && (screen.style.display = 'none');
+    });
+
+    // ── Close button — re-attached every render so it always works ──
+    document.getElementById('btn-close-journal')?.addEventListener('click', () => {
       const screen = document.getElementById('screen-journal');
       screen?.classList.add('hidden');
       screen && (screen.style.display = 'none');

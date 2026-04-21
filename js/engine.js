@@ -6,7 +6,8 @@
 import {
   DISTRICTS, SKILL_TREE, ENCOUNTER_PHASES, OBJECTION_LIBRARY,
   DISCOVERY_QUESTIONS, MILESTONES, JOURNAL_PROMPTS,
-  COMPETITORS, EMPLOYEE_ARCHETYPES, createInitialState
+  COMPETITORS, EMPLOYEE_ARCHETYPES, createInitialState,
+  generateDiscoveryQuestions
 } from './data.js';
 
 // ── Constants ────────────────────────────────────────────────
@@ -117,26 +118,92 @@ function _addTreeRing(map, x, y, w, h) {
 // District building placement
 function buildDistrictBlocks() {
   const blocks = [];
+
+  // Pre-generate the map so we can test tile types during placement
+  const tempMap = generateCityMap();
+
+  // Returns true if a 2x2 footprint at (tx,ty) is entirely on non-road,
+  // non-water, non-park, non-tree tiles — i.e. genuine building-lot space
+  function isValidBuildingSpot(tx, ty) {
+    if (tx < 1 || ty < 1 || tx + 2 > MAP_W - 1 || ty + 2 > MAP_H - 1) return false;
+    for (let dy = 0; dy < 2; dy++) {
+      for (let dx = 0; dx < 2; dx++) {
+        const t = tempMap[ty+dy]?.[tx+dx];
+        // Must be interior block (2) — not road(0), sidewalk(1), park(3), water(4), tree(5), parking(6)
+        if (t !== 2) return false;
+      }
+    }
+    // Also ensure the spot isn't already occupied by another block
+    return true;
+  }
+
+  // Find the nearest valid 2x2 spot to a preferred (px,py) tile coordinate
+  function snapToBlock(preferX, preferY) {
+    // Search in expanding rings around the preferred position
+    for (let radius = 0; radius <= 6; radius++) {
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue; // ring only
+          const tx = preferX + dx, ty = preferY + dy;
+          if (isValidBuildingSpot(tx, ty)) return { tx, ty };
+        }
+      }
+    }
+    return null; // fallback — shouldn't happen
+  }
+
   DISTRICTS.forEach(d => {
     const cx = Math.floor(d.x * MAP_W);
     const cy = Math.floor(d.y * MAP_H);
+    const used = new Set();
+
     d.businesses.forEach((biz, i) => {
       const angle = (i / d.businesses.length) * Math.PI * 2;
-      const radius = 4 + (i % 2) * 2;
-      const bx = cx + Math.round(Math.cos(angle) * radius);
-      const by = cy + Math.round(Math.sin(angle) * radius);
+      const radius = 3 + (i % 3) * 2;
+      const prefX = cx + Math.round(Math.cos(angle) * radius);
+      const prefY = cy + Math.round(Math.sin(angle) * radius);
+
+      // Snap to valid non-road interior tile
+      const spot = snapToBlock(prefX, prefY);
+      if (!spot) return;
+
+      const key = `${spot.tx},${spot.ty}`;
+      if (used.has(key)) return;
+      used.add(key);
+
+      // Mark those tiles as occupied so next building won't overlap
+      for (let dy = 0; dy < 2; dy++)
+        for (let dx = 0; dx < 2; dx++)
+          if (tempMap[spot.ty+dy]?.[spot.tx+dx] !== undefined)
+            tempMap[spot.ty+dy][spot.tx+dx] = 2; // keep as 2 (already is)
+
       blocks.push({
-        x: Math.max(1, Math.min(MAP_W - 3, bx)),
-        y: Math.max(1, Math.min(MAP_H - 3, by)),
+        x: spot.tx,
+        y: spot.ty,
         w: 2, h: 2,
         districtId: d.id,
         districtColor: d.color,
         business: biz,
       });
     });
-    // District sign
+
+    // District sign — snap to nearest sidewalk tile near center
+    let signX = cx, signY = cy;
+    for (let r = 0; r <= 4; r++) {
+      let found = false;
+      for (let dy = -r; dy <= r && !found; dy++) {
+        for (let dx = -r; dx <= r && !found; dx++) {
+          if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+          const tx = cx+dx, ty = cy+dy;
+          if (tx>=0&&tx<MAP_W&&ty>=0&&ty<MAP_H&&tempMap[ty]?.[tx]===1) {
+            signX = tx; signY = ty; found = true;
+          }
+        }
+      }
+      if (found) break;
+    }
     blocks.push({
-      x: cx, y: cy,
+      x: signX, y: signY,
       w: 1, h: 1,
       type: 'sign',
       districtId: d.id,
@@ -469,6 +536,10 @@ export class BizAmpireEngine {
       return;
     }
 
+    // Pre-generate industry-aware discovery questions for this encounter
+    const playerIndustry = this.state.businessIndustry || 'consulting';
+    const generatedQuestions = generateDiscoveryQuestions(playerIndustry, business);
+
     this.state.currentEncounter = {
       business,
       phase: 'recon',
@@ -478,6 +549,7 @@ export class BizAmpireEngine {
         openerQuality: 'cold',
         discoveryScore: 0,
         spinPhase: 0,
+        generatedQuestions,   // industry-aware SPIN questions for this encounter
         pricingSet: false,
         price: null,
         objections: [],
@@ -806,7 +878,31 @@ export class BizAmpireEngine {
     const startTY = Math.floor(this.cam.y / T);
     const endTX = Math.min(MAP_W - 1, startTX + Math.ceil(this.canvas.width  / T) + 2);
     const endTY = Math.min(MAP_H - 1, startTY + Math.ceil(this.canvas.height / T) + 2);
-    const now = Date.now();
+
+    // Pixel-art palette (warm, flat, hard-edged — Pokémon FireRed / EarthBound style)
+    const C = {
+      road:       '#8a8070',  // warm grey asphalt
+      roadDark:   '#7a7060',  // slightly darker road variant
+      roadLine:   '#f0e080',  // yellow center line
+      roadWhite:  '#e8e0d0',  // white edge line
+      sidewalk:   '#c8b890',  // warm cream concrete
+      sidewalkDk: '#b0a07a',  // grout lines / joints
+      sidewalkLt: '#d8c8a0',  // highlight edge
+      grass:      '#50a838',  // bright Pokémon-style grass
+      grassDk:    '#3d8a28',  // darker grass variant
+      grassLt:    '#68c048',  // lighter grass highlight
+      water:      '#3878c8',  // bright Pokémon water blue
+      waterLt:    '#58a0e8',  // water shimmer
+      waterDk:    '#2058a0',  // deep water
+      tree:       '#2a7a20',  // dark tree base
+      treeMid:    '#3a9a30',  // tree mid
+      treeLt:     '#50c040',  // tree highlight
+      path:       '#c0a870',  // stone path / brick
+      pathDk:     '#a08858',  // grout between bricks
+      parking:    '#706860',  // parking asphalt
+      parkingLn:  '#f0e080',  // parking bay line
+      buildBase:  '#111323',  // building lot base
+    };
 
     for (let ty = startTY; ty <= endTY; ty++) {
       for (let tx = startTX; tx <= endTX; tx++) {
@@ -814,256 +910,204 @@ export class BizAmpireEngine {
         const tile = this.map[ty]?.[tx] ?? 2;
         const px = tx * T, py = ty * T;
 
-        // ── ROAD (0) ──────────────────────────────────────────
+        // ── ROAD ──────────────────────────────────────────────
         if (tile === 0) {
-          // Base asphalt — slightly varied by position for texture
-          const varA = ((tx * 7 + ty * 13) % 5);
-          const asphalt = varA < 2 ? '#17192c' : varA < 4 ? '#161828' : '#181a2e';
-          ctx.fillStyle = asphalt;
-          ctx.fillRect(px, py, T, T);
-
           const isHRoad = ty % 8 === 4 || ty % 8 === 5;
           const isVRoad = tx % 10 === 5 || tx % 10 === 6;
+          const isInter = isHRoad && isVRoad;
 
-          if (isHRoad && isVRoad) {
-            // ── Intersection ──────────────────────────────────
-            ctx.fillStyle = '#1a1c2e';
+          // Alternate tile shade for texture
+          ctx.fillStyle = (tx + ty) % 2 === 0 ? C.road : C.roadDark;
+          ctx.fillRect(px, py, T, T);
+
+          if (isInter) {
+            // Intersection — slightly lighter, crosswalk stripes
+            ctx.fillStyle = '#958872';
             ctx.fillRect(px, py, T, T);
-            // Crosswalk stripes (all 4 sides)
-            ctx.fillStyle = 'rgba(255,255,255,0.10)';
+            ctx.fillStyle = 'rgba(240,224,208,0.22)';
             for (let s = 0; s < 4; s++) {
-              ctx.fillRect(px + 4 + s * 10, py + 1, 6, 5);     // top
-              ctx.fillRect(px + 4 + s * 10, py + T - 6, 6, 5); // bottom
-              ctx.fillRect(px + 1, py + 4 + s * 10, 5, 6);     // left
-              ctx.fillRect(px + T - 6, py + 4 + s * 10, 5, 6); // right
+              ctx.fillRect(px + 4 + s * 10, py, 6, 5);
+              ctx.fillRect(px + 4 + s * 10, py + T - 5, 6, 5);
+              ctx.fillRect(px, py + 4 + s * 10, 5, 6);
+              ctx.fillRect(px + T - 5, py + 4 + s * 10, 5, 6);
             }
-            // Corner curb radii (dark chamfer)
-            ctx.fillStyle = '#12141f';
-            ctx.beginPath(); ctx.arc(px,     py,     3, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(px+T,   py,     3, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(px,     py+T,   3, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(px+T,   py+T,   3, 0, Math.PI*2); ctx.fill();
           } else if (isHRoad) {
-            // ── Horizontal road ───────────────────────────────
-            // Yellow dashed center line (between row 4 and 5 of each block)
             if (ty % 8 === 4) {
-              // Top half of road — draw center line on bottom edge of this tile
-              if (tx % 6 < 4) {
-                ctx.fillStyle = 'rgba(255,200,0,0.55)';
-                ctx.fillRect(px + 3, py + T - 2, T - 6, 2);
-              }
-              // White edge line at top
-              ctx.fillStyle = 'rgba(255,255,255,0.18)';
-              ctx.fillRect(px, py + 1, T, 1.5);
+              // Top lane: white edge top, dashed yellow bottom
+              ctx.fillStyle = C.roadWhite;
+              ctx.fillRect(px, py, T, 2);
+              if (tx % 4 < 2) { ctx.fillStyle = C.roadLine; ctx.fillRect(px + 2, py + T - 3, T - 4, 3); }
             } else {
-              // Bottom half — white edge line at bottom
-              ctx.fillStyle = 'rgba(255,255,255,0.18)';
-              ctx.fillRect(px, py + T - 2, T, 1.5);
+              // Bottom lane: dashed yellow top, white edge bottom
+              if (tx % 4 < 2) { ctx.fillStyle = C.roadLine; ctx.fillRect(px + 2, py, T - 4, 3); }
+              ctx.fillStyle = C.roadWhite;
+              ctx.fillRect(px, py + T - 2, T, 2);
             }
           } else if (isVRoad) {
-            // ── Vertical road ─────────────────────────────────
             if (tx % 10 === 5) {
-              // Left half — dashed center on right edge, white edge on left
-              if (ty % 6 < 4) {
-                ctx.fillStyle = 'rgba(255,200,0,0.55)';
-                ctx.fillRect(px + T - 2, py + 3, 2, T - 6);
-              }
-              ctx.fillStyle = 'rgba(255,255,255,0.18)';
-              ctx.fillRect(px + 1, py, 1.5, T);
+              ctx.fillStyle = C.roadWhite;
+              ctx.fillRect(px, py, 2, T);
+              if (ty % 4 < 2) { ctx.fillStyle = C.roadLine; ctx.fillRect(px + T - 3, py + 2, 3, T - 4); }
             } else {
-              ctx.fillStyle = 'rgba(255,255,255,0.18)';
-              ctx.fillRect(px + T - 2, py, 1.5, T);
+              if (ty % 4 < 2) { ctx.fillStyle = C.roadLine; ctx.fillRect(px, py + 2, 3, T - 4); }
+              ctx.fillStyle = C.roadWhite;
+              ctx.fillRect(px + T - 2, py, 2, T);
             }
           }
 
-        // ── SIDEWALK (1) ──────────────────────────────────────
+        // ── SIDEWALK ──────────────────────────────────────────
         } else if (tile === 1) {
-          // Concrete base — slightly lighter at edges for curb feel
-          ctx.fillStyle = '#1e2136';
+          // Alternating tile pattern (like real concrete slabs)
+          const slabAlt = ((tx + ty) % 2 === 0);
+          ctx.fillStyle = slabAlt ? C.sidewalk : '#c0b088';
           ctx.fillRect(px, py, T, T);
 
-          // Curb edge highlight (bright line on road-adjacent sides)
-          const adjU = this.map[ty-1]?.[tx], adjD = this.map[ty+1]?.[tx];
-          const adjL = this.map[ty]?.[tx-1], adjR = this.map[ty]?.[tx+1];
-          ctx.fillStyle = 'rgba(255,255,255,0.13)';
-          if (adjU === 0) ctx.fillRect(px, py, T, 2);       // curb top
-          if (adjD === 0) ctx.fillRect(px, py+T-2, T, 2);   // curb bottom
-          if (adjL === 0) ctx.fillRect(px, py, 2, T);       // curb left
-          if (adjR === 0) ctx.fillRect(px+T-2, py, 2, T);   // curb right
+          // Hard grout lines on every tile edge
+          ctx.fillStyle = C.sidewalkDk;
+          ctx.fillRect(px, py, T, 1);         // top grout
+          ctx.fillRect(px, py, 1, T);         // left grout
 
-          // Concrete slab joint lines (2x2 grid within tile)
-          ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-          ctx.lineWidth = 0.5;
-          ctx.beginPath();
-          ctx.moveTo(px + T/2, py + 2); ctx.lineTo(px + T/2, py + T - 2); // vertical joint
-          ctx.moveTo(px + 2, py + T/2); ctx.lineTo(px + T - 2, py + T/2); // horizontal joint
-          ctx.stroke();
+          // Curb edge (bright raised lip toward road)
+          const au = this.map[ty-1]?.[tx], ad = this.map[ty+1]?.[tx];
+          const al = this.map[ty]?.[tx-1],  ar = this.map[ty]?.[tx+1];
+          ctx.fillStyle = C.sidewalkLt;
+          if (au === 0) ctx.fillRect(px, py, T, 3);
+          if (ad === 0) ctx.fillRect(px, py+T-3, T, 3);
+          if (al === 0) ctx.fillRect(px, py, 3, T);
+          if (ar === 0) ctx.fillRect(px+T-3, py, 3, T);
 
-          // Subtle texture flecks
-          const seed = (tx * 31 + ty * 17) % 48;
-          ctx.fillStyle = 'rgba(255,255,255,0.03)';
-          ctx.fillRect(px + (seed % 20) + 4, py + ((seed * 3) % 24) + 4, 2, 2);
-          ctx.fillRect(px + ((seed * 7) % 22) + 4, py + ((seed * 11) % 20) + 4, 2, 2);
-
-        // ── PARK / GRASS (3) ──────────────────────────────────
+        // ── PARK / GRASS ──────────────────────────────────────
         } else if (tile === 3) {
-          // Rich grass base with blade variation
-          const gVar = (tx * 5 + ty * 11) % 4;
-          const grass = ['#1a3d22','#1c4025','#183820','#1f4428'][gVar];
-          ctx.fillStyle = grass;
+          // Checkerboard grass variation (Pokémon style)
+          const v = (tx + ty) % 2;
+          ctx.fillStyle = v === 0 ? C.grass : C.grassDk;
           ctx.fillRect(px, py, T, T);
 
-          // Path/walkway through center of large park (visual only)
-          // Subtle lighter patches
-          if ((tx + ty) % 5 === 0) {
-            ctx.fillStyle = 'rgba(255,255,255,0.025)';
-            ctx.fillRect(px + 8, py + 8, T - 16, T - 16);
+          // Tiny blade marks (2x2 dot clusters)
+          if ((tx * 3 + ty * 7) % 5 === 0) {
+            ctx.fillStyle = C.grassLt;
+            ctx.fillRect(px + (tx*7)%36 + 4, py + (ty*11)%36 + 4, 2, 3);
+            ctx.fillRect(px + (tx*13)%36 + 4, py + (ty*5)%36 + 8, 2, 3);
           }
 
-          // Grass texture — short strokes
-          ctx.strokeStyle = 'rgba(80,180,80,0.15)';
-          ctx.lineWidth = 1;
-          const bladeSeeds = [(tx*3+ty*7)%T, (tx*11+ty*5)%T, (tx*17+ty*13)%T];
-          for (const bx of bladeSeeds) {
-            const by2 = (bx * 7 + ty * 3) % (T - 8) + 4;
-            ctx.beginPath();
-            ctx.moveTo(px + bx % (T-4) + 2, py + by2);
-            ctx.lineTo(px + bx % (T-4) + 3, py + by2 - 4);
-            ctx.stroke();
+          // Stone path inside park (every 3 tiles horizontal)
+          const isParkPath = (ty % 3 === 0) && (tx % 2 === 0);
+          if (isParkPath) {
+            ctx.fillStyle = C.path;
+            ctx.fillRect(px + 4, py + T/2 - 3, T - 8, 6);
+            ctx.fillStyle = C.pathDk;
+            ctx.fillRect(px + 4, py + T/2 - 3, T - 8, 1);
+            ctx.fillRect(px + 4, py + T/2 + 2, T - 8, 1);
           }
 
-          // Flower dots (sparse, deterministic)
-          if ((tx * 13 + ty * 7) % 11 === 0) {
-            ctx.fillStyle = 'rgba(255,220,60,0.6)';
-            ctx.beginPath();
-            ctx.arc(px + (tx*7)%32 + 8, py + (ty*11)%32 + 8, 1.5, 0, Math.PI*2);
-            ctx.fill();
+          // Flower dots
+          if ((tx * 11 + ty * 13) % 17 === 0) {
+            ctx.fillStyle = '#f8e040';
+            ctx.fillRect(px + (tx*7)%30 + 8, py + (ty*9)%30 + 8, 3, 3);
           }
-          if ((tx * 17 + ty * 11) % 13 === 0) {
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.beginPath();
-            ctx.arc(px + (tx*13)%30 + 9, py + (ty*7)%30 + 9, 1, 0, Math.PI*2);
-            ctx.fill();
+          if ((tx * 17 + ty * 7) % 19 === 0) {
+            ctx.fillStyle = '#f86080';
+            ctx.fillRect(px + (tx*11)%28 + 10, py + (ty*13)%28 + 10, 3, 3);
           }
 
-        // ── WATER / LAKE (4) ──────────────────────────────────
+        // ── WATER ─────────────────────────────────────────────
         } else if (tile === 4) {
-          // Deep water base
-          ctx.fillStyle = '#0d2a4a';
+          // Flat water base
+          ctx.fillStyle = C.water;
           ctx.fillRect(px, py, T, T);
 
-          // Animated shimmer (time-based)
-          const shimmerPhase = (now / 1800 + tx * 0.3 + ty * 0.5) % (Math.PI * 2);
-          const shimmerA = 0.05 + Math.sin(shimmerPhase) * 0.04;
-          ctx.fillStyle = `rgba(0,160,220,${shimmerA.toFixed(3)})`;
-          ctx.fillRect(px, py, T, T);
-
-          // Highlight ripple lines
-          const rippleOff = (now / 2400 + tx * 0.4) % T;
-          ctx.strokeStyle = 'rgba(100,200,255,0.12)';
-          ctx.lineWidth = 1;
-          for (let r = 0; r < 3; r++) {
-            const ry = py + ((rippleOff + r * 14) % T);
-            ctx.beginPath();
-            ctx.moveTo(px + 4, ry);
-            ctx.bezierCurveTo(px + T*0.25, ry - 2, px + T*0.75, ry + 2, px + T - 4, ry);
-            ctx.stroke();
+          // Animated sparkle tiles (time-based, only every other tile)
+          const sparkle = (tx + ty + Math.floor(Date.now() / 500)) % 4;
+          if (sparkle === 0) {
+            ctx.fillStyle = C.waterLt;
+            ctx.fillRect(px + 4, py + 4, T - 8, T - 8);
+          } else if (sparkle === 2) {
+            ctx.fillStyle = C.waterDk;
+            ctx.fillRect(px + 6, py + 6, T - 12, T - 12);
           }
 
-          // Shore edge foam on water-adjacent-to-land tiles
-          const adjU4 = this.map[ty-1]?.[tx], adjD4 = this.map[ty+1]?.[tx];
-          const adjL4 = this.map[ty]?.[tx-1], adjR4 = this.map[ty]?.[tx+1];
-          ctx.fillStyle = 'rgba(180,230,255,0.18)';
-          if (adjU4 !== 4 && adjU4 !== undefined) ctx.fillRect(px, py, T, 3);
-          if (adjD4 !== 4 && adjD4 !== undefined) ctx.fillRect(px, py+T-3, T, 3);
-          if (adjL4 !== 4 && adjL4 !== undefined) ctx.fillRect(px, py, 3, T);
-          if (adjR4 !== 4 && adjR4 !== undefined) ctx.fillRect(px+T-3, py, 3, T);
+          // Hard white edge foam
+          const au4 = this.map[ty-1]?.[tx], ad4 = this.map[ty+1]?.[tx];
+          const al4 = this.map[ty]?.[tx-1],  ar4 = this.map[ty]?.[tx+1];
+          ctx.fillStyle = '#a8d8f8';
+          if (au4 !== 4 && au4 !== undefined) ctx.fillRect(px, py, T, 4);
+          if (ad4 !== 4 && ad4 !== undefined) ctx.fillRect(px, py+T-4, T, 4);
+          if (al4 !== 4 && al4 !== undefined) ctx.fillRect(px, py, 4, T);
+          if (ar4 !== 4 && ar4 !== undefined) ctx.fillRect(px+T-4, py, 4, T);
 
-        // ── TREE CANOPY (5) ───────────────────────────────────
+        // ── TREE CANOPY ───────────────────────────────────────
         } else if (tile === 5) {
-          // Ground underneath (grass or sidewalk)
-          const underTile = (this.map[ty-1]?.[tx]===3||this.map[ty+1]?.[tx]===3||
-                              this.map[ty]?.[tx-1]===3||this.map[ty]?.[tx+1]===3) ? 3 : 1;
-          if (underTile === 3) {
-            ctx.fillStyle = '#183a20';
-          } else {
-            ctx.fillStyle = '#1a1e30';
-          }
+          // Ground underneath
+          ctx.fillStyle = (this.map[ty+1]?.[tx]===3||this.map[ty]?.[tx+1]===3) ? C.grassDk : '#1a1e30';
           ctx.fillRect(px, py, T, T);
 
-          // Tree shadow (offset ellipse under canopy)
-          ctx.fillStyle = 'rgba(0,0,0,0.35)';
-          ctx.beginPath();
-          ctx.ellipse(px + T/2 + 3, py + T/2 + 4, T*0.38, T*0.22, 0, 0, Math.PI*2);
-          ctx.fill();
+          // Pixel-art tree: 3-layer hard-edged circles, no blur
+          // Shadow
+          ctx.fillStyle = 'rgba(0,0,0,0.4)';
+          ctx.fillRect(px + 8, py + T - 10, T - 10, 6);
 
-          // Outer canopy (dark green ring)
-          ctx.fillStyle = '#1f5a28';
+          // Outer canopy (dark ring)
+          ctx.fillStyle = C.tree;
           ctx.beginPath();
-          ctx.arc(px + T/2, py + T/2, T*0.42, 0, Math.PI*2);
+          ctx.arc(px + T/2, py + T/2, T * 0.44, 0, Math.PI*2);
           ctx.fill();
 
           // Mid canopy
-          ctx.fillStyle = '#2d7a38';
+          ctx.fillStyle = C.treeMid;
           ctx.beginPath();
-          ctx.arc(px + T/2, py + T/2 - 2, T*0.34, 0, Math.PI*2);
+          ctx.arc(px + T/2, py + T/2 - 3, T * 0.35, 0, Math.PI*2);
           ctx.fill();
 
-          // Highlight cluster (top-left lit)
-          ctx.fillStyle = '#3a9a48';
+          // Highlight (top-left, hard pixel block style)
+          ctx.fillStyle = C.treeLt;
+          ctx.fillRect(px + Math.floor(T*0.22), py + Math.floor(T*0.12), Math.floor(T*0.28), Math.floor(T*0.22));
+          // Clip to circle feel — just round the highlight
+          ctx.fillStyle = C.treeMid;
+          ctx.fillRect(px + Math.floor(T*0.22), py + Math.floor(T*0.12), 2, 2);
+          ctx.fillRect(px + Math.floor(T*0.22) + Math.floor(T*0.28) - 2, py + Math.floor(T*0.12), 2, 2);
+
+          // Trunk
+          ctx.fillStyle = '#6a4020';
+          ctx.fillRect(px + T/2 - 2, py + T/2 + 8, 4, 8);
+
+          // Hard 1px dark outline around whole canopy
+          ctx.strokeStyle = '#1a3010';
+          ctx.lineWidth = 1.5;
           ctx.beginPath();
-          ctx.arc(px + T/2 - 4, py + T/2 - 5, T*0.22, 0, Math.PI*2);
-          ctx.fill();
+          ctx.arc(px + T/2, py + T/2, T * 0.44, 0, Math.PI*2);
+          ctx.stroke();
 
-          // Specular top highlight
-          ctx.fillStyle = 'rgba(120,220,100,0.25)';
-          ctx.beginPath();
-          ctx.arc(px + T/2 - 5, py + T/2 - 6, T*0.12, 0, Math.PI*2);
-          ctx.fill();
-
-          // Trunk (tiny, barely visible under canopy)
-          ctx.fillStyle = '#3d2a18';
-          ctx.fillRect(px + T/2 - 2, py + T/2 + 6, 4, 6);
-
-        // ── PARKING LOT (6) ───────────────────────────────────
+        // ── PARKING LOT ───────────────────────────────────────
         } else if (tile === 6) {
-          // Worn asphalt, lighter than road
-          ctx.fillStyle = '#1c1e2e';
+          ctx.fillStyle = C.parking;
           ctx.fillRect(px, py, T, T);
-
-          // Parking space lines (white dashes)
-          const pCol = (tx % 3);
-          ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-          ctx.lineWidth = 1;
-          // Vertical bay lines
-          ctx.beginPath();
-          ctx.moveTo(px + 1, py + 4); ctx.lineTo(px + 1, py + T - 4);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(px + T - 1, py + 4); ctx.lineTo(px + T - 1, py + T - 4);
-          ctx.stroke();
-          // Yellow stop line at entry edge
-          if ((ty * 3 + tx) % 3 === 0) {
-            ctx.strokeStyle = 'rgba(255,200,0,0.3)';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.moveTo(px + 3, py + T - 3); ctx.lineTo(px + T - 3, py + T - 3);
-            ctx.stroke();
-          }
-          // Occasional car silhouette
+          // Bay lines
+          ctx.fillStyle = C.parkingLn;
+          ctx.fillRect(px + 1, py + 4, 2, T - 8);
+          ctx.fillRect(px + T - 3, py + 4, 2, T - 8);
+          // Occasional parked car (pixel-art box)
           if ((tx * 7 + ty * 11) % 9 === 0) {
-            ctx.fillStyle = 'rgba(30,40,60,0.7)';
-            ctx.beginPath();
-            ctx.roundRect(px + 6, py + 8, T - 12, T - 18, 3);
-            ctx.fill();
-            ctx.fillStyle = 'rgba(60,120,180,0.25)';
-            ctx.fillRect(px + 9, py + 10, T - 18, 8); // windshield
+            ctx.fillStyle = ['#4060a0','#a04040','#408040','#806020'][(tx+ty)%4];
+            ctx.fillRect(px + 6, py + 6, T - 12, T - 16);
+            ctx.fillStyle = '#203040';
+            ctx.fillRect(px + 9, py + 9, T - 18, 8);
+            // Hard outline
+            ctx.strokeStyle = '#101020';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(px + 6, py + 6, T - 12, T - 16);
           }
 
-        // ── BUILDING INTERIOR (2) ─────────────────────────────
+        // ── BUILDING LOT / ALLEY (tile=2) ────────────────────
         } else {
-          ctx.fillStyle = '#111323';
+          // Render as concrete-coloured lot space — same as sidewalk but darker
+          // This breaks up the "giant dark block" visual
+          const alt = (tx + ty) % 2;
+          ctx.fillStyle = alt ? '#16192a' : '#131624';
           ctx.fillRect(px, py, T, T);
+          // Subtle grout lines so it reads as individual tiles
+          ctx.fillStyle = 'rgba(255,255,255,0.025)';
+          ctx.fillRect(px, py, T, 1);
+          ctx.fillRect(px, py, 1, T);
         }
       }
     }
@@ -1126,242 +1170,251 @@ export class BizAmpireEngine {
   _drawBuilding(ctx, bx, by, bw, bh, color, { isLocked, isClosed, isLostToComp, isNearby, biz }) {
     const T = TILE;
 
-    // ── Lot boundary / curb ──────────────────────────
-    // Concrete lot pad — slightly larger than building footprint
-    ctx.fillStyle = '#191b2a';
-    ctx.beginPath();
-    ctx.roundRect(bx - 3, by - 3, bw + 6, bh + 6, 5);
-    ctx.fill();
-    // Curb lip highlight
-    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(bx - 3, by - 3, bw + 6, bh + 6, 5);
-    ctx.stroke();
+    // ── Pixel-art palette ────────────────────────────
+    // Warm FireRed / EarthBound style — flat colors, hard edges
+    const PA = {
+      wallA:    '#c87848',  // terracotta brick (warm)
+      wallB:    '#b86838',  // darker terracotta
+      wallLt:   '#d89868',  // sunlit highlight
+      wallSh:   '#904828',  // shadow side
+      roofA:    '#8a4828',  // dark red-brown roof
+      roofB:    '#703820',  // roof shadow
+      roofLt:   '#a05830',  // roof highlight
+      roofEdge: '#582810',  // parapet outline
+      winGlass: '#88c0f0',  // window blue-white
+      winFr:    '#703820',  // window frame
+      winLit:   '#f8e090',  // lit window warm yellow
+      winDark:  '#203040',  // unlit window dark
+      door:     '#502010',  // dark wood door
+      doorFr:   '#382008',  // door frame
+      doorKnob: '#e0b020',  // brass handle
+      awning:   '#e04828',  // awning base (district-tinted)
+      awningS:  '#c03820',  // awning stripe
+      step:     '#c8b890',  // entrance step (sidewalk colour)
+      outline:  '#3a2010',  // hard pixel outline
+      signBg:   '#201008',  // sign background
+      closedWall: '#386028', closedRoof: '#285020', closedBadge: '#50e058',
+      lostWall:   '#6a2028', lostRoof:   '#501820', lostBadge:  '#ff5060',
+      lockedWall: '#282030', lockedRoof: '#1c1828',
+    };
 
-    // ── Drop shadow ──────────────────────────────────
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.beginPath();
-    ctx.roundRect(bx + 6, by + 7, bw, bh, 5);
-    ctx.fill();
+    // State-driven colour overrides
+    let wallA = PA.wallA, wallB = PA.wallB, wallLt = PA.wallLt, wallSh = PA.wallSh;
+    let roofA = PA.roofA, roofB = PA.roofB, roofLt = PA.roofLt;
+    let outlineC = PA.outline;
 
-    // ── Building state colors ────────────────────────
-    let wallColor, roofColor, borderColor, glowColor;
     if (isLocked) {
-      wallColor = '#1a1c2d'; roofColor = '#161826'; borderColor = '#2a2c3e'; glowColor = null;
+      wallA = PA.lockedWall; wallB = '#1e1828'; wallLt = '#302840'; wallSh = '#181420';
+      roofA = PA.lockedRoof; roofB = '#141020'; roofLt = '#242030';
+      outlineC = '#302848';
     } else if (isClosed) {
-      wallColor = '#132a18'; roofColor = '#0e2012'; borderColor = '#4ade80'; glowColor = '#4ade80';
+      wallA = '#386028'; wallB = '#2e5020'; wallLt = '#50804a'; wallSh = '#204018';
+      roofA = '#285020'; roofB = '#1e3c18'; roofLt = '#3a6830';
+      outlineC = '#385028';
     } else if (isLostToComp) {
-      wallColor = '#2a1016'; roofColor = '#200c10'; borderColor = '#ff4466'; glowColor = '#ff4466';
-    } else if (isNearby) {
-      wallColor = color + '30'; roofColor = color + '1a'; borderColor = color; glowColor = color;
-    } else {
-      wallColor = color + '14'; roofColor = color + '0c'; borderColor = color + '55'; glowColor = null;
+      wallA = '#6a2028'; wallB = '#581820'; wallLt = '#883038'; wallSh = '#401018';
+      roofA = '#501820'; roofB = '#3c1018'; roofLt = '#682028';
+      outlineC = '#582020';
     }
 
-    if (glowColor && (isNearby || isClosed || isLostToComp)) {
-      ctx.shadowColor = glowColor;
-      ctx.shadowBlur = isNearby ? 20 : 10;
-    }
+    // ── Hard drop shadow (offset pixel block) ────────
+    ctx.fillStyle = 'rgba(0,0,0,0.38)';
+    ctx.fillRect(bx + 4, by + 5, bw, bh);
 
-    // ── Main wall ────────────────────────────────────
-    ctx.fillStyle = wallColor;
-    ctx.strokeStyle = borderColor;
-    ctx.lineWidth = isNearby ? 2 : 1;
-    ctx.beginPath();
-    ctx.roundRect(bx, by, bw, bh, 4);
-    ctx.fill();
-    ctx.stroke();
+    // ── Outer outline (chunky pixel-art border) ───────
+    if (isNearby) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 16;
+    }
+    ctx.fillStyle = outlineC;
+    ctx.fillRect(bx - 2, by - 2, bw + 4, bh + 4);
     ctx.shadowBlur = 0;
+
+    // ── Rooftop band ──────────────────────────────────
+    // Visible sloped roof above the front wall — FireRed style
+    const roofH = Math.max(10, Math.floor(T * 0.28));
+    // Roof base
+    ctx.fillStyle = roofA;
+    ctx.fillRect(bx, by, bw, roofH);
+    // Roof highlight (top 3px — sunlit parapet edge)
+    ctx.fillStyle = roofLt;
+    ctx.fillRect(bx, by, bw, 3);
+    // Roof shadow at bottom of roof band
+    ctx.fillStyle = roofB;
+    ctx.fillRect(bx, by + roofH - 4, bw, 4);
+    // Crenellation / parapet bumps across top (pixel blocks)
+    const crenW = 8, crenH = 4, crenGap = 6;
+    ctx.fillStyle = roofLt;
+    for (let cx2 = bx + 3; cx2 < bx + bw - crenW; cx2 += crenW + crenGap) {
+      ctx.fillRect(cx2, by - crenH, crenW, crenH);
+      // Outline on each bump
+      ctx.fillStyle = outlineC;
+      ctx.fillRect(cx2 - 1, by - crenH - 1, crenW + 2, 1); // top
+      ctx.fillRect(cx2 - 1, by - crenH - 1, 1, crenH + 1); // left
+      ctx.fillRect(cx2 + crenW, by - crenH - 1, 1, crenH + 1); // right
+      ctx.fillStyle = roofLt;
+    }
+
+    // ── Main wall face ────────────────────────────────
+    // Alternating brick-row texture (2 shades)
+    const wallTop = by + roofH;
+    const wallBot = by + bh;
+    const rowH = 8;
+    for (let ry = wallTop; ry < wallBot; ry += rowH) {
+      const rowAlt = Math.floor((ry - wallTop) / rowH) % 2;
+      ctx.fillStyle = rowAlt === 0 ? wallA : wallB;
+      ctx.fillRect(bx, ry, bw, Math.min(rowH, wallBot - ry));
+    }
+    // Left shadow strip
+    ctx.fillStyle = wallSh;
+    ctx.fillRect(bx, wallTop, 3, bh - roofH);
+    // Right shadow strip
+    ctx.fillStyle = wallSh;
+    ctx.fillRect(bx + bw - 3, wallTop, 3, bh - roofH);
+    // Sunlit highlight strip (top-right corner)
+    ctx.fillStyle = wallLt;
+    ctx.fillRect(bx + 2, wallTop, bw - 5, 3);
 
     if (isLocked) {
       this._drawLockedBuilding(ctx, bx, by, bw, bh, color);
       return;
     }
 
-    // ── Roof / parapet band ───────────────────────────
-    ctx.fillStyle = roofColor || (color + '0c');
-    ctx.beginPath();
-    ctx.roundRect(bx + 1, by + 1, bw - 2, T * 0.3, [4, 4, 0, 0]);
-    ctx.fill();
-    // Parapet line
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(bx + 2, by + T * 0.3);
-    ctx.lineTo(bx + bw - 2, by + T * 0.3);
-    ctx.stroke();
-
-    // ── Awning / storefront ───────────────────────────
-    const awningY = by + bh - T * 0.52;
-    const awningH = T * 0.24;
-    const awningColor = isLostToComp ? 'rgba(255,68,102,0.28)' :
-                        isClosed    ? 'rgba(74,222,128,0.20)' :
-                                      (color + '38');
-    ctx.fillStyle = awningColor;
-    ctx.beginPath();
-    ctx.roundRect(bx + 1, awningY, bw - 2, awningH, [0, 0, 2, 2]);
-    ctx.fill();
-    // Awning stripe pattern
-    for (let s = 0; s < 6; s++) {
-      ctx.fillStyle = 'rgba(255,255,255,0.05)';
-      const sw = (bw - 4) / 6;
-      ctx.fillRect(bx + 2 + s * sw, awningY, sw / 2, awningH);
+    // ── Awning / canopy ───────────────────────────────
+    const awningY = by + bh - Math.floor(T * 0.48);
+    const awningH = Math.floor(T * 0.22);
+    // Pick district-tinted awning colour
+    const awHex = isLostToComp ? '#a02030' : isClosed ? '#207a38' : color;
+    ctx.fillStyle = awHex;
+    ctx.fillRect(bx, awningY, bw, awningH);
+    // Awning stripes (alternating lighter)
+    const stripeW = Math.max(6, Math.floor(bw / 7));
+    for (let s = 0; s < bw; s += stripeW * 2) {
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.fillRect(bx + s, awningY, stripeW, awningH);
     }
-    // Awning bottom fringe dots
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    for (let f = 0; f < Math.floor(bw / 8); f++) {
-      ctx.beginPath();
-      ctx.arc(bx + 4 + f * 8, awningY + awningH, 1.5, 0, Math.PI * 2);
-      ctx.fill();
+    // Awning hard outline
+    ctx.fillStyle = outlineC;
+    ctx.fillRect(bx - 1, awningY - 1, bw + 2, 2);  // top edge
+    ctx.fillRect(bx - 1, awningY + awningH, bw + 2, 2); // bottom edge
+    // Fringe dots
+    for (let f = bx + 3; f < bx + bw - 3; f += 6) {
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.fillRect(f, awningY + awningH, 2, 3);
     }
 
     // ── Windows ───────────────────────────────────────
-    const winRows = 2;
-    const winCols = bw > T * 2.5 ? 3 : 2;
-    const winW = Math.floor((bw - 12) / winCols) - 3;
-    const winH = Math.floor((awningY - by - T * 0.38) / winRows) - 4;
-    const winStartY = by + T * 0.38;
+    const winAreaTop  = wallTop + 5;
+    const winAreaBot  = awningY - 4;
+    const winRows = winAreaBot - winAreaTop > 28 ? 2 : 1;
+    const winCols = bw >= T * 2.5 ? 3 : 2;
+    const winW = Math.max(6, Math.floor((bw - 10) / winCols) - 5);
+    const winH = Math.max(6, Math.floor((winAreaBot - winAreaTop) / winRows) - 6);
 
     for (let r = 0; r < winRows; r++) {
       for (let c = 0; c < winCols; c++) {
-        const wx = bx + 6 + c * ((bw - 12) / winCols) + 1;
-        const wy = winStartY + r * (winH + 5);
-        const lit = ((bx + by + r * 7 + c * 13) % 5) < 3;
+        const wx = bx + 5 + c * Math.floor((bw - 10) / winCols) + 1;
+        const wy = winAreaTop + 3 + r * (winH + 6);
+        const lit = ((Math.round(bx) + Math.round(by) + r * 7 + c * 13) % 5) < 3;
 
-        // Reveal (recessed window inset)
-        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        // Frame (hard pixel outline)
+        ctx.fillStyle = PA.winFr;
         ctx.fillRect(wx - 2, wy - 2, winW + 4, winH + 4);
 
         // Glass
-        if (isLostToComp)      ctx.fillStyle = 'rgba(255,68,102,0.15)';
-        else if (isClosed)     ctx.fillStyle = 'rgba(74,222,128,0.22)';
-        else if (lit)          ctx.fillStyle = color + '38';
-        else                   ctx.fillStyle = 'rgba(8,10,20,0.85)';
+        if (isLostToComp)  ctx.fillStyle = '#a02020';
+        else if (isClosed) ctx.fillStyle = '#30c048';
+        else if (lit)      ctx.fillStyle = PA.winLit;
+        else               ctx.fillStyle = PA.winDark;
         ctx.fillRect(wx, wy, winW, winH);
 
-        // Sill highlight
-        ctx.fillStyle = 'rgba(255,255,255,0.04)';
-        ctx.fillRect(wx, wy + winH, winW, 2);
+        // Window divider cross
+        ctx.fillStyle = PA.winFr;
+        ctx.fillRect(wx + Math.floor(winW/2) - 1, wy, 2, winH);
+        ctx.fillRect(wx, wy + Math.floor(winH/2) - 1, winW, 2);
 
-        // Cross-frame divider
-        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(wx + winW/2, wy); ctx.lineTo(wx + winW/2, wy + winH);
-        ctx.stroke();
-
-        // Reflection glint
+        // Reflection (top-left pixel corner)
         if (lit && !isLostToComp) {
-          ctx.fillStyle = 'rgba(255,255,255,0.14)';
-          ctx.fillRect(wx + 1, wy + 1, Math.floor(winW * 0.38), 2);
+          ctx.fillStyle = 'rgba(255,255,255,0.45)';
+          ctx.fillRect(wx + 1, wy + 1, 3, 2);
         }
       }
     }
 
     // ── Front door ───────────────────────────────────
-    const doorW = T * 0.3, doorH = T * 0.38;
-    const doorX = bx + bw / 2 - doorW / 2;
-    const doorY = awningY - doorH + 1;
-    // Door surround
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(doorX - 2, doorY - 1, doorW + 4, doorH + 2);
-    // Door panel
-    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    const doorW = Math.max(10, Math.floor(T * 0.28));
+    const doorH = Math.floor(T * 0.36);
+    const doorX = bx + Math.floor(bw / 2) - Math.floor(doorW / 2);
+    const doorY = awningY - doorH;
+    // Frame
+    ctx.fillStyle = PA.doorFr;
+    ctx.fillRect(doorX - 2, doorY - 2, doorW + 4, doorH + 3);
+    // Panel
+    ctx.fillStyle = PA.door;
     ctx.fillRect(doorX, doorY, doorW, doorH);
-    // Door frame
-    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
-    ctx.lineWidth = 0.5;
-    ctx.strokeRect(doorX, doorY, doorW, doorH);
-    // Glass panel in door
-    ctx.fillStyle = 'rgba(100,180,255,0.07)';
-    ctx.fillRect(doorX + 2, doorY + 2, doorW - 4, doorH * 0.55);
-    // Handle
-    ctx.fillStyle = color + 'bb';
-    ctx.beginPath();
-    ctx.arc(doorX + doorW * 0.72, doorY + doorH * 0.52, 1.8, 0, Math.PI * 2);
-    ctx.fill();
+    // Upper glass inset
+    ctx.fillStyle = isLostToComp ? 'rgba(200,40,40,0.4)' :
+                    isClosed     ? 'rgba(40,200,80,0.35)' :
+                                   'rgba(140,200,255,0.22)';
+    ctx.fillRect(doorX + 2, doorY + 2, doorW - 4, Math.floor(doorH * 0.5));
+    // Brass knob
+    ctx.fillStyle = PA.doorKnob;
+    ctx.fillRect(doorX + doorW - 5, doorY + Math.floor(doorH * 0.52), 3, 3);
+    // Step
+    ctx.fillStyle = PA.step;
+    ctx.fillRect(doorX - 2, doorY + doorH, doorW + 4, 4);
+    ctx.fillStyle = outlineC;
+    ctx.fillRect(doorX - 3, doorY + doorH + 3, doorW + 6, 1);
 
-    // ── Steps / entrance mat ─────────────────────────
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
-    ctx.fillRect(doorX - 2, doorY + doorH, doorW + 4, 3);
-
-    // ── Street furniture (lamp post on left side of lot) ──
-    // Draw only for buildings with even x-tile index
-    const bTileX = Math.round(bx / T);
-    if (bTileX % 2 === 0 && !isLocked) {
-      const lampX = bx - 5, lampY = by + bh * 0.35;
-      // Post
-      ctx.strokeStyle = 'rgba(200,200,220,0.3)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(lampX, lampY + 14); ctx.lineTo(lampX, lampY);
-      ctx.stroke();
-      // Arm
-      ctx.beginPath();
-      ctx.moveTo(lampX, lampY); ctx.lineTo(lampX + 5, lampY - 3);
-      ctx.stroke();
-      // Light glow
-      ctx.fillStyle = 'rgba(255,220,100,0.5)';
-      ctx.shadowColor = 'rgba(255,220,100,0.8)';
-      ctx.shadowBlur = 8;
-      ctx.beginPath();
-      ctx.arc(lampX + 5, lampY - 3, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    }
-
-    // ── Business sign above awning ────────────────────
-    ctx.fillStyle = color + 'dd';
-    ctx.font = 'bold 7px "General Sans", sans-serif';
+    // ── Business sign (above awning) ─────────────────
+    const signW = bw - 6;
+    const signH = 11;
+    const signX = bx + 3;
+    const signY = awningY - signH - 2;
+    ctx.fillStyle = PA.signBg;
+    ctx.fillRect(signX, signY, signW, signH);
+    ctx.fillStyle = outlineC;
+    ctx.fillRect(signX - 1, signY - 1, signW + 2, 1);
+    ctx.fillRect(signX - 1, signY + signH, signW + 2, 1);
+    ctx.fillStyle = isNearby ? '#ffffff' : (isClosed ? '#60ff80' : isLostToComp ? '#ff6060' : color);
+    ctx.font = 'bold 7px monospace';
     ctx.textAlign = 'center';
-    const signText = biz?.name?.split(' ').slice(0, 2).join(' ') || '';
-    ctx.fillText(signText, bx + bw / 2, awningY - 2);
+    ctx.fillText((biz?.name || '').substring(0, 14), bx + bw / 2, signY + signH - 2);
 
-    // ── Business icon on roof band ────────────────────
+    // ── Business icon on roof ─────────────────────────
     if (biz) {
-      const iconSize = Math.floor(T * 0.40);
+      const iconSize = Math.floor(T * 0.38);
       ctx.font = `${iconSize}px serif`;
       ctx.textAlign = 'center';
-      ctx.fillText(biz.icon, bx + bw / 2, by + T * 0.32);
+      ctx.fillText(biz.icon, bx + bw / 2, by + Math.floor(roofH * 0.82));
     }
 
-    // ── Status badge ──────────────────────────────────
-    if (isClosed) {
-      ctx.fillStyle = 'rgba(0,20,10,0.88)';
-      ctx.strokeStyle = '#4ade80';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(bx + bw/2 - 20, by + bh - 12, 40, 11, 3);
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#4ade80';
-      ctx.font = 'bold 7px "General Sans", sans-serif';
+    // ── Status badge (CLIENT / TAKEN) ─────────────────
+    if (isClosed || isLostToComp) {
+      const badgeLabel = isClosed ? '✓ CLIENT' : '✗ TAKEN';
+      const badgeColor = isClosed ? PA.closedBadge : PA.lostBadge;
+      const badgeBg    = isClosed ? '#102808' : '#280808';
+      const bW = 44, bH = 12;
+      const bBx = bx + Math.floor(bw / 2) - Math.floor(bW / 2);
+      const bBy = by + bh - bH - 2;
+      ctx.fillStyle = outlineC;
+      ctx.fillRect(bBx - 1, bBy - 1, bW + 2, bH + 2);
+      ctx.fillStyle = badgeBg;
+      ctx.fillRect(bBx, bBy, bW, bH);
+      ctx.fillStyle = badgeColor;
+      ctx.font = 'bold 7px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('✓ CLIENT', bx + bw / 2, by + bh - 4);
-    } else if (isLostToComp) {
-      ctx.fillStyle = 'rgba(20,0,5,0.88)';
-      ctx.strokeStyle = '#ff4466';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(bx + bw/2 - 18, by + bh - 12, 36, 11, 3);
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#ff4466';
-      ctx.font = 'bold 7px "General Sans", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('✗ TAKEN', bx + bw / 2, by + bh - 4);
+      ctx.fillText(badgeLabel, bx + bw / 2, bBy + bH - 3);
     }
 
-    // ── Warmth dot ────────────────────────────────────
+    // ── Warmth dot (top-right corner) ─────────────────
     if (biz && !isClosed && biz.warmth > 0) {
-      const dotColors = ['#f5a623', '#ffd166', '#4ade80'];
+      const dotColors = ['#f5a623', '#ffd166', '#50e058'];
       const dc = dotColors[Math.min(biz.warmth - 1, 2)];
+      ctx.fillStyle = outlineC;
+      ctx.fillRect(bx + bw - 8, by + 3, 8, 8);
       ctx.fillStyle = dc;
-      ctx.shadowColor = dc;
-      ctx.shadowBlur = 7;
-      ctx.beginPath();
-      ctx.arc(bx + bw - 5, by + 6, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
+      ctx.fillRect(bx + bw - 7, by + 4, 6, 6);
     }
   }
 
@@ -1472,183 +1525,193 @@ export class BizAmpireEngine {
   }
 
   // ── Player Character ─────────────────────────────────────────
-  // Top-down person: head, suit jacket, arms, legs with walk cycle
+  // Chunky Pokémon FireRed style — big head, flat colors, hard pixel outline
   _drawPlayer(ctx) {
-    const px = this.player.x;
-    const py = this.player.y;
+    const px = Math.round(this.player.x);
+    const py = Math.round(this.player.y);
     const frame = this.player.animFrame;
     const facing = this.player.facing;
 
-    // Walk cycle offsets
-    const walk = this.player.animTimer > 0 || (this.keys && (this.keys['a'] || this.keys['d'] || this.keys['w'] || this.keys['s'] || this.keys['arrowleft'] || this.keys['arrowright'] || this.keys['arrowup'] || this.keys['arrowdown']));
+    const walk = this.player.animTimer > 0 ||
+      (this.keys && (this.keys['a']||this.keys['d']||this.keys['w']||this.keys['s']||
+        this.keys['arrowleft']||this.keys['arrowright']||this.keys['arrowup']||this.keys['arrowdown']));
     const legSwing = walk ? Math.sin(frame * Math.PI / 2) * 3 : 0;
-    const armSwing = walk ? Math.cos(frame * Math.PI / 2) * 2.5 : 0;
-    const bobY = walk ? Math.abs(Math.sin(frame * Math.PI / 2)) * -1.5 : 0;
+    const armSwing = walk ? Math.cos(frame * Math.PI / 2) * 2 : 0;
+    const bobY = walk ? Math.abs(Math.sin(frame * Math.PI / 2)) * -2 : 0;
+    const oy = Math.round(bobY);
 
-    const oy = bobY; // vertical bob offset
+    // Palette — warm teal suit, terracotta skin
+    const P = {
+      skin:    '#d4946a',
+      skinLt:  '#e8b080',
+      skinDk:  '#b07040',
+      hair:    '#2a1808',
+      suit:    '#006858',
+      suitLt:  '#008870',
+      suitDk:  '#004838',
+      shirt:   '#f0ece0',
+      tie:     '#00c8b8',
+      trouser: '#182850',
+      shoe:    '#1a1008',
+      brief:   '#8a6010',
+      briefLt: '#b08028',
+      outline: '#1a0c04',
+    };
 
-    // ── Ground shadow ────────────────────────────────
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath();
-    ctx.ellipse(px, py + 14, 10, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
+    // ── Ground shadow (flat pixel rect) ──────────────────────────
+    ctx.fillStyle = 'rgba(0,0,0,0.30)';
+    ctx.fillRect(px - 9, py + 14, 18, 4);
 
-    // ── Teal suit jacket (body) ───────────────────────
-    ctx.fillStyle = '#006b65';
-    ctx.beginPath();
-    ctx.roundRect(px - 7, py - 4 + oy, 14, 13, 2);
-    ctx.fill();
+    // Layout constants
+    const footY  = py + 16 + oy;
+    const legH   = 9;
+    const legW   = 5;
+    const bodyY  = footY - legH - 14;
+    const bodyH  = 14;
+    const bodyW  = 13;
+    const headR  = 9;   // big chunky head
+    const headCX = px;
+    const headCY = bodyY - headR - 2 + oy;
+    const neckY  = bodyY - 3 + oy;
 
-    // Jacket lapels
-    ctx.fillStyle = '#005550';
-    ctx.beginPath();
-    ctx.moveTo(px - 2, py - 4 + oy);
-    ctx.lineTo(px,     py - 1 + oy);
-    ctx.lineTo(px + 2, py - 4 + oy);
-    ctx.closePath();
-    ctx.fill();
+    // ── Legs ──────────────────────────────────────────────────────
+    const lLegX = px - 7;
+    const rLegX = px + 2;
+    const legY2  = footY - legH;
+    const lSwing = (facing !== 'left' && facing !== 'right') ? legSwing : 0;
+    const rSwing = (facing !== 'left' && facing !== 'right') ? -legSwing : 0;
 
-    // Shirt / tie
-    ctx.fillStyle = '#e8e9f0';
-    ctx.fillRect(px - 1, py - 3 + oy, 2, 6);
-    ctx.fillStyle = '#00d4c8';
-    ctx.fillRect(px - 1, py - 1 + oy, 2, 5);
-
-    // ── Legs ─────────────────────────────────────────
-    const legY = py + 9 + oy;
-    const legW = 4, legH = 8;
-    ctx.fillStyle = '#1a2a5e'; // dark trousers
-
-    if (facing === 'left' || facing === 'right') {
-      // Side view — alternating legs
-      ctx.fillStyle = '#1a2a5e';
-      ctx.beginPath(); ctx.roundRect(px - 4, legY, legW, legH - legSwing, 2); ctx.fill();
-      ctx.beginPath(); ctx.roundRect(px + 1, legY, legW, legH + legSwing, 2); ctx.fill();
-    } else {
-      // Front/back — legs side by side
-      ctx.beginPath(); ctx.roundRect(px - 5, legY + legSwing, legW, legH, 2); ctx.fill();
-      ctx.beginPath(); ctx.roundRect(px + 1, legY - legSwing, legW, legH, 2); ctx.fill();
-    }
-
+    ctx.fillStyle = P.outline;
+    ctx.fillRect(lLegX - 1, legY2 - 1 + lSwing, legW + 2, legH + 3);
+    ctx.fillRect(rLegX - 1, legY2 - 1 + rSwing, legW + 2, legH + 3);
+    ctx.fillStyle = P.trouser;
+    ctx.fillRect(lLegX, legY2 + lSwing, legW, legH + 1);
+    ctx.fillRect(rLegX, legY2 + rSwing, legW, legH + 1);
     // Shoes
-    ctx.fillStyle = '#0c0d14';
-    if (facing === 'left' || facing === 'right') {
-      const shoeOffX = facing === 'left' ? -2 : 2;
-      ctx.beginPath(); ctx.ellipse(px - 4 + shoeOffX, legY + legH - legSwing, 4, 2, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(px + 3 + shoeOffX, legY + legH + legSwing, 4, 2, 0, 0, Math.PI * 2); ctx.fill();
-    } else {
-      ctx.beginPath(); ctx.ellipse(px - 3, legY + legH + legSwing, 3, 2, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(px + 3, legY + legH - legSwing, 3, 2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = P.outline;
+    ctx.fillRect(lLegX - 1, footY - 2 + lSwing, legW + 4, 5);
+    ctx.fillRect(rLegX - 1, footY - 2 + rSwing, legW + 4, 5);
+    ctx.fillStyle = P.shoe;
+    ctx.fillRect(lLegX, footY - 1 + lSwing, legW + 2, 3);
+    ctx.fillRect(rLegX, footY - 1 + rSwing, legW + 2, 3);
+
+    // ── Body (suit jacket) ────────────────────────────────────────
+    const bBodyX = px - Math.floor(bodyW / 2);
+    ctx.fillStyle = P.outline;
+    ctx.fillRect(bBodyX - 1, bodyY - 1 + oy, bodyW + 2, bodyH + 2);
+    ctx.fillStyle = P.suit;
+    ctx.fillRect(bBodyX, bodyY + oy, bodyW, bodyH);
+    ctx.fillStyle = P.suitLt;
+    ctx.fillRect(bBodyX, bodyY + oy, bodyW, 2);
+    ctx.fillRect(bBodyX, bodyY + oy, 2, bodyH);
+    ctx.fillStyle = P.suitDk;
+    ctx.fillRect(bBodyX + bodyW - 2, bodyY + oy, 2, bodyH);
+    ctx.fillStyle = P.shirt;
+    ctx.fillRect(px - 2, bodyY + 1 + oy, 4, bodyH - 2);
+    ctx.fillStyle = P.tie;
+    ctx.fillRect(px - 1, bodyY + 2 + oy, 3, bodyH - 4);
+
+    // ── Arms ──────────────────────────────────────────────────────
+    const armX_L = bBodyX - 4;
+    const armX_R = bBodyX + bodyW + 1;
+    const armTopY = bodyY + 2 + oy;
+    const armLen  = 9;
+
+    ctx.fillStyle = P.outline;
+    ctx.fillRect(armX_L - 1, armTopY + armSwing - 1, 5, armLen + 2);
+    ctx.fillStyle = P.suit;
+    ctx.fillRect(armX_L, armTopY + armSwing, 3, armLen);
+    ctx.fillStyle = P.outline;
+    ctx.fillRect(armX_R - 1, armTopY - armSwing - 1, 5, armLen + 2);
+    ctx.fillStyle = P.suit;
+    ctx.fillRect(armX_R, armTopY - armSwing, 3, armLen);
+
+    // Left hand
+    ctx.fillStyle = P.skinDk;
+    ctx.fillRect(armX_L - 1, armTopY + armLen + armSwing - 1, 5, 5);
+    ctx.fillStyle = P.skin;
+    ctx.fillRect(armX_L, armTopY + armLen + armSwing, 3, 3);
+
+    // Briefcase (right hand)
+    const bfY = armTopY + armLen - armSwing;
+    ctx.fillStyle = P.outline;
+    ctx.fillRect(armX_R - 1, bfY - 1, 10, 8);
+    ctx.fillStyle = P.brief;
+    ctx.fillRect(armX_R, bfY, 8, 6);
+    ctx.fillStyle = P.briefLt;
+    ctx.fillRect(armX_R + 3, bfY - 2, 2, 2);
+    ctx.fillStyle = P.outline;
+    ctx.fillRect(armX_R + 3, bfY + 2, 2, 1);
+
+    // ── Neck ──────────────────────────────────────────────────────
+    ctx.fillStyle = P.outline;
+    ctx.fillRect(px - 3, neckY - 1, 7, 5);
+    ctx.fillStyle = P.skin;
+    ctx.fillRect(px - 2, neckY, 5, 3);
+
+    // ── Head ──────────────────────────────────────────────────────
+    ctx.fillStyle = P.outline;
+    ctx.fillRect(headCX - headR - 1, headCY - headR - 1, headR * 2 + 3, headR * 2 + 3);
+    ctx.fillStyle = P.skin;
+    ctx.fillRect(headCX - headR, headCY - headR, headR * 2 + 1, headR * 2 + 1);
+    ctx.fillStyle = P.skinLt;
+    ctx.fillRect(headCX - headR + 1, headCY - headR + 1, 5, 3);
+    ctx.fillRect(headCX - headR + 1, headCY - headR + 1, 2, 6);
+
+    // Hair (top pixel block)
+    ctx.fillStyle = P.outline;
+    ctx.fillRect(headCX - headR - 1, headCY - headR - 1, headR * 2 + 3, 2);
+    ctx.fillStyle = P.hair;
+    ctx.fillRect(headCX - headR, headCY - headR, headR * 2 + 1, 5);
+    ctx.fillStyle = '#4a3020';
+    ctx.fillRect(headCX - headR + 2, headCY - headR + 1, 4, 2);
+
+    // Face features (pixel blocks)
+    if (facing === 'down') {
+      ctx.fillStyle = P.outline;
+      ctx.fillRect(headCX - 5, headCY, 4, 4);
+      ctx.fillRect(headCX + 2, headCY, 4, 4);
+      ctx.fillStyle = '#f0f8ff';
+      ctx.fillRect(headCX - 4, headCY + 1, 2, 2);
+      ctx.fillRect(headCX + 3, headCY + 1, 2, 2);
+      ctx.fillStyle = '#2040e0';
+      ctx.fillRect(headCX - 4, headCY + 1, 1, 1);
+      ctx.fillRect(headCX + 3, headCY + 1, 1, 1);
+      ctx.fillStyle = P.outline;
+      ctx.fillRect(headCX - 3, headCY + 4, 7, 2);
+      ctx.fillStyle = '#d07060';
+      ctx.fillRect(headCX - 2, headCY + 5, 5, 1);
+    } else if (facing === 'right') {
+      ctx.fillStyle = P.outline;
+      ctx.fillRect(headCX + 3, headCY, 4, 4);
+      ctx.fillStyle = '#f0f8ff';
+      ctx.fillRect(headCX + 4, headCY + 1, 2, 2);
+      ctx.fillStyle = '#2040e0';
+      ctx.fillRect(headCX + 5, headCY + 1, 1, 1);
+    } else if (facing === 'left') {
+      ctx.fillStyle = P.outline;
+      ctx.fillRect(headCX - 6, headCY, 4, 4);
+      ctx.fillStyle = '#f0f8ff';
+      ctx.fillRect(headCX - 5, headCY + 1, 2, 2);
+      ctx.fillStyle = '#2040e0';
+      ctx.fillRect(headCX - 5, headCY + 1, 1, 1);
     }
 
-    // ── Arms ─────────────────────────────────────────
-    ctx.fillStyle = '#006b65';
-    const armY = py - 2 + oy;
-    if (facing === 'left' || facing === 'right') {
-      // Arm reaching forward/back
-      const fwdArm = facing === 'right' ? armSwing : -armSwing;
-      ctx.beginPath(); ctx.roundRect(px - 9, armY + fwdArm, 3, 9, 1); ctx.fill();
-      ctx.beginPath(); ctx.roundRect(px + 6, armY - fwdArm, 3, 9, 1); ctx.fill();
-    } else {
-      ctx.beginPath(); ctx.roundRect(px - 9, armY + armSwing, 3, 9, 1); ctx.fill();
-      ctx.beginPath(); ctx.roundRect(px + 6, armY - armSwing, 3, 9, 1); ctx.fill();
-    }
-
-    // Hand / briefcase (right hand)
-    ctx.fillStyle = '#c8a882'; // skin tone
-    ctx.beginPath(); ctx.arc(px + 7.5, armY + 9.5 - armSwing + oy * 0.5, 2, 0, Math.PI * 2); ctx.fill();
-    // Briefcase
-    ctx.fillStyle = '#8b6914';
-    ctx.beginPath(); ctx.roundRect(px + 5, armY + 8 - armSwing + oy * 0.5, 7, 5, 1); ctx.fill();
-    ctx.fillStyle = '#a07820';
-    ctx.fillRect(px + 7, armY + 7.5 - armSwing + oy * 0.5, 3, 1);
-
-    // ── Head ─────────────────────────────────────────
-    const headY = py - 14 + oy;
-
-    // Neck
-    ctx.fillStyle = '#c8a882';
-    ctx.fillRect(px - 2, py - 6 + oy, 4, 4);
-
-    // Head shape
-    ctx.fillStyle = '#d4a870'; // slightly different skin tone from neck
-    ctx.beginPath();
-    ctx.arc(px, headY, 7, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Face features based on facing direction
-    if (facing === 'down' || facing === 'right' || facing === 'left') {
-      // Eyes
-      ctx.fillStyle = '#1a1a2e';
-      if (facing === 'down') {
-        ctx.beginPath(); ctx.arc(px - 2.5, headY + 1, 1.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(px + 2.5, headY + 1, 1.5, 0, Math.PI * 2); ctx.fill();
-        // Eye whites
-        ctx.fillStyle = 'white';
-        ctx.beginPath(); ctx.arc(px - 2.5, headY + 0.5, 0.8, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(px + 2.5, headY + 0.5, 0.8, 0, Math.PI * 2); ctx.fill();
-        // Smile
-        ctx.strokeStyle = '#3a2a1a';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(px, headY + 2, 2.5, 0.2, Math.PI - 0.2);
-        ctx.stroke();
-      } else {
-        // Side profile — one eye
-        const eyeX = facing === 'right' ? px + 3 : px - 3;
-        ctx.beginPath(); ctx.arc(eyeX, headY, 1.5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = 'white';
-        ctx.beginPath(); ctx.arc(eyeX, headY - 0.3, 0.8, 0, Math.PI * 2); ctx.fill();
-      }
-    } else {
-      // Back of head — just hair
-      ctx.fillStyle = '#2a1a0a';
-      ctx.beginPath();
-      ctx.arc(px, headY - 2, 6.5, Math.PI, 0);
-      ctx.fill();
-    }
-
-    // Hair
-    ctx.fillStyle = '#2a1a0a';
-    ctx.beginPath();
-    if (facing === 'up') {
-      ctx.arc(px, headY, 7, Math.PI, 0);
-    } else {
-      ctx.arc(px, headY - 1, 7, -Math.PI * 0.9, Math.PI * 0.1);
-    }
-    ctx.fill();
-
-    // ── Teal glow aura (subtle, brand color) ─────────
-    ctx.shadowColor = '#00d4c8';
-    ctx.shadowBlur = 16;
-    ctx.strokeStyle = 'rgba(0,212,200,0.3)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(px, py - 2 + oy, 15, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    // ── Name badge ───────────────────────────────────
-    const name = this.state.businessName?.substring(0, 15) || 'Player';
-    const nameW = Math.min(110, name.length * 5.5 + 14);
-    const nameX = px - nameW / 2;
-    const nameY2 = py - 32 + oy;
-
-    ctx.fillStyle = 'rgba(0,12,18,0.9)';
-    ctx.strokeStyle = 'rgba(0,212,200,0.6)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(nameX, nameY2, nameW, 14, 4);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = '#00d4c8';
-    ctx.font = 'bold 8px "General Sans", sans-serif';
+    // ── Name badge (pixel-art box) ────────────────────────────────
+    const name = (this.state.businessName || 'Player').substring(0, 14);
+    const nameW = Math.min(100, name.length * 6 + 12);
+    const nameX2 = px - Math.floor(nameW / 2);
+    const nameY2 = headCY - headR - 16;
+    ctx.fillStyle = P.outline;
+    ctx.fillRect(nameX2 - 2, nameY2 - 2, nameW + 4, 14);
+    ctx.fillStyle = '#081418';
+    ctx.fillRect(nameX2 - 1, nameY2 - 1, nameW + 2, 12);
+    ctx.fillStyle = P.tie;
+    ctx.font = 'bold 7px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(name, px, nameY2 + 10);
+    ctx.fillText(name, px, nameY2 + 8);
   }
-
-  // ── Competitor NPC ───────────────────────────────────────────
+  // ── Competitor NPC ───────────────────────────────────────────────
   _drawCompetitors(ctx) {
     this.competitorAgents.forEach((comp, i) => {
       this._drawNPC(ctx, comp.x, comp.y, comp, i);
@@ -1656,114 +1719,134 @@ export class BizAmpireEngine {
   }
 
   _drawNPC(ctx, px, py, comp, idx) {
-    const bobY = Math.sin(Date.now() / 600 + idx * 1.3) * -1;
-    const oy = bobY;
+    px = Math.round(px); py = Math.round(py);
+    const bob = Math.round(Math.sin(Date.now() / 600 + idx * 1.3) * -1.5);
+    const oy = bob;
 
-    // Unique palette per competitor
+    // Unique warm palette per competitor (villain colors)
     const npcPalettes = [
-      { suit: '#5a0a1e', suitDark: '#420814', hair: '#1a0a30', glow: '#ff4466', nameGlow: 'rgba(255,68,102,0.55)' },
-      { suit: '#1a3a6a', suitDark: '#112a50', hair: '#0a1a0a', glow: '#4488ff', nameGlow: 'rgba(68,136,255,0.55)' },
-      { suit: '#4a1a5a', suitDark: '#360f42', hair: '#2a0a0a', glow: '#cc44ff', nameGlow: 'rgba(200,68,255,0.55)' },
+      // 0 — QuickClose (red undercutter)
+      { suit: '#882020', suitLt: '#b03030', suitDk: '#601010',
+        hair: '#1a0808', skin: '#c07050', skinLt: '#d89060',
+        tie: '#ff5050', shoe: '#100808', outline: '#180404' },
+      // 1 — RegionPro (navy incumbent)
+      { suit: '#1a3870', suitLt: '#284fa0', suitDk: '#102050',
+        hair: '#0a0808', skin: '#c88050', skinLt: '#e09860',
+        tie: '#4488ff', shoe: '#080810', outline: '#080820' },
+      // 2 — Pinnacle (purple premium)
+      { suit: '#4a1868', suitLt: '#6a2890', suitDk: '#301040',
+        hair: '#1a0818', skin: '#b86848', skinLt: '#d08060',
+        tie: '#cc44ff', shoe: '#100810', outline: '#180018' },
     ];
     const pal = npcPalettes[idx % npcPalettes.length];
 
-    // Ground shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath();
-    ctx.ellipse(px, py + 14, 10, 3.5, 0, 0, Math.PI * 2);
-    ctx.fill();
+    // ── Ground shadow ─────────────────────────────────────────────
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fillRect(px - 8, py + 14, 16, 4);
 
-    // Legs
+    const footY  = py + 16 + oy;
+    const legH   = 8;
+    const legW   = 4;
+    const bodyY  = footY - legH - 13;
+    const bodyH  = 13;
+    const bodyW  = 12;
+    const headR  = 8;
+    const headCX = px;
+    const headCY = bodyY - headR - 2 + oy;
+
+    // ── Legs ──────────────────────────────────────────────────────
+    const lLX = px - 6, rLX = px + 2;
+    const legY2 = footY - legH;
+    ctx.fillStyle = pal.outline;
+    ctx.fillRect(lLX - 1, legY2 - 1, legW + 2, legH + 3);
+    ctx.fillRect(rLX - 1, legY2 - 1, legW + 2, legH + 3);
     ctx.fillStyle = '#181828';
-    ctx.beginPath(); ctx.roundRect(px - 4, py + 8 + oy, 3.5, 7, 2); ctx.fill();
-    ctx.beginPath(); ctx.roundRect(px + 0.5, py + 8 + oy, 3.5, 7, 2); ctx.fill();
+    ctx.fillRect(lLX, legY2, legW, legH + 1);
+    ctx.fillRect(rLX, legY2, legW, legH + 1);
     // Shoes
-    ctx.fillStyle = '#0a0a14';
-    ctx.beginPath(); ctx.ellipse(px - 2, py + 16 + oy, 3.5, 2, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(px + 2, py + 16 + oy, 3.5, 2, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = pal.outline;
+    ctx.fillRect(lLX - 1, footY - 2, legW + 4, 5);
+    ctx.fillRect(rLX - 1, footY - 2, legW + 4, 5);
+    ctx.fillStyle = pal.shoe;
+    ctx.fillRect(lLX, footY - 1, legW + 2, 3);
+    ctx.fillRect(rLX, footY - 1, legW + 2, 3);
 
-    // Body suit
+    // ── Body ──────────────────────────────────────────────────────
+    const bBodyX = px - Math.floor(bodyW / 2);
+    ctx.fillStyle = pal.outline;
+    ctx.fillRect(bBodyX - 1, bodyY - 1 + oy, bodyW + 2, bodyH + 2);
     ctx.fillStyle = pal.suit;
-    ctx.beginPath();
-    ctx.roundRect(px - 7, py - 3 + oy, 14, 12, 2);
-    ctx.fill();
+    ctx.fillRect(bBodyX, bodyY + oy, bodyW, bodyH);
+    ctx.fillStyle = pal.suitLt;
+    ctx.fillRect(bBodyX, bodyY + oy, bodyW, 2);
+    ctx.fillRect(bBodyX, bodyY + oy, 2, bodyH);
+    ctx.fillStyle = pal.suitDk;
+    ctx.fillRect(bBodyX + bodyW - 2, bodyY + oy, 2, bodyH);
+    // Shirt + tie
+    ctx.fillStyle = '#f0ece0';
+    ctx.fillRect(px - 2, bodyY + 1 + oy, 4, bodyH - 2);
+    ctx.fillStyle = pal.tie;
+    ctx.fillRect(px - 1, bodyY + 2 + oy, 3, bodyH - 4);
 
-    // Lapels
-    ctx.fillStyle = pal.suitDark;
-    ctx.beginPath();
-    ctx.moveTo(px - 2, py - 3 + oy);
-    ctx.lineTo(px, py + 0 + oy);
-    ctx.lineTo(px + 2, py - 3 + oy);
-    ctx.closePath();
-    ctx.fill();
-
-    // Tie (glowing color)
-    ctx.fillStyle = pal.glow + 'cc';
-    ctx.fillRect(px - 1, py - 1 + oy, 2, 6);
-
-    // Arms
+    // ── Arms ──────────────────────────────────────────────────────
+    const armX_L = bBodyX - 3;
+    const armX_R = bBodyX + bodyW + 1;
+    const armTopY = bodyY + 2 + oy;
+    const armLen = 8;
+    ctx.fillStyle = pal.outline;
+    ctx.fillRect(armX_L - 1, armTopY - 1, 4, armLen + 2);
+    ctx.fillRect(armX_R - 1, armTopY - 1, 4, armLen + 2);
     ctx.fillStyle = pal.suit;
-    ctx.beginPath(); ctx.roundRect(px - 9, py - 1 + oy, 2.5, 8, 1); ctx.fill();
-    ctx.beginPath(); ctx.roundRect(px + 6.5, py - 1 + oy, 2.5, 8, 1); ctx.fill();
+    ctx.fillRect(armX_L, armTopY, 2, armLen);
+    ctx.fillRect(armX_R, armTopY, 2, armLen);
     // Hands
-    ctx.fillStyle = '#c09070';
-    ctx.beginPath(); ctx.arc(px - 8, py + 7.5 + oy, 2, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(px + 8, py + 7.5 + oy, 2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = pal.skin;
+    ctx.fillRect(armX_L - 1, armTopY + armLen - 1, 4, 4);
+    ctx.fillRect(armX_R - 1, armTopY + armLen - 1, 4, 4);
 
-    // Neck
-    ctx.fillStyle = '#b07858';
-    ctx.fillRect(px - 2, py - 5 + oy, 4, 4);
+    // ── Neck ──────────────────────────────────────────────────────
+    ctx.fillStyle = pal.outline;
+    ctx.fillRect(px - 3, bodyY - 4 + oy, 7, 5);
+    ctx.fillStyle = pal.skin;
+    ctx.fillRect(px - 2, bodyY - 3 + oy, 5, 3);
 
-    // Head
-    const skinShades = ['#c07060', '#c88050', '#b86850'];
-    ctx.fillStyle = skinShades[idx % skinShades.length];
-    ctx.beginPath();
-    ctx.arc(px, py - 13 + oy, 7, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Hair
+    // ── Head ──────────────────────────────────────────────────────
+    ctx.fillStyle = pal.outline;
+    ctx.fillRect(headCX - headR - 1, headCY - headR - 1, headR * 2 + 3, headR * 2 + 3);
+    ctx.fillStyle = pal.skin;
+    ctx.fillRect(headCX - headR, headCY - headR, headR * 2 + 1, headR * 2 + 1);
+    ctx.fillStyle = pal.skinLt;
+    ctx.fillRect(headCX - headR + 1, headCY - headR + 1, 4, 2);
+    // Hair block
+    ctx.fillStyle = pal.outline;
+    ctx.fillRect(headCX - headR - 1, headCY - headR - 1, headR * 2 + 3, 2);
     ctx.fillStyle = pal.hair;
-    ctx.beginPath();
-    ctx.arc(px, py - 14 + oy, 7, -Math.PI * 0.9, Math.PI * 0.1);
-    ctx.fill();
+    ctx.fillRect(headCX - headR, headCY - headR, headR * 2 + 1, 5);
+    // Menacing eyes (glowing color)
+    ctx.fillStyle = pal.outline;
+    ctx.fillRect(headCX - 5, headCY, 4, 4);
+    ctx.fillRect(headCX + 2, headCY, 4, 4);
+    ctx.fillStyle = pal.tie;  // eye glow matches tie color
+    ctx.fillRect(headCX - 4, headCY + 1, 2, 2);
+    ctx.fillRect(headCX + 3, headCY + 1, 2, 2);
+    // Scowl
+    ctx.fillStyle = pal.outline;
+    ctx.fillRect(headCX - 3, headCY + 4, 7, 2);
 
-    // Menacing eyes with glow
-    ctx.fillStyle = '#1a0a0a';
-    ctx.beginPath(); ctx.arc(px - 2.5, py - 13 + oy, 1.8, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(px + 2.5, py - 13 + oy, 1.8, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = pal.glow;
-    ctx.shadowColor = pal.glow;
-    ctx.shadowBlur = 6;
-    ctx.beginPath(); ctx.arc(px - 2.5, py - 13 + oy, 1, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(px + 2.5, py - 13 + oy, 1, 0, Math.PI*2); ctx.fill();
-    ctx.shadowBlur = 0;
-
-    // Aura ring
-    ctx.shadowColor = pal.glow;
-    ctx.shadowBlur = 14;
-    ctx.strokeStyle = pal.nameGlow;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(px, py - 2 + oy, 15, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    // Name tag
-    const nameTag = comp.name || ['QuickClose', 'RegionPro', 'Pinnacle'][idx % 3];
-    const shortName = nameTag.split(' ')[0].substring(0, 10);
-    const tagW = Math.min(52, shortName.length * 5.5 + 14);
-    ctx.fillStyle = 'rgba(8,4,16,0.92)';
-    ctx.strokeStyle = pal.nameGlow;
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.roundRect(px - tagW/2, py - 32 + oy, tagW, 12, 3);
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = pal.glow;
-    ctx.font = 'bold 7px "General Sans", sans-serif';
+    // ── Name tag ──────────────────────────────────────────────────
+    const nameTag = (comp.name || ['QuickClose','RegionPro','Pinnacle'][idx % 3]).split(' ')[0].substring(0, 10);
+    const tagW = Math.min(72, nameTag.length * 6 + 12);
+    const tagX = px - Math.floor(tagW / 2);
+    const tagY = headCY - headR - 15;
+    ctx.fillStyle = pal.outline;
+    ctx.fillRect(tagX - 2, tagY - 2, tagW + 4, 14);
+    ctx.fillStyle = '#100408';
+    ctx.fillRect(tagX - 1, tagY - 1, tagW + 2, 12);
+    ctx.fillStyle = pal.tie;
+    ctx.font = 'bold 7px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(shortName, px, py - 22 + oy);
+    ctx.fillText(nameTag, px, tagY + 8);
   }
-
   _drawInteractPrompt(ctx, bld) {
     const biz = bld.business;
     const bx = (bld.x + bld.w / 2) * TILE;
@@ -1864,7 +1947,10 @@ export class EncounterEngine {
   }
 
   handleDiscovery(questionId, responseType) {
-    const q = DISCOVERY_QUESTIONS.find(q => q.skillTag === questionId);
+    // Use the pre-generated industry-aware questions (fallback to static DISCOVERY_QUESTIONS)
+    const questions = this.flags.generatedQuestions || DISCOVERY_QUESTIONS;
+    const q = questions.find(q => q.skillTag === questionId) ||
+              DISCOVERY_QUESTIONS.find(q => q.skillTag === questionId);
     if (!q) return;
 
     const hasSkill = this.state.unlockedSkills.includes(q.skillTag);
@@ -1875,12 +1961,12 @@ export class EncounterEngine {
       this.flags.discoveryScore += q.rapportOnGood;
       this.ui.showToast(`✓ ${q.framework}`, 'success');
     } else {
-      this.enc.rapport += q.rapportOnBad;
+      this.enc.rapport += q.rapportOnBad || 0;
       this.ui.showToast(`Missed opportunity — ${q.framework}`, 'warn');
     }
 
     this.flags.spinPhase++;
-    const totalSPIN = DISCOVERY_QUESTIONS.length;
+    const totalSPIN = questions.length;  // use dynamic question count
 
     if (this.flags.spinPhase >= totalSPIN) {
       this.enc.phase = 'pitch';

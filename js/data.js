@@ -488,6 +488,90 @@ export const DISCOVERY_QUESTIONS = [
   },
 ];
 
+// ── Dynamic discovery questions based on player industry + prospect type ───
+// Generates 4 SPIN questions that make sense for what the player is SELLING
+// to the specific type of business they're talking to.
+export function generateDiscoveryQuestions(playerIndustry, prospect) {
+  const pType = (prospect.type || '').toLowerCase();
+  const pPain = prospect.pain || 'operational inefficiencies';
+  const pOwner = prospect.owner || 'them';
+
+  // What does the player SELL — one-liner service description per industry
+  const playerServiceMap = {
+    it:           { service: 'IT & managed technology services', verb: 'manage your tech', unit: 'IT issues/downtime' },
+    marketing:    { service: 'marketing & customer acquisition', verb: 'grow your customer base', unit: 'marketing spend' },
+    finance:      { service: 'accounting & financial advisory', verb: 'handle your books and taxes', unit: 'accounting costs' },
+    law:          { service: 'legal services & business contracts', verb: 'protect your business legally', unit: 'legal exposure' },
+    construction: { service: 'construction & renovation services', verb: 'handle your build-outs', unit: 'project costs' },
+    auto:         { service: 'vehicle maintenance & fleet services', verb: 'keep your vehicles running', unit: 'vehicle downtime' },
+    realestate:   { service: 'real estate & property management', verb: 'manage your properties', unit: 'vacancy costs' },
+    health:       { service: 'healthcare & wellness services', verb: 'support your team's health', unit: 'healthcare overhead' },
+    consulting:   { service: 'operations & strategy consulting', verb: 'optimize your operations', unit: 'inefficiency costs' },
+  };
+
+  const ps = playerServiceMap[playerIndustry] || playerServiceMap.consulting;
+
+  // Prospect category — what kind of business are they?
+  function getProspectContext() {
+    if (pType.includes('restaurant') || pType.includes('café') || pType.includes('food')) return { has: 'a restaurant/food business', needs: 'reliable POS, staff scheduling, vendor payments' };
+    if (pType.includes('retail') || pType.includes('shop') || pType.includes('store')) return { has: 'a retail operation', needs: 'inventory systems, payment processing, customer loyalty' };
+    if (pType.includes('law') || pType.includes('legal') || pType.includes('attorney')) return { has: 'a law firm', needs: 'document management, client confidentiality, billing accuracy' };
+    if (pType.includes('medical') || pType.includes('health') || pType.includes('clinic') || pType.includes('dental')) return { has: 'a healthcare practice', needs: 'HIPAA compliance, patient management, insurance billing' };
+    if (pType.includes('construction') || pType.includes('contractor') || pType.includes('build')) return { has: 'a construction company', needs: 'project tracking, subcontractor coordination, invoicing' };
+    if (pType.includes('auto') || pType.includes('dealer') || pType.includes('repair') || pType.includes('fleet')) return { has: 'an automotive business', needs: 'fleet tracking, service scheduling, parts inventory' };
+    if (pType.includes('bank') || pType.includes('finance') || pType.includes('wealth') || pType.includes('insurance')) return { has: 'a financial services firm', needs: 'compliance, data security, client reporting' };
+    if (pType.includes('software') || pType.includes('saas') || pType.includes('tech') || pType.includes('dev')) return { has: 'a tech company', needs: 'scalable infrastructure, security, uptime' };
+    if (pType.includes('market') || pType.includes('agency') || pType.includes('brand') || pType.includes('media')) return { has: 'a marketing/agency business', needs: 'client reporting, project management, lead gen' };
+    if (pType.includes('real estate') || pType.includes('property') || pType.includes('brokerage')) return { has: 'a real estate business', needs: 'property tracking, client CRM, document workflows' };
+    return { has: 'a growing business', needs: 'reliable systems and scalable support' };
+  }
+
+  const pc = getProspectContext();
+
+  // Build 4 SPIN questions that are grounded in:
+  // - what the PLAYER sells (ps.service)
+  // - what the PROSPECT does (pc.has / pc.needs)
+  // - the prospect's known pain (pPain)
+  return [
+    {
+      phase: 'situation',
+      question: `How are you currently handling ${ps.unit} for ${pc.has}? Walk me through what that looks like day to day.`,
+      goodResponse: `Got it — so right now it's mostly ${pOwner} managing that directly. That works until it doesn't. At what point does it start slowing you down?`,
+      badResponse: `Interesting. And how long have you been doing it that way?`,
+      rapportOnGood: 1, rapportOnBad: 0,
+      skillTag: 'situation_questions',
+      framework: 'SPIN Selling — Situation Phase',
+    },
+    {
+      phase: 'problem',
+      question: `You mentioned ${pPain}. Where does that actually hurt most — is it the time it takes, the cost, or the risk it creates?`,
+      goodResponse: `That's exactly where I see it compound. The ${ps.unit} problem usually starts as a time drain, then becomes a cost, then becomes a risk. Which of those is keeping you up at night right now?`,
+      badResponse: `That's understandable. A lot of ${pc.has.replace('a ', '')} owners deal with that.`,
+      rapportOnGood: 2, rapportOnBad: 0,
+      skillTag: 'problem_questions',
+      framework: 'SPIN Selling — Problem Phase',
+    },
+    {
+      phase: 'implication',
+      question: `If ${pPain.toLowerCase()} doesn't get resolved in the next 6 months, what does that do to your growth plans — or your bottom line?`,
+      goodResponse: `So realistically we're talking about real dollars slipping — plus your time. When you factor in what ${ps.unit} is actually costing you versus what a proper ${ps.service} partner would run, the math usually flips pretty fast.`,
+      badResponse: `I see. Well, we could potentially help with that.`,
+      rapportOnGood: 2, rapportOnBad: -1,
+      skillTag: 'implication_questions',
+      framework: 'SPIN Selling — Implication Phase',
+    },
+    {
+      phase: 'need_payoff',
+      question: `If you had ${ps.service} completely handled — not a worry, just running — what would you actually spend that time and energy on instead?`,
+      goodResponse: `That's exactly what I help ${pc.has.replace('a ', '')} owners get back. Not just fixing the ${ps.unit} problem, but freeing you to focus on ${prospect.pain?.includes('growth') || prospect.pain?.includes('revenue') ? 'growing revenue' : 'what you're actually good at'}. Is that worth 20 minutes to explore?`,
+      badResponse: `That's the goal. Let me tell you a bit about what we do...`,
+      rapportOnGood: 3, rapportOnBad: 0,
+      skillTag: 'need_payoff',
+      framework: 'SPIN Selling — Need-Payoff Phase',
+    },
+  ];
+}
+
 export const OBJECTION_LIBRARY = {
   price: [
     {
