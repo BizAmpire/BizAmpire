@@ -508,9 +508,11 @@ img, canvas { display: block; max-width: 100%; }
 
 /* ── Encounter Screen ────────────────────────────────────── */
 #screen-encounter {
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: center;
-  padding-bottom: var(--s8);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--s6) var(--s4) var(--s10);
   background: rgba(28,18,8,0.85);
 }
 .encounter-arena {
@@ -519,6 +521,7 @@ img, canvas { display: block; max-width: 100%; }
   display: flex;
   flex-direction: column;
   gap: var(--s4);
+  flex-shrink: 0; /* prevent compression */
 }
 .encounter-header {
   display: flex;
@@ -1111,14 +1114,15 @@ img, canvas { display: block; max-width: 100%; }
 
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 600px) {
-  /* Encounter */
+  /* Encounter — screen-level scroll handles it; arena must not clip */
+  #screen-encounter {
+    padding: var(--s3) var(--s2) var(--s12);
+    align-items: flex-start;
+  }
   .encounter-arena {
-    padding: 0 var(--s2);
-    overflow-y: auto;
-    /* leave room for HUD strip at top */
-    max-height: calc(100dvh - 56px);
-    /* extra bottom padding for natural scroll space */
-    padding-bottom: var(--s10);
+    padding: 0;
+    max-height: none;
+    overflow-y: visible;
   }
   /* Panels */
   .skill-tree-panel { padding: var(--s5) var(--s3); }

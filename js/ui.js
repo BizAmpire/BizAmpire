@@ -488,8 +488,11 @@ export class UIManager {
 
     body.querySelectorAll('.choice-btn[data-opener]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const choice = JSON.parse(btn.dataset.choice || '{}');
-        this.encounterEngine.handleOpener(choice);
+        try {
+          const choice = JSON.parse(btn.dataset.choice || '{}');
+          if (!this.encounterEngine) { console.error('[BizAmpire] encounterEngine not set on UI'); return; }
+          this.encounterEngine.handleOpener(choice);
+        } catch(e) { console.error('[BizAmpire] opener click error:', e); }
       });
     });
 
@@ -582,7 +585,7 @@ export class UIManager {
       law: 'Legal Services', construction: 'Construction', auto: 'Auto/Fleet',
       realestate: 'Real Estate', health: 'Healthcare', consulting: 'Consulting',
     };
-    const playerServiceLabel = serviceLabels[playerIndustry] || state.businessName;
+    const playerServiceLabel = serviceLabels[state.businessIndustry] || state.businessName;
 
     body.innerHTML = `
       <div class="dialogue-box">
@@ -621,7 +624,10 @@ export class UIManager {
 
     body.querySelectorAll('.choice-btn[data-response]').forEach(btn => {
       btn.addEventListener('click', () => {
-        this.encounterEngine.handleDiscovery(btn.dataset.qid, btn.dataset.response);
+        try {
+          if (!this.encounterEngine) { console.error('[BizAmpire] encounterEngine not set on UI'); return; }
+          this.encounterEngine.handleDiscovery(btn.dataset.qid, btn.dataset.response);
+        } catch(e) { console.error('[BizAmpire] discovery click error:', e); }
       });
     });
 
@@ -684,7 +690,10 @@ export class UIManager {
 
     body.querySelectorAll('.choice-btn[data-pitch]').forEach(btn => {
       btn.addEventListener('click', () => {
-        this.encounterEngine.handlePitch(btn.dataset.pitch);
+        try {
+          if (!this.encounterEngine) { console.error('[BizAmpire] encounterEngine not set'); return; }
+          this.encounterEngine.handlePitch(btn.dataset.pitch);
+        } catch(e) { console.error('[BizAmpire] pitch click error:', e); }
       });
     });
   }
@@ -733,8 +742,11 @@ export class UIManager {
     });
 
     document.getElementById('btn-confirm-price')?.addEventListener('click', () => {
-      const price = parseInt(slider?.value || midpoint);
-      this.encounterEngine.handlePricing(price);
+      try {
+        const price = parseInt(slider?.value || midpoint);
+        if (!this.encounterEngine) { console.error('[BizAmpire] encounterEngine not set'); return; }
+        this.encounterEngine.handlePricing(price);
+      } catch(e) { console.error('[BizAmpire] pricing click error:', e); }
     });
   }
 
@@ -793,7 +805,10 @@ export class UIManager {
 
     body.querySelectorAll('.choice-btn[data-objection]').forEach(btn => {
       btn.addEventListener('click', () => {
-        this.encounterEngine.handleObjection(btn.dataset.objection, btn.dataset.response);
+        try {
+          if (!this.encounterEngine) { console.error('[BizAmpire] encounterEngine not set'); return; }
+          this.encounterEngine.handleObjection(btn.dataset.objection, btn.dataset.response);
+        } catch(e) { console.error('[BizAmpire] objection click error:', e); }
       });
     });
   }
@@ -848,7 +863,10 @@ export class UIManager {
 
     body.querySelectorAll('.choice-btn[data-close]').forEach(btn => {
       btn.addEventListener('click', () => {
-        this.encounterEngine.resolveEncounter(btn.dataset.close);
+        try {
+          if (!this.encounterEngine) { console.error('[BizAmpire] encounterEngine not set'); return; }
+          this.encounterEngine.resolveEncounter(btn.dataset.close);
+        } catch(e) { console.error('[BizAmpire] close click error:', e); }
       });
     });
   }
