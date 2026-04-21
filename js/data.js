@@ -114,14 +114,14 @@ const BUSINESS_TEMPLATES = {
       owner: 'Maya Patel', ownerTitle: 'CEO',
       pain: 'Churn rate too high, can\'t figure out why customers are leaving',
       budget: [3000, 12000], currentVendor: 'In-house', decisionTimeline: '60 days' },
-    { name: 'ByteForge Labs', type: 'Dev Shop', icon: '⚙️', size: 'Startup',
-      owner: 'Alex Chen', ownerTitle: 'CTO',
-      pain: 'Spending too much time on ops instead of building product',
-      budget: [1500, 5000], currentVendor: 'None', decisionTimeline: '14 days' },
-    { name: 'DataPulse Analytics', type: 'Analytics Firm', icon: '📊', size: 'Mid-Market',
-      owner: 'Sam Rivera', ownerTitle: 'VP Operations',
-      pain: 'Board wants 30% growth but no clear path to acquisition',
-      budget: [5000, 20000], currentVendor: 'Agency', decisionTimeline: '90 days' },
+    { name: 'SwiftRoute Couriers', type: 'Delivery Company', icon: '📦', size: 'SMB',
+      owner: 'Alex Torres', ownerTitle: 'Operations Manager',
+      pain: 'Growing delivery volume but aging van fleet is breaking down 2-3x per month',
+      budget: [3000, 12000], currentVendor: 'None', decisionTimeline: '14 days' },
+    { name: 'GreenEdge Landscaping', type: 'Landscaping Company', icon: '🌿', size: 'Mid-Market',
+      owner: 'Ray Salazar', ownerTitle: 'Owner',
+      pain: 'Fleet of aging trucks causing job delays and missed bids — losing to larger crews',
+      budget: [4000, 18000], currentVendor: 'None', decisionTimeline: '30 days' },
   ],
   downtown: [
     { name: 'Meridian Capital', type: 'Financial Advisory', icon: '💼', size: 'Mid-Market',
@@ -132,14 +132,14 @@ const BUSINESS_TEMPLATES = {
       owner: 'Linda Tran', ownerTitle: 'Owner',
       pain: 'Lead generation dried up, relying only on referrals',
       budget: [2000, 7000], currentVendor: 'None', decisionTimeline: '30 days' },
-    { name: 'Fifth & Main Bank', type: 'Community Bank', icon: '🏦', size: 'Enterprise',
-      owner: 'David Park', ownerTitle: 'CMO',
-      pain: 'Young customers choosing fintech apps over traditional banking',
-      budget: [15000, 50000], currentVendor: 'Agency', decisionTimeline: '120 days' },
-    { name: 'Vantage Wealth', type: 'Wealth Management', icon: '📈', size: 'SMB',
-      owner: 'Grace Liu', ownerTitle: 'Partner',
-      pain: 'Not enough qualified referrals, no structured referral process',
-      budget: [3000, 10000], currentVendor: 'Freelancer', decisionTimeline: '45 days' },
+    { name: 'Pinnacle Roofing', type: 'Roofing Contractor', icon: '🏠', size: 'Mid-Market',
+      owner: 'David Kozak', ownerTitle: 'Owner',
+      pain: 'Storm season overwhelm — not enough trucks to run multiple crews simultaneously',
+      budget: [6000, 25000], currentVendor: 'None', decisionTimeline: '21 days' },
+    { name: 'AirFlow HVAC', type: 'HVAC Contractor', icon: '❄️', size: 'Mid-Market',
+      owner: 'Grace Moreno', ownerTitle: 'Owner',
+      pain: 'Adding two new technicians but no vehicles — crew using personal trucks creates liability',
+      budget: [5000, 20000], currentVendor: 'None', decisionTimeline: '30 days' },
   ],
   professional_park: [
     { name: 'Hartley & Associates', type: 'Law Firm', icon: '⚖️', size: 'SMB',
@@ -172,10 +172,10 @@ const BUSINESS_TEMPLATES = {
       owner: 'Tony Nguyen', ownerTitle: 'Owner',
       pain: 'Can\'t compete with chain shops on price, needs differentiation',
       budget: [800, 3000], currentVendor: 'None', decisionTimeline: '7 days' },
-    { name: 'Steel & Stone Fabrication', type: 'Manufacturing', icon: '🏭', size: 'Mid-Market',
-      owner: 'Sandra Bell', ownerTitle: 'COO',
-      pain: 'Supply chain gaps causing project delays and client attrition',
-      budget: [6000, 25000], currentVendor: 'Consultant', decisionTimeline: '90 days' },
+    { name: 'FlowMaster Plumbing', type: 'Plumbing Contractor', icon: '🔩', size: 'Mid-Market',
+      owner: 'Sandra Reyes', ownerTitle: 'Owner',
+      pain: 'Running 6 trucks but 2 are over 200k miles — one breakdown already cost a $15k emergency job',
+      budget: [6000, 25000], currentVendor: 'None', decisionTimeline: '30 days' },
   ],
   medical_mile: [
     { name: 'Lakeside Family Practice', type: 'Medical Practice', icon: '🏥', size: 'SMB',
@@ -200,10 +200,10 @@ const BUSINESS_TEMPLATES = {
       owner: 'Dara Jackson', ownerTitle: 'Owner',
       pain: 'New chain opened next door, foot traffic down 30%',
       budget: [500, 2500], currentVendor: 'None', decisionTimeline: '14 days' },
-    { name: 'Luxe Apparel', type: 'Boutique Retail', icon: '👗', size: 'SMB',
-      owner: 'Isabelle Martin', ownerTitle: 'Owner',
-      pain: 'Instagram following isn\'t converting to in-store visits',
-      budget: [800, 3500], currentVendor: 'Freelancer', decisionTimeline: '21 days' },
+    { name: 'Harvest Catering Co.', type: 'Catering Company', icon: '🍽️', size: 'SMB',
+      owner: 'Isabelle Nguyen', ownerTitle: 'Owner',
+      pain: 'Turning down corporate catering contracts because catering van is unreliable',
+      budget: [2500, 9000], currentVendor: 'None', decisionTimeline: '14 days' },
     { name: 'Grid & Socket Electric', type: 'Electrical Contractor', icon: '⚡', size: 'SMB',
       owner: 'Ray Torres', ownerTitle: 'Owner',
       pain: 'No online presence, getting outbid by someone who just has Google reviews',
@@ -633,7 +633,9 @@ export function getProspectCategory(bizType) {
       t.includes('coffee') || t.includes('food') || t.includes('bakery') ||
       t.includes('retail') || t.includes('boutique') || t.includes('shop') ||
       t.includes('store') || t.includes('salon') || t.includes('barbershop') ||
-      t.includes('gym') || t.includes('fitness') || t.includes('spa'))
+      t.includes('gym') || t.includes('fitness') || t.includes('spa') ||
+      t.includes('cater') || t.includes('delivery') || t.includes('courier') ||
+      t.includes('logistics') || t.includes('distribution'))
     return 'retail_food';
 
   // Office professional — law, accounting, HR, consulting (catch-all for B2B services)

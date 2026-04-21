@@ -1,1 +1,860 @@
-export const QUESTIONS = {"office_professional":[[{"phase":"situation","question":"Does your firm have company vehicles — partner cars, a fleet of client-visit vehicles, or vehicles your staff use for any business purposes — that you're managing maintenance on?","goodResponse":"Even a small fleet of company vehicles creates maintenance coordination overhead if there's no systematic approach. Understanding what vehicles you have and how maintenance is currently handled tells me whether we'd be a fit. How many vehicles are we talking about?","badResponse":"We provide fleet maintenance services. Do you have any vehicles we could service?","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"Are you having any issues with vehicle downtime, deferred maintenance, or the administrative burden of managing service appointments across multiple employees' vehicles?","goodResponse":"Even small fleets can create scheduling headaches and unexpected downtime if maintenance is being handled reactively. Is maintenance something that falls through the cracks because there's no one person responsible for it?","badResponse":"We handle all of that. Fleet maintenance on a schedule so nothing gets forgotten.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If a vehicle breakdown put a staff member out of commission for a client visit — or created a liability situation because a vehicle wasn't maintained to code — how does that ripple through your operations and your professional image?","goodResponse":"For a professional services firm, a breakdown situation with a client-facing employee creates more than a logistical problem. It's a professionalism signal. Scheduled maintenance prevents those surprises.","badResponse":"Breakdowns are avoidable. Scheduled maintenance keeps the fleet reliable.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If every company vehicle was on a scheduled maintenance program — oil changes, tire rotations, inspection check-ins — and you never had to think about it, how would that simplify your operations?","goodResponse":"Fleet maintenance programs are designed to be invisible — you set it up, and it runs without you having to manage it. Let me walk you through what a small fleet program looks like for a firm your size.","badResponse":"We run fleet programs for small company fleets. It's low-overhead and predictable.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"Beyond company vehicles — do any of your partners or senior staff use personal vehicles for client meetings or business travel in a way where the firm reimburses mileage or contributes to vehicle upkeep?","goodResponse":"Some professional services firms offer vehicle maintenance allowances or reimbursement programs as a benefit for partners and senior staff. If that's the case, we could potentially structure a preferred service arrangement that benefits both the firm and the individuals.","badResponse":"We offer business vehicle service programs that firms can offer as a staff benefit.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"Is tracking and managing vehicle expense reimbursements for staff who use personal vehicles for business purposes something that creates any administrative friction or inconsistency in your firm?","goodResponse":"Vehicle reimbursement administration is a surprisingly common source of friction in professional services firms — unclear policies, inconsistent approvals, and employee dissatisfaction. Is it something that comes up?","badResponse":"A structured vehicle maintenance program can simplify that whole process.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If poorly maintained employee vehicles are creating reliability issues — missed client meetings, last-minute schedule changes, or a liability exposure if an employee has an accident in a vehicle that wasn't properly maintained — how does that affect your firm?","goodResponse":"Liability exposure from employee accidents in personal vehicles used for business is real, especially if the vehicle's maintenance state becomes relevant. A structured maintenance benefit reduces that exposure and the administrative complexity around it.","badResponse":"Employee vehicle maintenance has liability implications for the firm. A program addresses that.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your firm offered a preferred vehicle service benefit — discounted rates, scheduled maintenance reminders, and easy booking for staff who use their vehicles for business — how would that land as a retention perk for your team?","goodResponse":"Vehicle maintenance benefits are a low-cost, high-visibility perk that employees actually use and notice. Let me walk you through what a corporate service account looks like for a firm your size.","badResponse":"We set up corporate service accounts for professional firms. It's a nice staff benefit.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"Does anyone on your leadership team commute long distances or travel regularly for client work in a way where vehicle reliability is a real concern — where a breakdown would create a significant professional or personal problem?","goodResponse":"High-mileage professional drivers are one of our most consistent client types — people who put 30,000 or 40,000 miles a year on their vehicle and can't afford a breakdown situation. Is that something that applies to any of your partners or senior staff?","badResponse":"We specialize in keeping high-mileage professional vehicles in top condition.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"Have you or anyone on your team had a vehicle issue that created a professional problem — a missed client meeting, a stressful roadside situation, or a vehicle that was in the shop when you needed it?","goodResponse":"High-mileage professional driving is demanding on vehicles, and deferred maintenance tends to catch up at the worst possible moment. The professionals who avoid those situations are the ones with a proactive maintenance relationship. Has that come up?","badResponse":"Proactive maintenance prevents those situations. That's what we provide.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"For someone who relies on their vehicle for client relationships and professional commitments, what's the real cost of a breakdown situation — not just the repair, but the professional disruption and the stress of managing it?","goodResponse":"The hidden cost of a vehicle breakdown for a professional isn't the repair — it's the disrupted client meeting, the rescheduling cascade, and the stress of managing a logistical problem when you're supposed to be focused on work. Preventing that is the real value.","badResponse":"Vehicle reliability has professional implications. Proactive maintenance solves it.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your vehicle was on a proactive maintenance schedule — oil changes, inspections, and any developing issues caught early — and you could hand it off and have it back the same day, how would that change how you think about vehicle ownership?","goodResponse":"That's what a professional vehicle maintenance relationship looks like — transparent, reliable, and designed around your schedule. Let me walk you through what a personal or executive fleet service account covers.","badResponse":"We run executive vehicle maintenance accounts. Predictable, fast, and reliable.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}]],"tech_company":[[{"phase":"situation","question":"Does your company have a fleet of vehicles — delivery vehicles, company cars for field teams, or test/demo vehicles — that you're managing maintenance on, or is your team primarily working out of a central office?","goodResponse":"Most tech companies are office-based, but some have field teams, equipment delivery operations, or company vehicles for sales and executive travel. If any of that applies, there's potentially a fleet maintenance relationship that makes sense. What does your vehicle situation look like?","badResponse":"We do fleet maintenance for companies with vehicles. Do you have any company vehicles?","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"If your team does have company vehicles — whether for demos, field deployment, or executive use — is maintenance something that gets handled proactively or reactively, when a problem shows up?","goodResponse":"Reactive vehicle maintenance is the norm for companies where vehicles aren't the core business. The problem is that reactive maintenance is more expensive and creates operational surprises. Is there a person or process responsible for tracking vehicle service?","badResponse":"We take reactive maintenance off your plate with scheduled programs.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If a company vehicle broke down when your field team needed it for a client deployment or demo — and you had no backup plan — what's the operational cost of that disruption to your team and your customer?","goodResponse":"For a tech company, vehicle downtime during a field deployment creates a customer experience problem and an operational scramble. Scheduled maintenance is the most straightforward way to prevent that situation.","badResponse":"Vehicle downtime during field deployments is an operational and customer experience problem.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your company vehicles were on a scheduled maintenance program — handled without anyone on your team having to think about it — how would that simplify your operations and remove a potential source of field deployment risk?","goodResponse":"Fleet maintenance programs are designed to be invisible from an administrative standpoint. Let me walk you through what a small business vehicle account looks like for companies with three to ten vehicles.","badResponse":"We run fleet programs for tech companies with small vehicle needs. It's low overhead.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"For any executive or sales team members who drive their own vehicles for company business — does your company offer any vehicle maintenance benefit or allowance as part of their compensation package?","goodResponse":"Tech companies are increasingly offering vehicle maintenance allowances as a perk for sales and field staff, particularly those who log significant mileage. It's a low-cost, high-visibility benefit. Is that something your HR team has considered?","badResponse":"We offer corporate service accounts that tech companies can use as employee vehicle benefits.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"Are your sales reps or field engineers dealing with vehicle maintenance situations that create scheduling conflicts — last-minute delays for client visits because their car is in the shop — that could be mitigated with better vehicle maintenance planning?","goodResponse":"Sales reps who are managing their own vehicle maintenance reactively will inevitably have scheduling conflicts at inconvenient times. A company-sponsored maintenance program removes that friction from their lives and from your scheduling.","badResponse":"We reduce vehicle-related scheduling friction for sales teams.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If vehicle reliability issues are creating delays in customer-facing activities for your sales or field team — missed demos, late client arrivals — what's the customer experience and revenue impact when that happens at a critical moment in a deal cycle?","goodResponse":"First impressions in enterprise sales are hard to recover from. A late arrival or a cancelled demo because of a vehicle issue is a trust signal in the wrong direction. A vehicle maintenance benefit eliminates that risk.","badResponse":"Vehicle-related delays during deal cycles have real revenue implications.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your company offered a vehicle maintenance benefit that kept your sales and field team's vehicles reliable and maintained — reducing scheduling disruptions and giving them one less thing to manage — how would that affect their effectiveness and satisfaction?","goodResponse":"High-performing sales reps notice benefits that make their professional life easier. Let me walk you through what a corporate vehicle maintenance account looks like for a team your size.","badResponse":"We set up corporate vehicle maintenance accounts for tech teams. It's a useful perk.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"Does your company operate any physical infrastructure that requires vehicle access — data center visits, field deployment sites, or office locations spread across a geography where your team is driving regularly?","goodResponse":"Some tech companies have significant vehicle-based operational needs that aren't immediately obvious — infrastructure teams visiting colo sites, field deployment teams, or IT staff servicing distributed locations. Is that part of your operational model?","badResponse":"We service vehicles for any company with physical infrastructure or field operations.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"If your infrastructure or field team relies on vehicles for time-sensitive operations — colo visits, equipment installs — has vehicle reliability ever been a constraint on their ability to respond quickly when something needs attention?","goodResponse":"Infrastructure teams that respond to time-sensitive events are exactly the teams where a vehicle breakdown creates a critical operations problem. Is that a scenario that applies to your infrastructure or field team?","badResponse":"Vehicle reliability is critical for infrastructure response teams. We keep vehicles ready.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If a vehicle breakdown during a critical infrastructure response delayed your team's arrival at a site — extending your MTTR during an incident — what's the operational and SLA impact of that additional delay?","goodResponse":"For infrastructure teams where response time is tied to SLAs, every minute of delay has a measurable impact. Vehicle reliability is an infrastructure reliability input that's easy to overlook. Scheduled maintenance removes it as a variable.","badResponse":"Vehicle reliability affects MTTR for infrastructure incidents. Maintenance programs fix that.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your infrastructure team's vehicles were on a scheduled maintenance program — inspected regularly and addressed proactively — how would that change your confidence in their ability to respond quickly when incidents happen?","goodResponse":"Removing vehicle reliability as a variable from your infrastructure response capability is a small operational improvement with disproportionate peace of mind. Let me walk you through what a corporate fleet program looks like.","badResponse":"We run fleet programs for teams with operational vehicle needs. Let's talk.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}]],"healthcare":[[{"phase":"situation","question":"Do your providers or staff use vehicles for any practice-related activity — home visits, mobile health services, lab pickups, or commuting to satellite locations — and is there any company or practice vehicle in the mix?","goodResponse":"Healthcare practices with home visit programs, mobile health units, or multi-site operations have real vehicle maintenance needs that are often managed reactively. Understanding what your vehicle footprint looks like tells me whether we'd be a fit.","badResponse":"We service vehicles for healthcare practices — from single cars to small mobile health fleets.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"If your practice has any mobile or home visit component — is vehicle reliability ever a scheduling concern? Have you had a provider unable to make a patient visit because of a vehicle issue?","goodResponse":"A provider who can't make a scheduled home visit because of a vehicle breakdown creates a patient care disruption and an administrative scramble. In mobile health, the vehicle is clinical infrastructure. Is reliability something that's come up?","badResponse":"We keep mobile health and home visit vehicles reliably maintained.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If vehicle failures are disrupting scheduled patient visits — leading to rescheduled appointments, patient dissatisfaction, and lost billing — what's the downstream cost to your practice in revenue and patient retention?","goodResponse":"In home-based or mobile healthcare, every missed visit is a lost billable encounter and a patient experience failure. Vehicle maintenance is patient care infrastructure for those programs. The reliability cost is measurable.","badResponse":"Missed visits from vehicle issues have real revenue and patient care implications.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your practice vehicles were on a scheduled maintenance program — with proactive service that eliminated breakdown surprises — how would that change the reliability of your mobile or home visit operations?","goodResponse":"For mobile healthcare operations, vehicle reliability is a clinical reliability input. Let me walk you through what a healthcare practice fleet program looks like.","badResponse":"We service healthcare practice vehicles on scheduled programs. Let's talk about yours.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"Do any of your clinical staff or administrators use personal vehicles for practice-related travel — inter-facility transport, lab runs, or patient outreach — and does the practice provide any vehicle benefit or allowance for that?","goodResponse":"Healthcare practices with multi-site or outreach operations often have staff using personal vehicles for practice purposes, and the maintenance burden and liability implications of that are worth addressing. What does your current arrangement look like?","badResponse":"We offer corporate vehicle maintenance accounts for healthcare practice staff benefits.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"Has a staff member's personal vehicle ever created a scheduling or operational problem for your practice — a nurse who couldn't make a home visit, or an administrator who couldn't do a lab run because their car was having issues?","goodResponse":"Staff vehicle reliability affecting practice operations is a more common problem than practices expect, especially for community health, home health, or multi-site practices. Has this come up in a way that affected patient care?","badResponse":"A staff vehicle benefit reduces those operational surprises.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If staff vehicle issues are occasionally disrupting patient care schedules or creating liability exposure when staff drive poorly maintained personal vehicles on practice business — what's the risk and operational cost of not addressing that?","goodResponse":"Staff driving personal vehicles for practice business creates both operational risk and liability exposure. A practice-sponsored maintenance benefit reduces both while also being a meaningful retention perk for the staff who receive it.","badResponse":"Personal vehicle reliability on practice business has liability and operational implications.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your practice offered a vehicle maintenance account as a benefit for staff who regularly drive for practice purposes — what would that mean for staff satisfaction and the reliability of your mobile or inter-facility operations?","goodResponse":"Vehicle maintenance benefits for mobile and field staff are a high-visibility, practical perk. Let me walk you through what a healthcare practice corporate account looks like.","badResponse":"We set up healthcare practice corporate vehicle accounts. Let's discuss what fits your team.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"Does your practice operate any medical transport vehicles, mobile screening units, or wellness event vehicles — and if so, who's handling their maintenance and compliance inspections?","goodResponse":"Medical transport and mobile health vehicles have specific maintenance and compliance requirements — commercial vehicle inspections, equipment certification timelines, and insurance-required service documentation. How are those requirements being tracked and managed currently?","badResponse":"We service medical transport and mobile health vehicles to commercial and compliance standards.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"Have you had a compliance inspection, an insurance renewal, or a contract audit that flagged a gap in your vehicle maintenance documentation or certification currency?","goodResponse":"Mobile medical units and transport vehicles are subject to more regulatory scrutiny than standard commercial vehicles, and documentation gaps show up in insurance audits and contract renewals. Has compliance documentation ever been a concern in your operations?","badResponse":"We maintain the documentation trail that keeps mobile medical vehicles compliant.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If a compliance gap in your vehicle maintenance documentation triggered an insurance issue or caused you to pull a mobile unit from service during a critical screening event — what's the cost to your practice and your community health program?","goodResponse":"Mobile health programs depend on operational continuity, and a vehicle compliance gap at the wrong moment can shut down an entire service line. Proactive maintenance with documentation creates the audit trail that prevents those situations.","badResponse":"Compliance documentation gaps can shut down mobile health programs. Prevention is straightforward.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your mobile medical vehicles were maintained on a documented, scheduled program — with service records that satisfied insurance and compliance requirements — how would that change the operational confidence of your mobile health or transport program?","goodResponse":"Documented maintenance programs for medical vehicles are a compliance asset and an operational foundation. Let me walk you through what a mobile health fleet service program looks like.","badResponse":"We run documented fleet programs for mobile health and medical transport. Let's talk.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}]],"retail_food":[[{"phase":"situation","question":"Do you have a delivery vehicle, catering vehicle, or food truck — or any vehicles your staff use for supply runs and deliveries — that are part of your business operations?","goodResponse":"Food and beverage operations with delivery, catering, or supply chain components often have vehicles that are critical to daily operations but maintained reactively. Understanding what vehicles are in the picture tells me whether we'd be a natural fit.","badResponse":"We service vehicles for food and beverage businesses — from single delivery vans to small food truck fleets.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"Have you ever had a delivery vehicle, catering van, or food truck break down before or during an event — costing you a booking or creating a customer service crisis?","goodResponse":"Vehicle breakdowns during food events or catering jobs are one of the most operationally damaging things that can happen to a food business — you lose the revenue, you lose the client, and you potentially lose future bookings from their network. Has that happened?","badResponse":"Scheduled maintenance prevents those situations. We keep your service vehicles running.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If a vehicle breakdown caused you to miss or significantly delay a catering event or a high-volume delivery day — and you lost the booking fee plus the future relationship — what does that event cost you in revenue and reputation?","goodResponse":"A missed catering booking from a vehicle breakdown is a double loss — the immediate revenue and the word-of-mouth from a dissatisfied client. In a business built on reputation and referrals, that's a compounding cost. The maintenance investment is trivial by comparison.","badResponse":"Vehicle-related booking failures are expensive in revenue and reputation.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your business vehicles were on a scheduled maintenance program — so that breakdowns before events were essentially eliminated — how would that change your confidence when committing to large bookings or regular delivery routes?","goodResponse":"Reliable vehicles mean reliable commitments. Let me walk you through what a food service business vehicle account looks like and what the service schedule covers.","badResponse":"We service delivery and catering vehicles for food businesses. Let's set up a schedule.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"If you're running a food truck — what's your current maintenance arrangement? Are you going to a shop when something comes up, or do you have a regular service relationship with someone who knows your vehicle?","goodResponse":"Food truck operators often have reactive maintenance relationships, which works until a breakdown costs them a prime event slot or a weekend market. Understanding your current maintenance setup helps me see whether a more proactive program would be valuable.","badResponse":"We specialize in food truck maintenance — from routine service to event-day reliability.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"Has your food truck ever had a mechanical problem that cost you a market day, a festival booking, or a regular lunch route — and left you scrambling for a repair while losing revenue?","goodResponse":"Food truck breakdowns are disproportionately expensive because the vehicle IS the business. A day off the road is a day of zero revenue, and missing a confirmed event booking can damage relationships that took months to build. What happened with the situation you're thinking of?","badResponse":"We keep food trucks running reliably so those situations don't happen.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If your food truck is off the road for two or three days during prime season — at a cost of whatever your average daily revenue is — and you lose a repeat booking in the process, what's the total financial impact of a single breakdown event?","goodResponse":"For a food truck operator, the total cost of a breakdown includes the repair, the lost revenue days, the missed bookings, and the potential lost relationship. When you add that up, a scheduled maintenance program usually costs a fraction of one breakdown event.","badResponse":"Breakdown costs for food trucks are compounding. Maintenance is much cheaper.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your food truck was serviced on a regular schedule — oil changes, generator service, and safety inspections — and you had a shop you could call when something needed attention, how would that change how you plan your booking calendar?","goodResponse":"Booking confidence comes from knowing your vehicle will be there. Let me walk you through what a food truck service account looks like and what the typical service schedule covers.","badResponse":"We run food truck service accounts. Reliable maintenance, predictable costs.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"If you do supply runs — picking up specialty ingredients, visiting distributors, or making market runs — are those trips being done in a personal vehicle, a business vehicle, or a delivery vehicle that's being tracked for maintenance?","goodResponse":"Many food business owners do daily supply runs in personal vehicles without really tracking the wear those trips create. If you're putting 15,000 business miles per year on a personal vehicle, the maintenance math starts to look different. What does your typical week of driving for the business look like?","badResponse":"We service vehicles that are working hard for food businesses — personal or commercial.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"Is the vehicle you use for supply runs and business trips being maintained proactively, or is it something you tend to deal with when a problem shows up?","goodResponse":"Business-use vehicles almost always accumulate deferred maintenance because the owner is too busy running the business to focus on it. That pattern ends with expensive surprise repairs or a breakdown at the worst possible time. Is that the situation?","badResponse":"We put business-use vehicles on scheduled maintenance so problems don't accumulate.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If your supply vehicle broke down during your morning run before a big weekend service — leaving you without key ingredients or stuck waiting for a tow — what does that do to your operations and your customer commitments for that day?","goodResponse":"A vehicle breakdown in the supply chain of a food business is an operational crisis with immediate customer impact. Proactive maintenance is the most straightforward way to prevent that scenario.","badResponse":"Supply vehicle breakdowns are operational crises for food businesses. Maintenance prevents them.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your supply vehicle was on a scheduled maintenance program — so that breakdowns weren't in your operational risk calculation — how would that change the reliability of your supply chain and your ability to commit to a full service calendar?","goodResponse":"Removing vehicle reliability from your operational risk list is a simple win. Let me walk you through what a business vehicle maintenance account looks like for a food business like yours.","badResponse":"We run business vehicle maintenance accounts for food operators. Let's set up a schedule.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}]],"trades_contractor":[[{"phase":"situation","question":"How many vehicles do you have in your fleet — service trucks, vans, trailers — and how are you currently managing maintenance across all of them? Is it a formal schedule, or is it handled by whoever notices a problem first?","goodResponse":"Fleet maintenance is one of the most common operational vulnerabilities in contracting businesses. When you're running multiple vehicles hard every day, reactive maintenance quickly becomes more expensive and more disruptive than a scheduled program. How many miles per year is your average service vehicle putting on?","badResponse":"We run fleet maintenance programs for trade contractors. Scheduled, cost-effective, and reliable.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"Have you had a service truck break down on the way to a job — or mid-job — that caused you to miss a commitment, leave a crew stranded, or damage a customer relationship?","goodResponse":"A service truck breakdown is one of the most disruptive operational events for a trade contractor. You've got a crew stranded, a customer waiting, and an expensive emergency repair call. How often does something like that happen, and what does it typically cost you in time and money?","badResponse":"We prevent those breakdown situations with scheduled maintenance.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If vehicle breakdowns are costing you an average of two or three job days per vehicle per year — in missed commitments, emergency repairs, and crew downtime — what does that add up to across your full fleet in lost revenue and repair costs?","goodResponse":"When you run that math across a fleet of five or six vehicles, the total cost of reactive maintenance versus scheduled maintenance usually favors the scheduled program significantly. Would it be useful to walk through that estimate for your fleet?","badResponse":"Fleet breakdown costs compound across multiple vehicles. Scheduled programs reduce them.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your entire fleet was on a scheduled maintenance program — with every vehicle serviced based on mileage and usage, issues caught early, and service records maintained — how would that change your operational reliability and your annual maintenance cost?","goodResponse":"Fleet programs almost universally reduce total maintenance cost while dramatically improving reliability. Let me walk you through what a trade contractor fleet program looks like and what the typical cost-per-vehicle comparison is.","badResponse":"We run fleet programs for trade contractors. Let's compare your current cost to a scheduled program.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"How are you tracking maintenance schedules across your fleet — do you have a system that tells you which vehicles need service and when, or is it more informal based on whoever is driving the truck?","goodResponse":"Fleet tracking and maintenance scheduling in contracting businesses is typically informal, which means service intervals get missed, and vehicles accumulate deferred maintenance that shows up as expensive problems later. How are you currently tracking your maintenance history for each vehicle?","badResponse":"We track and schedule maintenance for contractor fleets so nothing gets missed.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"Have you ever had a vehicle fail a DOT inspection or an insurance inspection because a maintenance item had been missed — and ended up with a vehicle out of service or a compliance issue you didn't see coming?","goodResponse":"DOT compliance and insurance inspection failures from deferred maintenance are the most expensive fleet surprises for contractors — you're paying for the repair, paying for a rental, and potentially dealing with an out-of-service order. Has that happened with any of your vehicles?","badResponse":"We prevent compliance failures by keeping maintenance current and documented.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If a compliance failure took one of your key service vehicles out of service during a peak season — and you couldn't complete committed jobs because of it — what's the revenue impact and the customer relationship cost of that situation?","goodResponse":"Peak season vehicle compliance failures are among the most expensive events in contracting. You're turning away jobs you've already committed to, and the customer experience damage is significant. The scheduled maintenance cost that prevents that is a clear insurance investment.","badResponse":"Compliance failures during peak season are costly. Scheduled maintenance prevents them.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your fleet maintenance was tracked and scheduled — so that you always knew the service status of every vehicle, and compliance issues were caught before they became inspection failures — how would that change your operational confidence during your busy season?","goodResponse":"Fleet confidence during peak season is worth a lot. Let me walk you through what a contractor fleet maintenance program looks like and what it covers.","badResponse":"We run contractor fleet maintenance programs with full tracking. Let's map your fleet.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"Are any of your vehicles approaching high mileage — 100,000 miles or more — where you're starting to make decisions about whether to repair, replace, or manage them differently to extend their service life?","goodResponse":"High-mileage fleet management is a real decision point for trade contractors. The cost-per-mile calculation changes at high mileage, and the maintenance strategy needs to shift to match. Understanding where your fleet is in its lifecycle helps me see where we'd be most valuable.","badResponse":"We help contractors manage high-mileage fleet decisions and extend service vehicle life.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"Are your older, higher-mileage vehicles becoming a reliability concern — with increasing repair frequency that's starting to make you question whether you're spending more maintaining them than replacing them would cost?","goodResponse":"The repair-versus-replace decision point is one of the most common fleet management questions for contractors, and the answer depends on real data about maintenance costs versus replacement costs. What does the repair history on your highest-mileage vehicle look like?","badResponse":"We help contractors make data-driven repair versus replace decisions.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If a high-mileage vehicle that you've been keeping running is now costing you more in repairs than a replacement payment would be — while still creating reliability risk on jobs — what's the total cost of that deferred replacement decision over the next 12 months?","goodResponse":"The hidden cost of keeping the wrong vehicle in the fleet is one of the most common fleet management mistakes I see — the repair bills seem manageable month by month, but they add up to more than a payment would be, while the reliability risk remains. Running those numbers explicitly usually changes the decision.","badResponse":"Deferred replacement decisions have a real cost. Let's run the numbers.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If you had a fleet maintenance partner who tracked your repair history per vehicle, helped you identify the right repair-versus-replace thresholds, and kept everything running in the meantime — how would that change your fleet cost management and operational reliability?","goodResponse":"That kind of fleet relationship is what separates contractors who manage fleet as an asset from those who manage it reactively. Let me walk you through what a contractor fleet partnership looks like.","badResponse":"We partner with contractors on fleet lifecycle management. Let's look at your fleet together.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}]],"auto_services":[[{"phase":"situation","question":"I'll be upfront — selling auto services to another auto service business is a bit of an unusual conversation. But I'm curious: do you have any specialty services you refer customers out for — alignment, transmission work, bodywork — where a partnership or referral arrangement might make sense?","goodResponse":"Specialty referral relationships between auto service businesses are actually more common than people think — a general repair shop that doesn't do bodywork, a quick lube that doesn't do transmission work. Referral partnerships can be mutually valuable. What's the service you most commonly refer out?","badResponse":"We could potentially partner on referrals for services you don't offer.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"When customers come in for a service you don't offer — say an alignment, transmission rebuild, or bodywork — do you just tell them to find someone else, or do you have a shop you trust enough to send them to?","goodResponse":"That referral gap is a customer experience problem and a missed revenue opportunity. If there's no trusted referral partner, you're leaving your customer to a Google search — and some percentage won't come back to you after that experience. What's your referral process look like today?","badResponse":"We could be that referral partner for the services you don't offer.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If you're regularly sending customers out to find their own solutions for specialty work — and some don't return after the referral — what does that lost retention cost you per year in repeat business?","goodResponse":"Even losing 10-15% of referred customers to a competitor is real money when you factor in lifetime customer value. A formalized referral network keeps those customers in your orbit. It's a retention tool as much as a service extension.","badResponse":"Customer leakage on referrals is costly. A referral partner fixes that.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If we formalized a two-way referral arrangement — you send customers our way for specialty work we handle that you don't, we send yours back and vice versa — how would that improve your customer retention and round out the service experience you offer?","goodResponse":"A structured referral partnership is good for both shops. Let me put together a simple referral agreement framework and show you how other shops in our network have made it work.","badResponse":"A referral partnership is a natural fit. Let's set one up.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"How many bays do you run, and are you at capacity most weeks or do you find yourself with empty time slots you can't fill?","goodResponse":"Capacity utilization is the profit lever in auto service. Understanding whether you're leaving bays idle or turning away work tells me a lot about the growth stage you're in and what kind of partnership might make sense.","badResponse":"We could help fill capacity gaps or handle overflow work.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"If you do have empty bay time, is that because of seasonal demand swings, marketing gaps, or because you can't find enough qualified technicians to keep bays staffed?","goodResponse":"Idle capacity with a labor cause is different from idle capacity with a marketing cause — and they need completely different solutions. What does your busy season look like versus your slow season?","badResponse":"We help auto shops address capacity issues whether it's a marketing or staffing problem.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"An empty bay costs you roughly your average RO value per hour in lost revenue. On your slow days, what does that idle time translate to in monthly lost gross profit?","goodResponse":"When shops run that number, they're often surprised how quickly idle bay time adds up. It shifts how you think about any investment in filling those hours. What's your typical repair order average?","badResponse":"Idle bays are lost revenue. We help fill them.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If there was a structured arrangement — whether it's overflow work, fleet accounts, or a referral network — that helped you fill those idle bays with quality work, how would that change the profitability math for the shop?","goodResponse":"Filling bay time with quality work is the fastest path to bottom line improvement for most auto shops. Let me walk you through the options that make sense given your setup.","badResponse":"We can help fill your bays. Let's talk about what type of arrangement works.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"Do you do any fleet work currently — municipal, commercial, delivery vehicles — or is your business primarily consumer passenger vehicles?","goodResponse":"Fleet and consumer auto service are quite different business models. Fleet is higher volume, lower margin per RO, but more predictable. Consumer is the opposite. Understanding your current mix tells me what kind of additional work might complement what you already do.","badResponse":"Fleet accounts are a reliable revenue stream for auto shops — we could discuss that.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"If you're primarily consumer-focused, do you find the seasonality and unpredictability of consumer demand creates cash flow challenges during slow periods?","goodResponse":"Consumer auto demand is notoriously lumpy — weather, the economy, consumer confidence all affect it. Fleet contracts smooth that revenue curve considerably. What does your slow season typically look like?","badResponse":"Fleet work smooths out consumer demand volatility.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"In a slow month, when your consumer drop-off volume is down — do you find yourself unable to cover fixed costs like labor and rent from shop revenue alone?","goodResponse":"Fixed cost coverage is the stress test for any auto shop. When consumer volume dips, shops without steady accounts feel it immediately in their cash position. That's the risk that a commercial relationship hedges against.","badResponse":"Fixed cost shortfalls in slow months are a real cash flow risk. Fleet accounts hedge that.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If you had a reliable commercial account or fleet relationship that provided a base level of predictable work each month — regardless of consumer volume swings — how would that change your business stability and your ability to plan for growth?","goodResponse":"Anchor accounts are how the most stable shops in any market operate. Let me walk you through what a structured commercial arrangement could look like for your shop.","badResponse":"A commercial fleet account is the stability anchor your shop needs. Let's explore options.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}]],"financial_services":[[{"phase":"situation","question":"Does your office operate a company vehicle fleet — whether that's for client visits, executive transport, or field staff — and who's currently managing the maintenance and service schedules on those vehicles?","goodResponse":"A lot of financial firms have 3-10 vehicles in regular use and no formal maintenance program managing them. Understanding what you have and how it's currently handled tells me where the value might be.","badResponse":"We offer fleet maintenance programs for professional service firms.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"When a vehicle needs service, do your employees have to find a shop on their own and expense it — or is there a company process that handles it, and do you have visibility into what's being spent?","goodResponse":"Self-managed vehicle expenses are almost always underdocumented and overspent. Employees pick the shop they know, not the best one, and the company has no aggregate view of the cost. What does that process look like for your team today?","badResponse":"We consolidate vehicle maintenance under one managed account so you have full visibility.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If you don't have a centralized view of vehicle maintenance spend, you're likely overpaying and missing the repair windows that prevent much more expensive failures. What's your rough sense of what the company spends on vehicle-related expenses per year?","goodResponse":"Most firms underestimate their annual vehicle expense because it's fragmented across expense reports and credit cards. When you aggregate it, the number is usually 20-40% higher than expected — and that's before factoring in productivity loss when a vehicle is out of service.","badResponse":"Untracked vehicle spend is almost always overspend. We bring it under control.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If all your company vehicles were on a single managed maintenance account — scheduled proactively, serviced at one location, with a monthly summary your CFO could actually use — how would that simplify your vehicle program and likely reduce what you're spending?","goodResponse":"That's exactly what our corporate accounts do for financial services firms. Let me walk you through what the account setup looks like and what our business clients typically save in the first year.","badResponse":"A corporate account gives you control and savings. Let's get yours set up.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"Do any of your advisors or relationship managers drive to client sites for in-person meetings, and if so, is there a company vehicle program or are they using personal vehicles?","goodResponse":"Client-facing staff who drive to meetings represent a real vehicle reliability dependency. Understanding whether they're using personal or company vehicles — and what happens when something goes wrong on the road — helps me understand the exposure.","badResponse":"We service vehicles for advisors and relationship managers who drive to clients.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"Has there ever been a situation where a client-facing employee had a vehicle breakdown on the way to or from a client meeting — and what did that do to the client relationship and the firm's reliability perception?","goodResponse":"Vehicle reliability failures during client interactions are reputational events for a financial firm. Clients who see their advisor stranded on the side of the road carry that image. It's a low-probability, high-impact risk that's easy to manage proactively.","badResponse":"Vehicle reliability is a reputational risk for firms with client-facing staff. We manage it.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If a client-facing breakdown happens during a high-stakes client visit — say during a quarterly review or a new account signing — and it delays or cancels the meeting, what's the reputational and revenue cost of that single incident?","goodResponse":"One missed client meeting at a sensitive moment in a relationship can put an account at risk. When the AUM at stake is six or seven figures, the math for a proactive vehicle maintenance program is very easy.","badResponse":"Vehicle failures during client visits have real relationship costs. We prevent them.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your client-facing team's vehicles were on a proactive maintenance schedule that caught issues before they became failures — so breakdowns became a non-issue — how would that change your confidence in the reliability of your field operations?","goodResponse":"Proactive vehicle maintenance is cheap insurance against reputational risk for client-facing firms. Let me walk you through what a professional services fleet program looks like.","badResponse":"A proactive maintenance program eliminates the breakdown risk. Let's build one for your team.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"For executive leadership — partners, managing directors — is there a company vehicle benefit, or are executives handling their own vehicle arrangements?","goodResponse":"Executive vehicle programs are a meaningful compensation and retention element at many financial firms. Understanding what's currently in place tells me whether there's an opportunity to add value to an existing program or create one.","badResponse":"We service executive vehicles for financial services firms as part of a company vehicle benefit.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"If executives are handling their own vehicle maintenance, does the firm cover any of those costs — and if so, is there tracking, policy, or controls on what's being expensed versus what's personal use?","goodResponse":"Executive vehicle expense without clear policy and controls is one of those areas that creates compliance and tax issues. Reimbursement without documentation also creates fringe benefit tax reporting complexity. What does your current policy look like?","badResponse":"Uncontrolled executive vehicle expense creates compliance risk. A structured program manages it.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If there's executive vehicle reimbursement happening without a documented policy — and it's not being properly categorized as a fringe benefit — what's the potential tax and compliance exposure if that's challenged by an auditor?","goodResponse":"IRS rules on employer-provided vehicle benefits are specific and frequently mishandled. The exposure is usually small in dollar terms but disproportionate in audit attention. A documented vehicle program with proper records eliminates that risk.","badResponse":"Undocumented vehicle reimbursements are a fringe benefit compliance issue. We help fix that.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If you had a structured executive vehicle account — with documented service records, clear personal-versus-business use tracking, and a clean paper trail for compliance purposes — how would that reduce the administrative complexity and compliance risk of your current approach?","goodResponse":"A clean vehicle program is a minor administrative investment with meaningful compliance upside. Let me show you what our executive account structure looks like and how we make the documentation simple.","badResponse":"A structured executive vehicle account solves the compliance and administrative problem cleanly.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}]],"real_estate":[[{"phase":"situation","question":"How many vehicles does your team operate — I'm thinking about agents doing property showings, property managers doing site visits, maybe a company vehicle for the principal. What does your vehicle footprint look like?","goodResponse":"Real estate is one of the most vehicle-dependent professional service businesses — agents are in their cars for showings, property managers are driving between sites. Understanding the scope helps me see what kind of program would make sense.","badResponse":"We service vehicles for real estate teams — agents, PMs, company cars.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"For your agents using personal vehicles for showings — are vehicle maintenance costs reimbursed, are agents responsible for it themselves, and do you have visibility into whether the vehicles being used for client-facing work are actually well-maintained?","goodResponse":"This is a common blind spot for real estate teams — agents are using their personal vehicles for client work, the firm has zero visibility, and if something goes wrong with a client in the car, it's a liability and perception problem. What's your current approach?","badResponse":"Agent vehicle maintenance is a liability and image issue when there's no oversight. We help.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If an agent's vehicle breaks down between showings — or worse, during a showing with a buyer in the car — what does that do to that buyer's confidence in the agent's professionalism and the brokerage's brand?","goodResponse":"In real estate, the showing experience is the brand. A client stuck in a broken-down car with their agent is a story that gets told. It's a low-probability event but a high-impact one. Proactive maintenance eliminates it.","badResponse":"Vehicle reliability during showings is a brand and trust issue. Maintenance prevents incidents.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your agents had access to a commercial maintenance account — where they could bring their vehicles in on a discounted corporate rate, stay on a maintenance schedule, and the firm had some visibility into the program — how would that benefit both the agents and the brokerage's professional image?","goodResponse":"A corporate maintenance benefit for agents is a recruiting and retention tool as well as a brand protection measure. Let me walk you through what our real estate team programs look like.","badResponse":"A corporate maintenance account benefits your agents and your brand. Let's set one up.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"For property managers handling multiple sites — do they use a company vehicle or personal vehicles for site visits, maintenance checks, and tenant coordination?","goodResponse":"Property management is high-mileage work. Site visits, maintenance coordination, tenant move-ins — it all accumulates. Understanding the vehicle arrangement tells me where the program gaps might be.","badResponse":"We maintain vehicles for property managers doing high-mileage site work.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"For property managers using their personal vehicles for company work — what happens when a vehicle needs service? Is there downtime impact on the properties they're responsible for?","goodResponse":"A property manager's vehicle breakdown means delayed maintenance responses, tenant calls going unanswered, and site visits not happening on schedule. For managed properties, that's a service level failure. What does your current backup plan look like?","badResponse":"PM vehicle downtime creates service level gaps. We minimize it with maintenance programs.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If a property manager is out of service for a day or two because their vehicle is down — and maintenance requests at their properties pile up — what's the tenant satisfaction impact and the risk of lease non-renewals from that service gap?","goodResponse":"Tenant satisfaction is directly connected to maintenance responsiveness. A two-day service gap from a vehicle breakdown can generate three weeks of tenant complaints and affect renewal decisions. The property management vehicle is operational infrastructure.","badResponse":"PM vehicle downtime creates tenant service failures. Proactive maintenance prevents them.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If your property managers were on a scheduled maintenance program — vehicles serviced proactively, breakdowns minimized — how would that improve the consistency of your property service delivery and your tenant satisfaction scores?","goodResponse":"Reliable property management vehicles mean reliable property management. Let me walk you through what a property management fleet program looks like and what firms our size typically put in it.","badResponse":"A maintenance program keeps your PMs on the road and your tenants happy. Let's build one.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}],[{"phase":"situation","question":"Does your firm have any dedicated company vehicles — like a van for property management, a vehicle for the principal, or anything branded — or is everything personal vehicle?","goodResponse":"Company vehicles in real estate range from a single principal's car to a whole property management fleet. Understanding what you're running — even if it's just one or two vehicles — tells me what a service program would look like.","badResponse":"We maintain company vehicles for real estate firms of all sizes.","rapportOnGood":1,"rapportOnBad":0,"skillTag":"situation_questions","framework":"SPIN – Situation"},{"phase":"problem","question":"For any company-owned vehicles, is there a formal maintenance schedule being followed, or is service happening reactively — when something breaks or a warning light comes on?","goodResponse":"Reactive maintenance is almost always more expensive than scheduled maintenance over the life of a vehicle. It also means more unexpected downtime. What does your current maintenance process look like for company vehicles?","badResponse":"Reactive maintenance costs more and creates more downtime. We convert firms to proactive schedules.","rapportOnGood":2,"rapportOnBad":0,"skillTag":"problem_questions","framework":"SPIN – Problem"},{"phase":"implication","question":"If a company vehicle fails unexpectedly during a critical period — say during an active listing campaign or a high-volume rental season — what's the operational and financial impact of that downtime?","goodResponse":"Company vehicle downtime in real estate always happens at the worst possible time. The cost isn't just the repair — it's the deals and tenant responses that didn't happen. How often do you have unexpected vehicle issues now?","badResponse":"Unexpected vehicle failures cost more than repairs — they cost deals. Scheduled maintenance prevents that.","rapportOnGood":2,"rapportOnBad":-1,"skillTag":"implication_questions","framework":"SPIN – Implication"},{"phase":"need_payoff","question":"If all your company vehicles were on a structured service schedule — predictable costs, minimal surprises, all tracked in one account — how would that simplify your vehicle management and reduce the operational risk to your business?","goodResponse":"A structured vehicle program turns vehicle maintenance from a reactive fire drill into a predictable overhead line. Let me walk you through what we offer real estate firms and what the setup looks like.","badResponse":"A structured program eliminates vehicle surprises. Let's get your vehicles on a schedule.","rapportOnGood":3,"rapportOnBad":0,"skillTag":"need_payoff","framework":"SPIN – Need-Payoff"}]]};
+// q_auto.js — Auto Dealer / Dealership perspective
+// Player is SELLING vehicles, fleet accounts, and financing — not maintenance services
+export const QUESTIONS = {
+
+  // ─── TRADES / CONTRACTORS ──────────────────────────────────────────────────
+  // Perfect fit: plumbers, HVAC, electricians, landscapers need work trucks constantly
+  "trades_contractor": [
+    [
+      {
+        phase: "situation",
+        question: "How many work trucks and vans are you running right now, and are they owned outright, financed, or are some of them personal vehicles your guys are using for jobs?",
+        goodResponse: "That mix of owned, financed, and personal vehicles is really common at your stage — and it usually means costs are scattered and hard to track. How old is your oldest work truck?",
+        badResponse: "Got it. We have great deals on commercial vehicles if you're ever in the market.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "When a truck goes down on a job — breakdown, inspection failure, whatever — how long does it usually take before that crew is back up and running, and what does a lost day actually cost you?",
+        goodResponse: "A lost crew day in contracting can run $2–5k once you factor in missed billable hours, emergency equipment rental, and rescheduling ripple effects. Is that happening more than once a year across your fleet?",
+        badResponse: "Breakdowns are tough. We can get you into something reliable.",
+        rapportOnGood: 2, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If you're losing two or three crew days a year per aging truck, and you've got four trucks, that's potentially 12 lost days — at $2,000 a day that's $24k in soft losses on top of repair bills. Is that math showing up anywhere in your margins?",
+        goodResponse: "Most contractors don't track it that way, but once you do, the replace-vs-repair math shifts fast. At what mileage or age do you typically decide a truck is done?",
+        badResponse: "We have financing options that could help with the cost.",
+        rapportOnGood: 2, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "If you had a fleet account with us — locked-in pricing on replacements, priority service scheduling, and a dedicated commercial rep who handles everything — how much time would that save your ops manager every year?",
+        goodResponse: "That's exactly what a fleet account is built for. We can set you up with net-30 billing, priority service lanes, and I'll personally handle every vehicle swap so you're never scrambling. Want me to walk you through what the account looks like?",
+        badResponse: "We can definitely set something up for you.",
+        rapportOnGood: 3, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "Are your crews driving branded vehicles or personal trucks? And when you hire a new tech, is providing a vehicle part of the comp package or are they expected to use their own?",
+        goodResponse: "The branded-vs-personal question comes up a lot. Unbranded vehicles mean missed marketing impressions every time your crew drives through a neighborhood — and using personal vehicles creates insurance liability issues most owners don't realize they're carrying. How many new hires are you planning this year?",
+        badResponse: "Branding on vehicles is great for visibility. We have some good options.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "When your lead tech or your best crew lead puts in their two weeks — and takes their personal truck with them — how quickly can you cover that capacity?",
+        goodResponse: "That's one of the hidden risks of relying on employee-owned vehicles. When they leave, their truck leaves too. How often has that caught you short?",
+        badResponse: "That's tough. We can help you get company-owned vehicles so that doesn't happen.",
+        rapportOnGood: 2, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If that departure costs you even two weeks of reduced capacity at your daily billing rate, you're looking at $15–30k in lost revenue just from one tech leaving — on top of the recruiting cost. Does that risk change how you think about vehicle ownership?",
+        goodResponse: "Most contractors who switch to company-owned vehicles say the predictability alone is worth it. You control the asset, you control the brand, and you don't lose capacity when someone walks.",
+        badResponse: "It's something to think about. We have good deals on vans right now.",
+        rapportOnGood: 2, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "What would it mean for your business if every tech showed up in a clean, branded company vehicle — consistent image, company insurance, no liability gaps, and you never lose a truck when someone leaves?",
+        goodResponse: "That's the pitch for company-owned fleets — and the financing usually makes it easier than people expect. I can show you a side-by-side of what the monthly numbers look like versus what you're absorbing now. Want to run through it?",
+        badResponse: "We can make it work for you financially.",
+        rapportOnGood: 3, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "When you're bidding a big job — say a commercial buildout or a multi-unit project — do you ever lose it because your equipment or vehicle situation makes you look smaller than a competitor?",
+        goodResponse: "That's a real issue. A lot of contractors are doing $2M in revenue out of trucks that look like $500k operations. First impression of your fleet is part of your brand whether you want it to be or not. What does your current fleet look like to a commercial client?",
+        badResponse: "Looking professional matters. We have some clean options that would make a great impression.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "Have you ever had a commercial property manager or a GC question your crew's professionalism based on what they pulled up in?",
+        goodResponse: "It happens more than people admit. A banged-up unmarked truck pulling up to a $5M property sends a signal — right or wrong. Has it cost you a job?",
+        badResponse: "Looks matter in this business. Let me show you what we have.",
+        rapportOnGood: 2, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If you lost even one commercial contract this year because the first impression didn't match your actual quality — what was that worth in margin?",
+        goodResponse: "Commercial contracts are usually 3–5x the margin of residential. Losing even one to a perception problem is the most expensive kind of loss because it's preventable. Is that the kind of work you're trying to grow into?",
+        badResponse: "Commercial work is definitely worth protecting.",
+        rapportOnGood: 2, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "If upgrading your fleet helped you win one more commercial contract this year, what would that do for your annual revenue — and does the math make the vehicles worth it?",
+        goodResponse: "That's the ROI framing most of my fleet clients use. The vehicles pay for themselves if they open one door that was closed before. I can build you a fleet proposal with commercial financing — want to look at the numbers together?",
+        badResponse: "Let's see what we can do for you.",
+        rapportOnGood: 3, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ]
+  ],
+
+  // ─── REAL ESTATE ──────────────────────────────────────────────────────────
+  // Good fit: agents need reliable, presentable cars; brokerages may run branded fleets
+  "real_estate": [
+    [
+      {
+        phase: "situation",
+        question: "How many agents are in your office, and are they all driving their own personal vehicles to showings — or does your brokerage provide any kind of vehicle program?",
+        goodResponse: "Most brokerages leave it entirely to agents, which means wildly inconsistent first impressions when a buyer gets in the car. What are your top producers driving right now?",
+        badResponse: "We have some great options that agents love. Professional look, great reliability.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "Have you ever had a listing situation where the agent's vehicle — or even just the condition of it — made the buyer or seller uncomfortable? Or lost you a luxury listing because the agent didn't look the part?",
+        goodResponse: "It's uncomfortable to talk about but it happens. Sellers interviewing agents for a $2M listing are evaluating everything — including what that agent pulls up in. Has it come up internally?",
+        badResponse: "Presentation matters at every price point. We can help.",
+        rapportOnGood: 2, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If the vehicle mismatch costs you one luxury listing a year — even at a modest commission — that's $15–30k in lost GCI. Is that a number that would change how the brokerage thinks about supporting agents with vehicles?",
+        goodResponse: "Most brokers haven't done that math, but once they do it's hard to unsee. Are you trying to grow your luxury or move-up market share?",
+        badResponse: "It's definitely something worth thinking about.",
+        rapportOnGood: 2, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "What if your brokerage had a preferred vehicle partner — agents get preferred pricing and financing, you get a consistent brand image on the road, and top recruits see it as a perk when they're choosing where to hang their license?",
+        goodResponse: "That's the fleet partnership model — and it costs the brokerage nothing directly. I work with agents individually on financing, but you get to promote it as a brokerage benefit. Want me to put together a one-pager you could share with your team?",
+        badResponse: "We can definitely work something out.",
+        rapportOnGood: 3, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "When a buyer gets into your agent's car for a showing tour — what's that experience like? Is it a rolling advertisement for the brokerage or just whatever car the agent happens to own?",
+        goodResponse: "The car is a mobile office for real estate agents — buyers spend 2–4 hours in that vehicle. That's more intimate than most office meetings. What kind of experience are your buyers having right now?",
+        badResponse: "Vehicle experience matters. We have some great options agents love.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "Have any of your agents had a reliability issue — breakdown mid-showing, AC failure in summer, something that put them in an embarrassing spot in front of a client?",
+        goodResponse: "A breakdown during a buyer tour is one of those experiences that can kill a transaction — or at minimum kills the professional image you've built. How old are most of your agents' vehicles?",
+        badResponse: "Reliability is important. We can get them into something dependable.",
+        rapportOnGood: 2, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If an agent loses a buyer because of a vehicle issue — or worse, a buyer mentions it in a review — how does that affect the agent's business and your brokerage's reputation?",
+        goodResponse: "One bad Zillow review mentioning 'the agent's car broke down' can cost 10 future leads. Is reputation management something you're actively protecting?",
+        badResponse: "Reputation matters. Let's find something reliable.",
+        rapportOnGood: 2, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "If every agent in your office had a reliable, presentable vehicle they were proud to drive clients in — how would that change the culture and the brand image you're building?",
+        goodResponse: "I've seen brokerages use vehicle programs as a legitimate recruiting tool. 'We have a preferred dealer partnership' sounds small but it signals that the brokerage invests in agent success. Want to explore what that would look like here?",
+        badResponse: "We can definitely put something together.",
+        rapportOnGood: 3, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "Are you or any of your top agents in a lease that's coming up in the next six months? Or driving something you've been meaning to replace but haven't prioritized?",
+        goodResponse: "Lease turn timing is always the right conversation to have early — waiting until the last month means you make rushed decisions. What are you currently in and when does it come up?",
+        badResponse: "We can definitely work with your timing on a new vehicle.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "Do you find yourself avoiding certain client situations — luxury listings, high-net-worth buyers, CEO referrals — because you're not sure the vehicle matches the expectation?",
+        goodResponse: "More agents than you'd think hold themselves back from premium markets for exactly that reason. It's a confidence thing as much as a perception thing. Has that happened to you?",
+        badResponse: "A vehicle upgrade could open some doors.",
+        rapportOnGood: 2, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If holding back from one luxury client category is costing you even two transactions a year — at average luxury commissions — what does that add up to annually in missed income?",
+        goodResponse: "For most agents in this market that's $20–40k in foregone GCI. The vehicle is a business investment, not a personal purchase — and the IRS sees it that way too with the right deduction strategy. Are you writing off vehicle expenses now?",
+        badResponse: "It could definitely be worth doing the math.",
+        rapportOnGood: 2, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "What would it mean for your business — and your confidence going into high-stakes listing appointments — if you were driving something that matched the caliber of client you're going after?",
+        goodResponse: "I've had agents tell me closing that first luxury listing felt easier just because they felt like they belonged in the room. The vehicle is part of that story. I can put together three options at different price points — want to look at numbers this week?",
+        badResponse: "Let's find something that works for you.",
+        rapportOnGood: 3, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ]
+  ],
+
+  // ─── OFFICE / PROFESSIONAL SERVICES ───────────────────────────────────────
+  // Moderate fit: law firms, consultants, CPAs — company cars, partner vehicles
+  "office_professional": [
+    [
+      {
+        phase: "situation",
+        question: "Does your firm provide company vehicles for partners or senior staff who do a lot of client travel — or is everyone expensing mileage on personal vehicles?",
+        goodResponse: "The mileage reimbursement model works at low volumes, but once you're running $800–1,200/month in reimbursements per person, company vehicles often pencil out cheaper and cleaner from a tax standpoint. How many people in your firm are driving to client sites regularly?",
+        badResponse: "We have great options for professional firms. Very clean, great image.",
+        rapportOnGood: 1, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "When a partner shows up to a high-stakes client meeting — merger negotiation, major account review — is the vehicle they arrive in something that reinforces the firm's positioning?",
+        goodResponse: "It's a surprisingly common blind spot. Firms spend $15k on office interiors to signal prestige and then send partners to client sites in a 2018 base-model sedan. Is that something that's come up internally?",
+        badResponse: "Presentation is everything at your level. We can help.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If the vehicle inconsistency is creating any friction in your firm's enterprise client perception — even subconsciously — what's the cost of that over a year of business development?",
+        goodResponse: "I'm not saying the car closes deals, but it's part of the total signal a firm sends. For a firm at your level, removing that variable is worth something. What does a typical new enterprise client relationship mean in fees?",
+        badResponse: "It's worth thinking about the total impression you're making.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "If your firm established a vehicle program — partners on a consistent make and model, corporate lease structure, clean tax treatment — how would that simplify the administrative overhead and strengthen the firm's image?",
+        goodResponse: "Corporate fleet programs for professional firms are cleaner than most people expect. One invoice, one point of contact, consistent vehicles across the leadership team. I can put together a proposal sized for your partnership. Want to start with how many vehicles and at what tier?",
+        badResponse: "We can make it work for your firm.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "Is there a vehicle policy at the firm right now — like a standard for what partners can expense or a preferred vehicle for client-facing roles?",
+        goodResponse: "Most firms don't have one until someone shows up in something that creates an awkward conversation. Is that something the managing partner has ever flagged?",
+        badResponse: "A formal policy can simplify things. We work with several firms on this.",
+        rapportOnGood: 1, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "Have you had situations where partners are expensing dramatically different vehicle costs — one driving a $95k car, another a $22k car — and it creates internal equity issues?",
+        goodResponse: "That inconsistency shows up in partnerships more than people discuss. It can create tension during comp reviews or when new partners are promoted into the tier. Has the firm set any guardrails on that?",
+        badResponse: "A consistent program can solve a lot of those issues.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If the vehicle inconsistency is creating internal friction or equity perception issues among your partnership — what's that doing to culture and retention at the partner level?",
+        goodResponse: "Partner retention at professional service firms is one of the most expensive problems to solve. If something as fixable as a vehicle policy is creating friction, it's worth addressing. What does it cost to lose a mid-level partner at your firm?",
+        badResponse: "Retention matters. A consistent program helps.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "What if the firm had a clean, standardized vehicle program that removed the ambiguity — everyone in leadership on the same tier, consistent image externally, and a single monthly invoice internally?",
+        goodResponse: "I've set this up for three or four local firms. It's simpler than it sounds — we handle all the financing, you handle approvals, and the monthly cost is predictable. Want me to build a proposal for your partnership size?",
+        badResponse: "We can definitely put something together.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "Are any of the partners in a personal lease right now that's coming up — or driving something they've been wanting to replace but haven't gotten around to?",
+        goodResponse: "Timing matters a lot with vehicles. The best deals happen when you're not in a rush. What are most of your partners currently driving?",
+        badResponse: "We can work with whatever timing works best for your team.",
+        rapportOnGood: 1, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "Is anyone in the firm handling the vehicle search and negotiation process themselves — going dealer to dealer, spending weekends doing research — when that time could be billed?",
+        goodResponse: "A partner billing $400/hour spending six hours shopping for a car is a $2,400 opportunity cost. That's before the negotiation stress. Does the firm have anyone who handles that kind of admin?",
+        badResponse: "We can make the process really easy and take that off your plate.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If partners are spending 5–10 hours per vehicle purchase on research and negotiation — and you have four partners who each replace a vehicle every three years — that's 20–40 hours of billable time lost to car shopping over a cycle. Does the firm think about that kind of overhead?",
+        goodResponse: "Most don't, but once they do the math on billing rate versus time lost, a fleet account with one dedicated rep starts to look very different. That's exactly what I offer.",
+        badResponse: "It adds up faster than people realize.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "What if I became the firm's go-to for every vehicle purchase — you call me, tell me what you need, I have it ready, and your partners never spend a weekend in a dealership again?",
+        goodResponse: "That's the concierge model I offer fleet clients. No negotiation, no research, no time wasted. I bring the vehicle to you if you need it. Want to set up a 20-minute call this week so I can learn what your partners typically drive?",
+        badResponse: "We can make it very easy.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ]
+  ],
+
+  // ─── HEALTHCARE ───────────────────────────────────────────────────────────
+  // Moderate fit: mobile health units, visiting nurses, home health agencies
+  "healthcare": [
+    [
+      {
+        phase: "situation",
+        question: "Does your practice have any vehicles for home visits, mobile outreach, or staff who need to travel between clinic locations — or is everyone getting there on their own?",
+        goodResponse: "Mobile health is one of the fastest-growing segments — home visits, mobile screening units, outreach programs. Even if you're not there yet, it's worth knowing your options. Do you have any travel-heavy roles on your team?",
+        badResponse: "We have some great options for healthcare organizations. Very reliable.",
+        rapportOnGood: 1, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "For staff who are doing home health visits or traveling between sites — are they using personal vehicles and getting reimbursed, or does the organization carry any liability there?",
+        goodResponse: "Personal vehicle use for patient visits creates a liability gap most administrators don't fully understand until there's an incident. Is your legal team aware of how your travel policy is structured?",
+        badResponse: "Liability is something to be careful about. Organization-owned vehicles help.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If a staff member using their personal vehicle for a patient visit is in an accident — even a minor one — what does your organization's liability exposure look like under your current policy?",
+        goodResponse: "Most healthcare orgs find out their commercial auto policy doesn't cover employee-owned vehicles in transit during work hours. That's a significant gap. Has risk management looked at your travel policy recently?",
+        badResponse: "It's definitely worth reviewing. Organization-owned vehicles close that gap.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "If your organization had a small fleet of organization-owned vehicles for mobile staff — clean, insured, branded — how would that change your risk profile and your ability to expand mobile services?",
+        goodResponse: "Mobile health is where the growth is going. Having the vehicle infrastructure ready makes it much easier to say yes to a new home-visit contract or a mobile screening partnership. I can put together a small fleet proposal — what does your mobile program look like today?",
+        badResponse: "We can definitely put something together for your needs.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "Does your practice do any community outreach — health fairs, screenings, mobile clinics? Or is everything confined to the facility right now?",
+        goodResponse: "Community outreach is one of the strongest patient acquisition channels for independent practices — and a branded vehicle makes every outreach event twice as visible. Have you ever run a mobile screening event?",
+        badResponse: "Outreach is a great opportunity. A branded vehicle really helps with visibility.",
+        rapportOnGood: 1, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "When your staff travel to community events or off-site screenings, what do they show up in — and does that create any professional or logistical challenges?",
+        goodResponse: "Showing up to a health fair in a mix of personal vehicles, some of which don't have space for equipment, creates a scramble every time. Has that caused any problems with how your events run?",
+        badResponse: "Having the right vehicle for the job makes a big difference.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If equipment transport limitations or vehicle issues have caused you to turn down or scale back any community events — what does that mean for patient acquisition and your community relationships?",
+        goodResponse: "Community events are a pipeline, not just PR. If logistical constraints are limiting how many you can do, you're leaving patient relationships on the table. How many events are you running per quarter right now?",
+        badResponse: "Every event you can't do is a missed opportunity.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "If you had a dedicated, branded vehicle for community outreach — set up for equipment transport, clean and professional — how many more events could your team realistically run per quarter?",
+        goodResponse: "Most practices I work with can double their community presence once the vehicle logistics are solved. And a branded vehicle doing community events is 24/7 marketing. I can show you some options that work well for mobile health setups — want to look this week?",
+        badResponse: "We can find something that fits your needs.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "For physicians or senior staff who do hospital rounds at multiple facilities — are those their personal vehicles, or does the practice provide anything?",
+        goodResponse: "Multi-site physicians spending 40–60 minutes a day commuting between facilities in their own vehicles is a significant quality-of-life and retention issue. Is that something that's come up with your medical staff?",
+        badResponse: "We have great options for medical professionals. Very reliable and professional.",
+        rapportOnGood: 1, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "Have you had physicians or PA-Cs leave — or express frustration — about the travel demands of a multi-site model, especially when they're managing their own vehicle costs?",
+        goodResponse: "Physician retention is the most expensive problem in independent practice. If travel burden is a friction point — and the practice isn't helping with vehicle costs — that's a fixable retention gap. Has it come up in reviews?",
+        badResponse: "Retention matters. A vehicle benefit can help with that.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If a physician leaves because of quality-of-life friction — including the travel burden — what does replacing them cost the practice between recruiting, credentialing, and lost revenue during the gap?",
+        goodResponse: "Most practices put physician replacement cost at $250–500k when you add it all up. A vehicle program for traveling physicians costs a fraction of that. Is physician retention something the practice has a formal strategy for?",
+        badResponse: "Physician retention is critical. A vehicle program can be a real differentiator.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "What if the practice offered a vehicle benefit to multi-site physicians — corporate lease, practice covers a portion, physician gets a clean reliable vehicle — and you used it as a retention tool in recruiting?",
+        goodResponse: "I've worked with two other practices on exactly this structure. It works really well as a recruiting differentiator because it's visible and tangible in a way that a salary bump isn't. Want me to put together some options at different contribution levels?",
+        badResponse: "We can definitely structure something that works.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ]
+  ],
+
+  // ─── RETAIL / FOOD ────────────────────────────────────────────────────────
+  // Weak fit: delivery vehicles, catering vans, food trucks — lower priority
+  "retail_food": [
+    [
+      {
+        phase: "situation",
+        question: "Do you run any deliveries, catering, or off-site pop-ups — and if so, what are you using for transport right now? Your own vehicle, something you own outright, or a rental when you need it?",
+        goodResponse: "The rental-when-needed model seems flexible but usually ends up costing more than owning once you add up the rental fees, availability issues, and the times you've had to turn down an event because you couldn't get a van. How often are you doing off-site work?",
+        badResponse: "Having your own vehicle makes those situations a lot smoother.",
+        rapportOnGood: 1, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "Have you ever had to turn down a catering gig, a pop-up, or a delivery opportunity because you didn't have the right vehicle available — or because your current vehicle wasn't reliable enough?",
+        goodResponse: "Turning down revenue because of a vehicle limitation is a painful calculation. How often has that happened, and what was the typical order size you were leaving on the table?",
+        badResponse: "Missing revenue opportunities is always tough. We can help with that.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If you're turning down two or three catering gigs a month because of vehicle availability — at $500–2,000 per event — that's potentially $12–24k a year in missed revenue. Does that change how you think about the vehicle investment?",
+        goodResponse: "That math surprises most owners. The vehicle pays for itself in captured revenue faster than the monthly payment. What does a typical event run in gross revenue for you?",
+        badResponse: "The numbers add up faster than you'd think.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "If you had a reliable, right-sized vehicle ready to go whenever an opportunity came up — how much more revenue do you think you could say yes to over the next twelve months?",
+        goodResponse: "That's the right way to frame the purchase — not as a cost but as a revenue unlock. I have some options in the $25–45k range that are perfect for catering and delivery setups. Want to see what the monthly payment looks like against what you're leaving on the table?",
+        badResponse: "Let's find something that works for your operation.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "Is your current delivery or transport vehicle wrapped with your branding — or is it just your personal car or something generic?",
+        goodResponse: "An unbranded vehicle doing deliveries is a missed marketing impression every single trip. If you're making 30 deliveries a week in your neighborhood, that's 30 missed opportunities to turn a head. What does your current situation look like?",
+        badResponse: "A branded vehicle is great marketing. We can definitely help with that.",
+        rapportOnGood: 1, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "For deliveries or catering — have you had the experience of pulling up and having the client question whether you're a legitimate operation because the vehicle didn't match the business?",
+        goodResponse: "It happens to growing food businesses all the time. The food quality is there but the vehicle sends a different signal. Has that kind of mismatch ever cost you a repeat client or a referral?",
+        badResponse: "First impressions matter. A proper vehicle solves that.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If even one corporate catering account passed on using you again — or never referred you — because the vehicle made you look less established, what's that worth in recurring revenue?",
+        goodResponse: "Corporate catering clients often have weekly or monthly recurring spend. Losing even one account to a perception issue is a disproportionate loss. Is corporate catering a segment you're trying to grow?",
+        badResponse: "Corporate clients are a big opportunity. Looking the part matters.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "What would it mean for your business to pull up to every corporate account in a clean, branded vehicle — professional, consistent, and immediately communicating that you're built for scale?",
+        goodResponse: "That's the branding ROI of the right vehicle — it works 24/7 and it changes how clients perceive you before you say a word. I have some cargo vans and sprinters that wrap beautifully. Want to come by and look at a few options?",
+        badResponse: "A good vehicle really transforms the brand.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "Are you planning to expand — second location, food truck, expanded delivery radius — and is vehicle capacity something that's going to be a constraint on that growth?",
+        goodResponse: "Vehicle capacity is one of the most commonly underplanned parts of food business growth. You lock in the lease, hire the staff, and then realize the transport infrastructure isn't ready. Are you actively planning an expansion right now?",
+        badResponse: "Growth is exciting. Vehicle planning is an important part of that.",
+        rapportOnGood: 1, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "When you think about doubling your delivery volume or catering events — what breaks first in your current setup?",
+        goodResponse: "Most growing food businesses say the answer is either people or vehicles. And people is usually solvable before vehicles because you can hire fast but can't get the right vehicle overnight. Which is the tighter constraint for you right now?",
+        badResponse: "Growth always surfaces the bottlenecks. We can help with the vehicle side.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If the vehicle gap is going to become the ceiling on your growth in the next six months — what does that mean for the revenue targets you've set for the year?",
+        goodResponse: "Missing a growth target because of an infrastructure gap that was knowable and fixable in advance is one of the more frustrating business experiences. Are you planning for the vehicle piece proactively or hoping to solve it when it becomes a problem?",
+        badResponse: "Planning ahead for that makes a lot of sense.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "What if you had the vehicle infrastructure ready before you need it — so that when the growth opportunity comes, the answer is yes instead of 'we're not set up for that yet'?",
+        goodResponse: "That's the proactive fleet mindset — and it's what separates the businesses that scale cleanly from the ones that scramble. I can put together something in the right size range for where you're going. What does the next phase of your business look like?",
+        badResponse: "Being ready ahead of time always pays off.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ]
+  ],
+
+  // ─── AUTO SERVICES (selling to other dealers / repair shops) ──────────────
+  // Moderate fit: trade-in referrals, certified pre-owned partnerships
+  "auto_services": [
+    [
+      {
+        phase: "situation",
+        question: "When a customer comes into your shop with a vehicle that's not worth the repair — what do you tell them, and where do you send them when they ask what to do next?",
+        goodResponse: "That conversation is one of the best lead referral opportunities in the auto services world, and most shops just say 'sorry, can't help you.' Do you have a relationship with a dealer right now where you send those customers?",
+        badResponse: "We appreciate referrals. We'd love to work together on that.",
+        rapportOnGood: 1, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "Do you find that when a customer leaves your shop in a not-worth-fixing situation, they often don't come back — even after they get a new vehicle — because the experience feels like a dead end?",
+        goodResponse: "That's the retention gap in auto services — when the car dies, the customer relationship often dies with it. If you could hand that customer to a trusted dealer and get them back as a service customer once they're in their new vehicle, would that change your retention numbers?",
+        badResponse: "Keeping customers is tough. A referral relationship helps.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If you're losing 20–30 customers a year to the 'not worth fixing' conversation — and none of them come back — what does that do to your revenue over a three-year period?",
+        goodResponse: "A loyal service customer over three years is worth $1,500–3,000 in recurring revenue. Losing 25 of them is a $37–75k impact that doesn't show up anywhere because it's a silent churn. Is that a number you've ever looked at?",
+        badResponse: "The cumulative effect really adds up.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "What if we set up a formal referral partnership — you send me the not-worth-fixing customer, I take care of them, and when they need service after they buy, I send them back to you with a warm handoff? And I pay you a referral fee for every one that buys.",
+        goodResponse: "A closed-loop referral partnership between a shop and a dealer is one of the cleanest revenue shares in auto. No marketing cost, just mutual trust. I'd pay you $200–500 per closed deal. Want to talk about how we'd structure the handoff?",
+        badResponse: "We can definitely work out an arrangement.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "When customers bring in trade-in vehicles — do you ever see ones that are in good mechanical shape but the owner just wants something different? What happens to those?",
+        goodResponse: "Clean mechanically sound trade-ins are gold for a dealer. If you're seeing those come through and not capturing any value from them, there's a referral or consignment arrangement that might make sense. How often does that happen?",
+        badResponse: "We're always interested in good trade-ins. Let's talk.",
+        rapportOnGood: 1, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "Do you have customers who ask your opinion on whether they should fix or sell their current vehicle — and you don't have a good answer for the 'sell' side of that?",
+        goodResponse: "That's a trust moment most shops aren't capturing. The customer is asking for advice, and you're equipped to answer the repair side but not the replacement side. Does that happen more than a few times a month?",
+        badResponse: "We can be a resource for those conversations.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If you're sending customers away for the replacement conversation and a competitor dealer captures them — and then sends them to their preferred shop going forward — what does that shift mean over time?",
+        goodResponse: "Customer loyalty in auto services follows the vehicle. If your customer ends up at a dealer who has their own service lane, you've just lost a long-term relationship. Is that happening with any frequency?",
+        badResponse: "Keeping customers in your ecosystem matters long term.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "What if you became the trusted advisor for the full vehicle lifecycle — repair decisions, replacement timing, and a dealer you trust — so customers never feel like they have to go anywhere else?",
+        goodResponse: "That's the value of a shop-dealer partnership done right. You stay the trusted advisor, I close the vehicle sale, and your customer comes back to you for every future service. It's a closed loop that benefits both of us. Want to map out how the referral flow would work?",
+        badResponse: "A partnership makes sense. Let's figure it out.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "Does your shop do any fleet service contracts — businesses that bring multiple vehicles in regularly? And when those fleets need to expand or replace, where are those customers going to buy?",
+        goodResponse: "Fleet service contracts are some of the most valuable recurring revenue in auto services. If you've got fleet clients and they're going to a competitor when they need new vehicles, that's a referral opportunity you're leaving uncaptured. How many fleet accounts are you servicing?",
+        badResponse: "Fleet relationships are valuable. Let's see how we can help each other.",
+        rapportOnGood: 1, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "When a fleet client asks you who to call when they need to add a vehicle or replace an aging truck — do you have a dealer you confidently recommend, or does that conversation kind of fall flat?",
+        goodResponse: "If you don't have a confident answer to that question, you're missing a referral moment that could mean a lot to that fleet client. Having a trusted dealer recommendation makes you look like a complete resource, not just a wrench shop.",
+        badResponse: "Having a good dealer to refer makes you look great to clients.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If your fleet clients are going to a dealer who then redirects their service to an in-house shop — even for minor things — what does that churn mean for your recurring fleet revenue?",
+        goodResponse: "Fleet clients are worth $800–3,000 per vehicle per year in service revenue. Losing even two of them to a dealer with a competing service lane is $5–10k gone. Is that a risk you've thought about?",
+        badResponse: "Fleet retention is really important. A dealer partnership helps.",
+        rapportOnGood: 1, rapportOnBad: -1,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "What if we built a formal shop-dealer referral loop — I send new fleet purchasers to you for service, you refer fleet clients to me when they're buying — and we both build our fleet books together?",
+        goodResponse: "A shop-dealer fleet partnership is one of the strongest local B2B relationships in auto. We're not competing — we're covering each other's blind spots. I'll pay a referral fee on every fleet vehicle sold from your referrals. Want to set up a time to map it out?",
+        badResponse: "A partnership makes a lot of sense. Let's talk.",
+        rapportOnGood: 2, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ]
+  ],
+
+  // ─── FINANCIAL SERVICES ────────────────────────────────────────────────────
+  // Low fit (score 0) — banks and wealth mgmt rarely buy vehicles from dealers
+  "financial_services": [
+    [
+      {
+        phase: "situation",
+        question: "Does the firm provide any vehicle benefits for advisors who do client home visits or estate planning meetings off-site — or is that entirely on the individual?",
+        goodResponse: "A few wealth management firms I work with offer vehicle stipends for advisors doing home visits — it's actually a strong recruiting tool at the senior advisor level. Is off-site client work common for your team?",
+        badResponse: "A vehicle benefit can be a nice perk. We work with several financial firms.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "For senior advisors managing high-net-worth clients — is there any expectation around the vehicle they drive to client meetings, or has that ever come up as a professional standards question?",
+        goodResponse: "Image management for wealth advisors is real — HNW clients do notice. Has it ever been a topic internally, or is it left entirely to individual advisor discretion?",
+        badResponse: "Presentation matters in your field. We can help with that.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If an advisor's vehicle creates any friction in a first impression with a high-net-worth client — and that client decides to work with a competitor firm — what does one lost relationship mean in AUM and fees?",
+        goodResponse: "A single HNW client relationship can mean $500k–2M in AUM and 5–7 years of advisory fees. If the vehicle is ever part of that first impression, it's worth thinking about. Has the firm ever quantified the advisor image standard?",
+        badResponse: "The stakes are high in your business. Every impression counts.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "If there was a simple way for senior advisors to get into the right vehicle — preferred pricing, clean process, no negotiation — would that be something the firm would want to offer as a benefit?",
+        goodResponse: "Some firms formalize it as a perk: 'preferred dealer for all vehicle purchases.' It costs the firm nothing but positions you as an employer who invests in the advisor experience. I can put together a program overview if that's worth exploring.",
+        badResponse: "We can make it really easy for your team.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "Is the firm's vehicle usage mostly personal commuting, or do advisors regularly drive to client offices, estates, or off-site meetings?",
+        goodResponse: "Advisors who are road-heavy — two to three client meetings a day off-site — start to have real mileage accumulation. Is anyone in the firm tracking that from a vehicle expense or liability standpoint?",
+        badResponse: "We work with a lot of professional service firms on this. Happy to help.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "Has the firm run into any situations where an advisor's vehicle situation — reliability, insurance coverage for business use, or optics — became an operational or HR issue?",
+        goodResponse: "It comes up more than firms expect, usually when someone uses a personal vehicle for client transport and there's a coverage gap. Is your HR team aware of the business-use insurance question for advisors?",
+        badResponse: "It's worth making sure the policy covers business use of personal vehicles.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If an advisor's personal vehicle isn't properly covered for business use and there's an incident during a client visit — what does the firm's liability exposure look like?",
+        goodResponse: "That's a gap most firms don't discover until something happens. Commercial auto for business travel in personal vehicles requires an endorsement most personal policies don't include. Has legal reviewed that exposure?",
+        badResponse: "That's a real liability gap worth closing.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "If your advisors had the option of a preferred dealer for personal vehicles — with business-use financing options structured properly — would that be a benefit worth mentioning in recruiting and retention conversations?",
+        goodResponse: "It sounds small but 'we have a preferred dealer who understands business-use financing' is a differentiator in advisor recruiting. I've helped a couple of local firms set up exactly that. Want a quick overview of how it works?",
+        badResponse: "We can definitely put together something useful for your team.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "When advisors in the firm purchase vehicles personally, do they typically do that on their own — or is there any firm-level guidance or preferred vendor arrangement?",
+        goodResponse: "Most firms leave it entirely to the individual, which means advisors are doing their own research and negotiation on their own time. Do you know if any of your advisors are in the market right now?",
+        badResponse: "We're happy to work with your team individually or as a group.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "Have advisors ever complained about the car buying process — time spent, negotiation stress, feeling like they didn't get a fair deal?",
+        goodResponse: "A senior advisor billing $300–500/hour spending a weekend at a dealership is spending significant income on a task that doesn't require their expertise. Is that something that comes up in offhand conversations?",
+        badResponse: "We make the process really simple. No pressure, no games.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If each advisor is spending six to eight hours on the research and purchase process every three years — across a team of ten advisors — that's 20+ hours of their personal time on something a preferred dealer relationship could eliminate. Is advisor time something the firm thinks about protecting?",
+        goodResponse: "The hidden cost of advisors spending time on admin and personal logistics that should be handled differently is real. A preferred dealer arrangement eliminates car-buying friction entirely. The firm looks good for offering it, and advisors get their weekends back.",
+        badResponse: "Advisor time is valuable. We can simplify this for them.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "What if your advisors could call one number, tell me what they want, and have it handled — no research, no negotiation, no lost weekends — as a firm-endorsed benefit?",
+        goodResponse: "That's the concierge model I offer to professional firms. Your advisors get preferred pricing, I handle everything, and you get to say the firm has a preferred dealer. It's a win on all sides. Want to bring this to your managing partner as a benefits addition?",
+        badResponse: "We can make it very easy and straightforward.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ]
+  ],
+
+  // ─── TECH / DIGITAL AGENCIES ───────────────────────────────────────────────
+  // Poor fit (score 0) — shown as blocked by fit dialogue
+  "tech_company": [
+    [
+      {
+        phase: "situation",
+        question: "Does your team do a lot of in-person client work — on-site implementation, client visits, demos — or is most of what you do remote?",
+        goodResponse: "For mostly-remote teams, vehicle needs are usually personal rather than business. But when you do have on-site client work, how are people getting there — own cars, rideshare?",
+        badResponse: "Remote-first is the norm these days. We still work with a few tech companies.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "For the on-site client visits your team does do — are there any situations where the vehicle situation has caused a problem, whether it's reliability, image, or logistics?",
+        goodResponse: "Tech teams doing enterprise on-site work sometimes run into situations where pulling up in the wrong vehicle to a Fortune 500 campus creates an awkward moment. Has that come up?",
+        badResponse: "We can help with reliability if that's ever an issue.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "Honestly — for a tech company like yours, the vehicle question is probably pretty low priority. Is this something that's ever even come up in a leadership conversation?",
+        goodResponse: "I appreciate you being direct. Honestly, we're probably not the right fit for your core business. Is there anyone in your network — maybe a contractor or a trades business you work with — who might actually need fleet vehicles?",
+        badResponse: "Fair enough. We're probably not the right fit right now.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "If there's not a fit for the business itself — is there anyone on your leadership team personally in the market for a vehicle? I'm easy to work with and referrals are always appreciated.",
+        goodResponse: "Sometimes the best outcome of a sales call is a personal referral. And I take care of people well — anyone I work with will get a straight deal and no games. If anyone comes to mind, I'd appreciate the introduction.",
+        badResponse: "No problem. Here's my card if anything comes up.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "Does your company have any field sales, field implementation, or account management roles that require regular in-person client travel?",
+        goodResponse: "Field roles are the one area where a tech company starts to have real vehicle needs. If you have AEs or implementation consultants on the road daily, that's where a fleet arrangement starts to make sense. How many people are in road-heavy roles?",
+        badResponse: "Field roles are where vehicle needs usually show up for tech companies.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "For your field reps or account managers — are they expensing mileage, using rideshare, or are they expected to have their own reliable vehicle as a condition of the role?",
+        goodResponse: "Mileage reimbursement for field-heavy roles adds up fast and creates inconsistent expense reporting. If it's $800/month or more per rep, company vehicles often pencil out. How many reps are in that situation?",
+        badResponse: "Vehicle expenses can be a headache to manage. We can simplify that.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If your field reps are managing their own vehicle situation — and the reliability or professional image varies — does that create any inconsistency in how clients experience your company in person?",
+        goodResponse: "Brand consistency in field sales is underrated. If your product and pitch are premium but the in-person touchpoint is inconsistent, there's a gap. Is that something your VP of Sales has flagged?",
+        badResponse: "Consistency in field representation matters.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "If your field team had a consistent, company-provided or company-preferred vehicle setup — clean image, reliable, no personal logistics headaches — how would that affect field rep retention and client experience?",
+        goodResponse: "Field rep retention in SaaS is one of the most expensive problems in the industry. A vehicle benefit is tangible and visible in a way that salary bumps aren't. I can put together a proposal for your field team size — want to start with a number?",
+        badResponse: "We can make it work for your team.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ],
+    [
+      {
+        phase: "situation",
+        question: "I'll be upfront with you — most tech companies aren't our core customer for fleet vehicles. But I'm curious: does your leadership team drive vehicles that match the company's brand positioning when they're visiting enterprise clients?",
+        goodResponse: "Leadership presence at enterprise accounts matters more than most tech executives think. If your CEO is showing up to a Fortune 100 sales call in the wrong vehicle, that's a subconscious signal. Has it ever come up?",
+        badResponse: "Fair enough. It's not usually a big need for tech companies.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "situation_questions", framework: "SPIN – Situation"
+      },
+      {
+        phase: "problem",
+        question: "For your executive team — C-suite, VPs — is there any company standard around how they show up to in-person enterprise meetings? Or is it all personal discretion?",
+        goodResponse: "Most startups and growth-stage tech companies leave it to personal discretion, which means wildly inconsistent executive presence at enterprise accounts. Has that inconsistency ever been flagged internally?",
+        badResponse: "Executive presence is a real thing. A good vehicle is part of that.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "problem_questions", framework: "SPIN – Problem"
+      },
+      {
+        phase: "implication",
+        question: "If your company is chasing enterprise deals — and the decision maker is also evaluating whether your team looks like a serious, scaled operation — does the vehicle your CEO drives to the intro meeting matter?",
+        goodResponse: "It's a small signal but enterprise procurement teams are evaluating everything. I'm not saying the car closes deals, but it's part of the total picture. Is enterprise growth a priority for you this year?",
+        badResponse: "Every signal matters in enterprise sales.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "implication_questions", framework: "SPIN – Implication"
+      },
+      {
+        phase: "need_payoff",
+        question: "Even if fleet vehicles aren't a business need — is any member of your leadership team personally in the market? I make it easy and I take care of anyone you send my way.",
+        goodResponse: "Sometimes the best outcome is a personal referral. I'd genuinely appreciate the introduction if someone comes to mind — and I'll make sure they're taken care of. Here's my card.",
+        badResponse: "No problem. Hope to be useful down the road.",
+        rapportOnGood: 0, rapportOnBad: 0,
+        skillTag: "need_payoff_questions", framework: "SPIN – Need-Payoff"
+      }
+    ]
+  ]
+};

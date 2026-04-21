@@ -921,18 +921,53 @@ export class UIManager {
     const _indId2 = state.businessIndustry?.id || state.businessIndustry;
     const playerServiceLabel = serviceLabels[_indId2] || state.businessName;
 
+    // Phase-keyed prospect implied reply lines — what the NPC says after your question
+    const prospectReplies = {
+      situation: [
+        `"Yeah, I mean... it's been working alright. We make do."`,
+        `"Honestly? We've never really looked at it that way before."`,
+        `"It's fine. Nothing crazy going on there."`
+      ],
+      problem: [
+        `"It comes up more than I'd like, honestly."`,
+        `"Yeah, that's... actually been a bit of a headache."`,
+        `"[pauses] More often than it should, probably."`
+      ],
+      implication: [
+        `"Huh. When you put it like that... yeah, that adds up."`,
+        `"I never actually looked at the total cost of it."`,
+        `"[shifts] That's a real number. I didn't realize it was that much."`
+      ],
+      need_payoff: [
+        `"I mean... if it actually did all that, yeah. That'd be huge."`,
+        `"That would take a lot off my plate, honestly."`,
+        `"[nods] Yeah. That's exactly what I'd want."`
+      ]
+    };
+    const phaseReplies = prospectReplies[q.phase] || prospectReplies.situation;
+    const prospectLine = phaseReplies[questionIdx % phaseReplies.length];
+
     body.innerHTML = `
-      <div class="dialogue-box">
-        <div class="dialogue-speaker">Discovery — ${q.phase.charAt(0).toUpperCase() + q.phase.slice(1)} Question</div>
-        <div class="dialogue-text">${this._subQText(q.question, biz)}</div>
-        <div class="dialogue-sub">
-          You (${playerServiceLabel}) → ${biz.owner} at ${biz.name} (${biz.type}) ·
-          Framework: <strong style="color:var(--violet)">${q.framework}</strong>
-          ${!hasSkill ? ` · <span style="color:var(--amber)">⚡ Unlock "${q.skillTag.replace(/_/g,' ')}" for full effect</span>` : ''}
-        </div>
+      <div style="font-size:var(--text-xs);color:var(--text-muted);padding-bottom:var(--s2);text-transform:uppercase;letter-spacing:.08em">
+        📍 ${q.framework} · ${biz.name}
+        ${!hasSkill ? ` · <span style="color:var(--amber)">⚡ Unlock "${q.skillTag.replace(/_/g,' ')}" for bonus Rapport</span>` : ''}
       </div>
+
+      <!-- YOU SAY -->
+      <div class="dialogue-box player-dialogue" style="background:rgba(79,152,163,0.08);border-color:var(--teal,#4f98a3);margin-bottom:var(--s3)">
+        <div class="dialogue-speaker" style="color:var(--teal,#4f98a3)">You → ${biz.owner}</div>
+        <div class="dialogue-text">${this._subQText(q.question, biz)}</div>
+      </div>
+
+      <!-- THEY SAY -->
+      <div class="dialogue-box" style="margin-bottom:var(--s3)">
+        <div class="dialogue-speaker">${biz.owner} — ${biz.ownerTitle}</div>
+        <div class="dialogue-text" style="font-style:italic">${prospectLine}</div>
+      </div>
+
+      <!-- YOUR FOLLOW-UP -->
       <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0;text-transform:uppercase;letter-spacing:.08em">
-        ${biz.owner} responds. How do you follow up?
+        How do you respond?
       </div>
       <div class="choices">
         <button class="choice-btn technique" data-response="good" data-qid="${q.skillTag}">
@@ -1396,10 +1431,7 @@ export class UIManager {
       screen.style.display = 'flex';
     }
 
-    document.getElementById('btn-close-skills')?.addEventListener('click', () => {
-      screen?.classList.add('hidden');
-      screen && (screen.style.display = 'none');
-    }, { once: true });
+    // listener re-attached in renderSkillTree after every innerHTML replacement
   }
 
   renderSkillTree(state) {
@@ -1455,6 +1487,13 @@ export class UIManager {
         this.gameEngine.unlockSkill(node.dataset.skill);
       });
     });
+
+    // Re-attach close listener every render (innerHTML replacement kills the old one)
+    const skillScreen = document.getElementById('screen-skills');
+    document.getElementById('btn-close-skills')?.addEventListener('click', () => {
+      skillScreen?.classList.add('hidden');
+      if (skillScreen) skillScreen.style.display = 'none';
+    }, { once: true });
   }
 
   // ── Field Journal ──────────────────────────────────────────

@@ -134,6 +134,8 @@
 
     <!-- Saved game card (shown if save exists) -->
     <div id="save-card-container" style="display:none;margin-bottom:var(--s2)">
+
+      <!-- Continue card -->
       <div class="save-card" id="btn-continue-game">
         <div style="font-size:24px">💼</div>
         <div class="save-card-info">
@@ -142,6 +144,46 @@
         </div>
         <div style="color:var(--teal);font-size:18px">→</div>
       </div>
+
+      <!-- Step 1: Delete trigger -->
+      <div id="delete-save-trigger" style="text-align:center;margin-top:var(--s2)">
+        <button id="btn-delete-save"
+          style="background:none;border:none;font-size:var(--text-xs);color:var(--text-muted);
+                 cursor:pointer;padding:var(--s1) var(--s2);border-radius:4px;
+                 text-decoration:underline;text-underline-offset:2px;
+                 transition:color 150ms"
+          onmouseover="this.style.color='var(--crimson)'"
+          onmouseout="this.style.color='var(--text-muted)'">
+          🗑 Delete this save
+        </button>
+      </div>
+
+      <!-- Step 2: Confirm bar (hidden until trash clicked) -->
+      <div id="delete-confirm-bar" style="display:none;flex-direction:column;gap:var(--s3);
+             background:rgba(200,64,48,0.12);border:1px solid var(--crimson);
+             border-radius:var(--r-md);padding:var(--s4);margin-top:var(--s2)">
+        <div style="font-size:var(--text-sm);color:var(--crimson);font-weight:700;text-align:center">
+          ⚠️ Delete save permanently?
+        </div>
+        <div style="font-size:var(--text-xs);color:var(--text-muted);text-align:center;line-height:1.5">
+          This cannot be undone. All progress, deals, and skills will be lost.
+        </div>
+        <div style="display:flex;gap:var(--s3)">
+          <button id="btn-delete-cancel"
+            style="flex:1;padding:var(--s2) var(--s3);font-size:var(--text-xs);font-weight:600;
+                   background:var(--surface);border:1px solid var(--border);color:var(--text);
+                   border-radius:var(--r-md);cursor:pointer">
+            ← Keep My Save
+          </button>
+          <button id="btn-delete-confirm"
+            style="flex:1;padding:var(--s2) var(--s3);font-size:var(--text-xs);font-weight:700;
+                   background:var(--crimson);border:1px solid var(--crimson);color:#fff;
+                   border-radius:var(--r-md);cursor:pointer">
+            Yes, Delete It
+          </button>
+        </div>
+      </div>
+
     </div>
 
     <div class="title-menu">
@@ -464,6 +506,38 @@ async function refreshSaveCard() {
         launchFromSave(save);
       };
     }
+
+    // ── Delete save button ──────────────────────────────────
+    const deleteBtn    = document.getElementById('btn-delete-save');
+    const deleteTrigger= document.getElementById('delete-save-trigger');
+    const confirmBar   = document.getElementById('delete-confirm-bar');
+    const cancelBtn    = document.getElementById('btn-delete-cancel');
+    const confirmBtn   = document.getElementById('btn-delete-confirm');
+
+    const showConfirm = () => {
+      if (confirmBar)   confirmBar.style.display   = 'flex';
+      if (deleteTrigger) deleteTrigger.style.display = 'none';
+    };
+    const hideConfirm = () => {
+      if (confirmBar)   confirmBar.style.display   = 'none';
+      if (deleteTrigger) deleteTrigger.style.display = 'block';
+    };
+
+    if (deleteBtn) deleteBtn.onclick = showConfirm;
+    if (cancelBtn) cancelBtn.onclick = hideConfirm;
+    if (confirmBtn) confirmBtn.onclick = async () => {
+      // Wipe local save
+      SaveSystem.deleteSave();
+      // Wipe cloud save if signed in
+      if (Auth.isSignedIn && Auth.user) {
+        try {
+          await supabase.from('saves').delete().eq('user_id', Auth.user.id);
+        } catch (err) { console.warn('Cloud delete failed:', err); }
+      }
+      container.style.display = 'none';
+      hideConfirm();
+    };
+
   } else {
     if (container) container.style.display = 'none';
   }
