@@ -5,7 +5,6 @@
 
 import {
   INDUSTRIES, SKILL_TREE, DISCOVERY_QUESTIONS, OBJECTION_LIBRARY,
-  generateDiscoveryQuestions,
   EMPLOYEE_ARCHETYPES, JOURNAL_PROMPTS, ENCOUNTER_PHASES
 } from './data.js';
 import { EncounterEngine } from './engine.js';
@@ -373,13 +372,81 @@ export class UIManager {
       <div id="encounter-body"></div>
     `;
 
+    // Score 0 = hard block — not your market at all
+    const fitScore = enc.stateFlags?.fitScore ?? 2;
+    const fitDialogue = enc.stateFlags?.fitDialogue;
+    if (fitScore === 0 && fitDialogue) {
+      this._showFitBlock(business, fitDialogue);
+      return;
+    }
+
+    // Score 1 = possible fit — show warning then proceed to recon
+    if (fitScore === 1 && fitDialogue) {
+      this._showFitWarning(business, fitDialogue, state);
+      return;
+    }
+
     this.showReconPanel(business);
   }
 
+  _showFitBlock(biz, fitDialogue) {
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+    body.innerHTML = `
+      <div class="dialogue-box" style="border-color:var(--crimson);background:rgba(200,64,48,0.08)">
+        <div class="dialogue-speaker" style="color:var(--crimson)">${biz.owner} — Not Your Market</div>
+        <div class="dialogue-text">"${fitDialogue.npc_line}"</div>
+        <div class="dialogue-sub" style="color:var(--crimson);font-style:italic;margin-top:var(--s2)">
+          ${fitDialogue.player_thought}
+        </div>
+      </div>
+      <div style="padding:var(--s4);background:rgba(200,64,48,0.06);border:1px solid rgba(200,64,48,0.25);border-radius:var(--r-lg);font-size:var(--text-sm);color:var(--text-muted);line-height:1.6">
+        💡 <strong style="color:var(--text)">ICP insight:</strong> This prospect isn't a realistic buyer for your service. In real sales, protecting your time by qualifying out bad-fit prospects is a <em>skill</em> — not a failure.
+      </div>
+      <button class="btn btn-secondary" id="btn-exit-encounter" style="margin-top:var(--s3)">← Walk Away (smart move)</button>
+    `;
+    document.getElementById('btn-exit-encounter')?.addEventListener('click', () => {
+      this.closeEncounter();
+    });
+  }
+
+  _showFitWarning(biz, fitDialogue, state) {
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+    body.innerHTML = `
+      <div class="dialogue-box" style="border-color:var(--amber);background:rgba(212,168,64,0.06)">
+        <div class="dialogue-speaker" style="color:var(--amber)">${biz.owner} — Possible Fit</div>
+        <div class="dialogue-text">"${fitDialogue.npc_line}"</div>
+        <div class="dialogue-sub" style="color:var(--amber);font-style:italic;margin-top:var(--s2)">
+          ${fitDialogue.player_thought}
+        </div>
+      </div>
+      <div style="padding:var(--s4);background:rgba(212,168,64,0.06);border:1px solid rgba(212,168,64,0.25);border-radius:var(--r-lg);font-size:var(--text-sm);color:var(--text-muted);line-height:1.6">
+        ⚠️ <strong style="color:var(--text)">Weak ICP match</strong> — you can try, but this isn't your ideal buyer. Starting at <span style="color:var(--crimson)">-1 Rapport</span> and the conversation will be an uphill battle.
+      </div>
+      <div style="display:flex;gap:var(--s3);margin-top:var(--s3);flex-wrap:wrap">
+        <button class="btn btn-secondary" style="flex:1;min-width:140px" id="btn-exit-encounter">← Walk Away</button>
+        <button class="btn btn-primary" style="flex:1;min-width:180px" id="btn-proceed-anyway">Try Anyway (risky) →</button>
+      </div>
+    `;
+    document.getElementById('btn-exit-encounter')?.addEventListener('click', () => {
+      this.closeEncounter();
+    });
+    document.getElementById('btn-proceed-anyway')?.addEventListener('click', () => {
+      this.showReconPanel(biz);
+    });
+  }
+
   _renderEncounterHeader(biz, enc) {
-    const warmthLabel = ['Cold', 'Familiar', 'Warm', 'Advocate'][biz.warmth] || 'Cold';
     const phases = Object.keys(ENCOUNTER_PHASES);
     const currentPhaseIdx = phases.indexOf(enc.phase) || 0;
+    const fitScore = enc.stateFlags?.fitScore ?? 2;
+    const fitBadge = [
+      { label: 'No Fit',      color: 'var(--crimson)', bg: 'rgba(200,64,48,0.12)' },
+      { label: 'Weak Fit',    color: 'var(--amber)',   bg: 'rgba(212,168,64,0.12)' },
+      { label: 'Good Fit',    color: 'var(--sage)',    bg: 'rgba(72,138,48,0.12)' },
+      { label: 'Perfect ICP', color: 'var(--sage)',    bg: 'rgba(72,138,48,0.18)' },
+    ][fitScore] || { label: 'Good Fit', color: 'var(--sage)', bg: 'rgba(72,138,48,0.12)' };
 
     return `
       <div class="encounter-header">
@@ -388,6 +455,9 @@ export class UIManager {
           <div>
             <div class="prospect-name">${biz.owner}</div>
             <div class="prospect-title">${biz.ownerTitle} · ${biz.name}</div>
+            <div style="margin-top:2px">
+              <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${fitBadge.color};background:${fitBadge.bg};padding:1px 6px;border-radius:3px">${fitBadge.label}</span>
+            </div>
           </div>
         </div>
         <div class="phase-track">
@@ -565,10 +635,8 @@ export class UIManager {
     const body = document.getElementById('encounter-body');
     if (!body) return;
 
-    // Use pre-generated questions from encounter stateFlags (set when encounter starts)
-    // This ensures the same questions are shown each step rather than regenerating
-    const questions = enc.stateFlags?.generatedQuestions ||
-      generateDiscoveryQuestions(state.businessIndustry || 'consulting', enc.business);
+    // Use pre-generated industry-aware questions cached at encounter start in engine.js
+    const questions = enc.stateFlags?.generatedQuestions || DISCOVERY_QUESTIONS;
     const q = questions[questionIdx];
     if (!q) {
       // No more questions — advance to pitch

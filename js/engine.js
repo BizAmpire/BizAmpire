@@ -7,8 +7,11 @@ import {
   DISTRICTS, SKILL_TREE, ENCOUNTER_PHASES, OBJECTION_LIBRARY,
   DISCOVERY_QUESTIONS, MILESTONES, JOURNAL_PROMPTS,
   COMPETITORS, EMPLOYEE_ARCHETYPES, createInitialState,
-  generateDiscoveryQuestions
+  getProspectCategory
 } from './data.js';
+import {
+  DISCOVERY_QUESTION_BANK, ICP_FIT_MATRIX, FIT_DIALOGUE
+} from './questions.js';
 
 // ── Constants ────────────────────────────────────────────────
 const TILE = 48;
@@ -580,20 +583,33 @@ export class BizAmpireEngine {
       return;
     }
 
-    // Pre-generate industry-aware discovery questions for this encounter
+    // Resolve prospect category and ICP fit score
     const playerIndustry = this.state.businessIndustry || 'consulting';
-    const generatedQuestions = generateDiscoveryQuestions(playerIndustry, business);
+    const prospectCategory = getProspectCategory(business.type);
+    const fitScore = (ICP_FIT_MATRIX[playerIndustry] || {})[prospectCategory] ?? 2;
+
+    // Pick a random question set from the bank for this industry × prospect combo
+    const bankSets = (DISCOVERY_QUESTION_BANK[playerIndustry] || {})[prospectCategory];
+    const generatedQuestions = bankSets
+      ? bankSets[Math.floor(Math.random() * bankSets.length)]
+      : DISCOVERY_QUESTIONS;  // fallback to static questions if somehow not found
+
+    // Fit dialogue for score 0 or 1
+    const fitDialogue = FIT_DIALOGUE[`score_${fitScore}`] || null;
 
     this.state.currentEncounter = {
       business,
       phase: 'recon',
-      rapport: 0,
+      rapport: fitScore === 1 ? -1 : 0,  // rapport penalty for weak-fit prospects
       stateFlags: {
         didRecon: false,
         openerQuality: 'cold',
         discoveryScore: 0,
         spinPhase: 0,
         generatedQuestions,   // industry-aware SPIN questions for this encounter
+        fitScore,             // 0=poor, 1=possible, 2=good, 3=perfect
+        fitDialogue,          // flavour text if fit is weak
+        prospectCategory,     // for UI display
         pricingSet: false,
         price: null,
         objections: [],

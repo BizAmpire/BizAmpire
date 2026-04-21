@@ -1,0 +1,1156 @@
+// CONTINUATION 2: auto (auto_services completion + financial_services + real_estate) + realestate + health + consulting
+
+// ── AUTO → auto_services (Set 1 complete, Sets 2-3, then financial_services, real_estate)
+// ── Then: realestate, health, consulting
+
+const AUTO_AUTO_SERVICES_S1_CONT = [
+  {
+    phase: 'problem',
+    question: "When customers come in for a service you don't offer — say an alignment, transmission rebuild, or bodywork — do you just tell them to find someone else, or do you have a shop you trust enough to send them to?",
+    goodResponse: "That referral gap is a customer experience problem and a missed revenue opportunity. If there's no trusted referral partner, you're leaving your customer to a Google search — and some percentage won't come back to you after that experience. What's your referral process look like today?",
+    badResponse: "We could be that referral partner for the services you don't offer.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If you're regularly sending customers out to find their own solutions for specialty work — and some don't return after the referral — what does that lost retention cost you per year in repeat business?",
+    goodResponse: "Even losing 10-15% of referred customers to a competitor is real money when you factor in lifetime customer value. A formalized referral network keeps those customers in your orbit. It's a retention tool as much as a service extension.",
+    badResponse: "Customer leakage on referrals is costly. A referral partner fixes that.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If we formalized a two-way referral arrangement — you send customers our way for specialty work we handle that you don't, we send yours back and vice versa — how would that improve your customer retention and round out the service experience you offer?",
+    goodResponse: "A structured referral partnership is good for both shops. Let me put together a simple referral agreement framework and show you how other shops in our network have made it work.",
+    badResponse: "A referral partnership is a natural fit. Let's set one up.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const AUTO_AUTO_SERVICES_S2 = [
+  {
+    phase: 'situation',
+    question: "How many bays do you run, and are you at capacity most weeks or do you find yourself with empty time slots you can't fill?",
+    goodResponse: "Capacity utilization is the profit lever in auto service. Understanding whether you're leaving bays idle or turning away work tells me a lot about the growth stage you're in and what kind of partnership might make sense.",
+    badResponse: "We could help fill capacity gaps or handle overflow work.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If you do have empty bay time, is that because of seasonal demand swings, marketing gaps, or because you can't find enough qualified technicians to keep bays staffed?",
+    goodResponse: "Idle capacity with a labor cause is different from idle capacity with a marketing cause — and they need completely different solutions. What does your busy season look like versus your slow season?",
+    badResponse: "We help auto shops address capacity issues whether it's a marketing or staffing problem.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "An empty bay costs you roughly your average RO value per hour in lost revenue. On your slow days, what does that idle time translate to in monthly lost gross profit?",
+    goodResponse: "When shops run that number, they're often surprised how quickly idle bay time adds up. It shifts how you think about any investment in filling those hours. What's your typical repair order average?",
+    badResponse: "Idle bays are lost revenue. We help fill them.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If there was a structured arrangement — whether it's overflow work, fleet accounts, or a referral network — that helped you fill those idle bays with quality work, how would that change the profitability math for the shop?",
+    goodResponse: "Filling bay time with quality work is the fastest path to bottom line improvement for most auto shops. Let me walk you through the options that make sense given your setup.",
+    badResponse: "We can help fill your bays. Let's talk about what type of arrangement works.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const AUTO_AUTO_SERVICES_S3 = [
+  {
+    phase: 'situation',
+    question: "Do you do any fleet work currently — municipal, commercial, delivery vehicles — or is your business primarily consumer passenger vehicles?",
+    goodResponse: "Fleet and consumer auto service are quite different business models. Fleet is higher volume, lower margin per RO, but more predictable. Consumer is the opposite. Understanding your current mix tells me what kind of additional work might complement what you already do.",
+    badResponse: "Fleet accounts are a reliable revenue stream for auto shops — we could discuss that.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If you're primarily consumer-focused, do you find the seasonality and unpredictability of consumer demand creates cash flow challenges during slow periods?",
+    goodResponse: "Consumer auto demand is notoriously lumpy — weather, the economy, consumer confidence all affect it. Fleet contracts smooth that revenue curve considerably. What does your slow season typically look like?",
+    badResponse: "Fleet work smooths out consumer demand volatility.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "In a slow month, when your consumer drop-off volume is down — do you find yourself unable to cover fixed costs like labor and rent from shop revenue alone?",
+    goodResponse: "Fixed cost coverage is the stress test for any auto shop. When consumer volume dips, shops without steady accounts feel it immediately in their cash position. That's the risk that a commercial relationship hedges against.",
+    badResponse: "Fixed cost shortfalls in slow months are a real cash flow risk. Fleet accounts hedge that.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If you had a reliable commercial account or fleet relationship that provided a base level of predictable work each month — regardless of consumer volume swings — how would that change your business stability and your ability to plan for growth?",
+    goodResponse: "Anchor accounts are how the most stable shops in any market operate. Let me walk you through what a structured commercial arrangement could look like for your shop.",
+    badResponse: "A commercial fleet account is the stability anchor your shop needs. Let's explore options.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const AUTO_FINANCIAL_SERVICES_S1 = [
+  {
+    phase: 'situation',
+    question: "Does your office operate a company vehicle fleet — whether that's for client visits, executive transport, or field staff — and who's currently managing the maintenance and service schedules on those vehicles?",
+    goodResponse: "A lot of financial firms have 3-10 vehicles in regular use and no formal maintenance program managing them. Understanding what you have and how it's currently handled tells me where the value might be.",
+    badResponse: "We offer fleet maintenance programs for professional service firms.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "When a vehicle needs service, do your employees have to find a shop on their own and expense it — or is there a company process that handles it, and do you have visibility into what's being spent?",
+    goodResponse: "Self-managed vehicle expenses are almost always underdocumented and overspent. Employees pick the shop they know, not the best one, and the company has no aggregate view of the cost. What does that process look like for your team today?",
+    badResponse: "We consolidate vehicle maintenance under one managed account so you have full visibility.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If you don't have a centralized view of vehicle maintenance spend, you're likely overpaying and missing the repair windows that prevent much more expensive failures. What's your rough sense of what the company spends on vehicle-related expenses per year?",
+    goodResponse: "Most firms underestimate their annual vehicle expense because it's fragmented across expense reports and credit cards. When you aggregate it, the number is usually 20-40% higher than expected — and that's before factoring in productivity loss when a vehicle is out of service.",
+    badResponse: "Untracked vehicle spend is almost always overspend. We bring it under control.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If all your company vehicles were on a single managed maintenance account — scheduled proactively, serviced at one location, with a monthly summary your CFO could actually use — how would that simplify your vehicle program and likely reduce what you're spending?",
+    goodResponse: "That's exactly what our corporate accounts do for financial services firms. Let me walk you through what the account setup looks like and what our business clients typically save in the first year.",
+    badResponse: "A corporate account gives you control and savings. Let's get yours set up.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const AUTO_FINANCIAL_SERVICES_S2 = [
+  {
+    phase: 'situation',
+    question: "Do any of your advisors or relationship managers drive to client sites for in-person meetings, and if so, is there a company vehicle program or are they using personal vehicles?",
+    goodResponse: "Client-facing staff who drive to meetings represent a real vehicle reliability dependency. Understanding whether they're using personal or company vehicles — and what happens when something goes wrong on the road — helps me understand the exposure.",
+    badResponse: "We service vehicles for advisors and relationship managers who drive to clients.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "Has there ever been a situation where a client-facing employee had a vehicle breakdown on the way to or from a client meeting — and what did that do to the client relationship and the firm's reliability perception?",
+    goodResponse: "Vehicle reliability failures during client interactions are reputational events for a financial firm. Clients who see their advisor stranded on the side of the road carry that image. It's a low-probability, high-impact risk that's easy to manage proactively.",
+    badResponse: "Vehicle reliability is a reputational risk for firms with client-facing staff. We manage it.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If a client-facing breakdown happens during a high-stakes client visit — say during a quarterly review or a new account signing — and it delays or cancels the meeting, what's the reputational and revenue cost of that single incident?",
+    goodResponse: "One missed client meeting at a sensitive moment in a relationship can put an account at risk. When the AUM at stake is six or seven figures, the math for a proactive vehicle maintenance program is very easy.",
+    badResponse: "Vehicle failures during client visits have real relationship costs. We prevent them.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If your client-facing team's vehicles were on a proactive maintenance schedule that caught issues before they became failures — so breakdowns became a non-issue — how would that change your confidence in the reliability of your field operations?",
+    goodResponse: "Proactive vehicle maintenance is cheap insurance against reputational risk for client-facing firms. Let me walk you through what a professional services fleet program looks like.",
+    badResponse: "A proactive maintenance program eliminates the breakdown risk. Let's build one for your team.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const AUTO_FINANCIAL_SERVICES_S3 = [
+  {
+    phase: 'situation',
+    question: "For executive leadership — partners, managing directors — is there a company vehicle benefit, or are executives handling their own vehicle arrangements?",
+    goodResponse: "Executive vehicle programs are a meaningful compensation and retention element at many financial firms. Understanding what's currently in place tells me whether there's an opportunity to add value to an existing program or create one.",
+    badResponse: "We service executive vehicles for financial services firms as part of a company vehicle benefit.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If executives are handling their own vehicle maintenance, does the firm cover any of those costs — and if so, is there tracking, policy, or controls on what's being expensed versus what's personal use?",
+    goodResponse: "Executive vehicle expense without clear policy and controls is one of those areas that creates compliance and tax issues. Reimbursement without documentation also creates fringe benefit tax reporting complexity. What does your current policy look like?",
+    badResponse: "Uncontrolled executive vehicle expense creates compliance risk. A structured program manages it.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If there's executive vehicle reimbursement happening without a documented policy — and it's not being properly categorized as a fringe benefit — what's the potential tax and compliance exposure if that's challenged by an auditor?",
+    goodResponse: "IRS rules on employer-provided vehicle benefits are specific and frequently mishandled. The exposure is usually small in dollar terms but disproportionate in audit attention. A documented vehicle program with proper records eliminates that risk.",
+    badResponse: "Undocumented vehicle reimbursements are a fringe benefit compliance issue. We help fix that.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If you had a structured executive vehicle account — with documented service records, clear personal-versus-business use tracking, and a clean paper trail for compliance purposes — how would that reduce the administrative complexity and compliance risk of your current approach?",
+    goodResponse: "A clean vehicle program is a minor administrative investment with meaningful compliance upside. Let me show you what our executive account structure looks like and how we make the documentation simple.",
+    badResponse: "A structured executive vehicle account solves the compliance and administrative problem cleanly.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const AUTO_REAL_ESTATE_S1 = [
+  {
+    phase: 'situation',
+    question: "How many vehicles does your team operate — I'm thinking about agents doing property showings, property managers doing site visits, maybe a company vehicle for the principal. What does your vehicle footprint look like?",
+    goodResponse: "Real estate is one of the most vehicle-dependent professional service businesses — agents are in their cars for showings, property managers are driving between sites. Understanding the scope helps me see what kind of program would make sense.",
+    badResponse: "We service vehicles for real estate teams — agents, PMs, company cars.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "For your agents using personal vehicles for showings — are vehicle maintenance costs reimbursed, are agents responsible for it themselves, and do you have visibility into whether the vehicles being used for client-facing work are actually well-maintained?",
+    goodResponse: "This is a common blind spot for real estate teams — agents are using their personal vehicles for client work, the firm has zero visibility, and if something goes wrong with a client in the car, it's a liability and perception problem. What's your current approach?",
+    badResponse: "Agent vehicle maintenance is a liability and image issue when there's no oversight. We help.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If an agent's vehicle breaks down between showings — or worse, during a showing with a buyer in the car — what does that do to that buyer's confidence in the agent's professionalism and the brokerage's brand?",
+    goodResponse: "In real estate, the showing experience is the brand. A client stuck in a broken-down car with their agent is a story that gets told. It's a low-probability event but a high-impact one. Proactive maintenance eliminates it.",
+    badResponse: "Vehicle reliability during showings is a brand and trust issue. Maintenance prevents incidents.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If your agents had access to a commercial maintenance account — where they could bring their vehicles in on a discounted corporate rate, stay on a maintenance schedule, and the firm had some visibility into the program — how would that benefit both the agents and the brokerage's professional image?",
+    goodResponse: "A corporate maintenance benefit for agents is a recruiting and retention tool as well as a brand protection measure. Let me walk you through what our real estate team programs look like.",
+    badResponse: "A corporate maintenance account benefits your agents and your brand. Let's set one up.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const AUTO_REAL_ESTATE_S2 = [
+  {
+    phase: 'situation',
+    question: "For property managers handling multiple sites — do they use a company vehicle or personal vehicles for site visits, maintenance checks, and tenant coordination?",
+    goodResponse: "Property management is high-mileage work. Site visits, maintenance coordination, tenant move-ins — it all accumulates. Understanding the vehicle arrangement tells me where the program gaps might be.",
+    badResponse: "We maintain vehicles for property managers doing high-mileage site work.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "For property managers using their personal vehicles for company work — what happens when a vehicle needs service? Is there downtime impact on the properties they're responsible for?",
+    goodResponse: "A property manager's vehicle breakdown means delayed maintenance responses, tenant calls going unanswered, and site visits not happening on schedule. For managed properties, that's a service level failure. What does your current backup plan look like?",
+    badResponse: "PM vehicle downtime creates service level gaps. We minimize it with maintenance programs.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If a property manager is out of service for a day or two because their vehicle is down — and maintenance requests at their properties pile up — what's the tenant satisfaction impact and the risk of lease non-renewals from that service gap?",
+    goodResponse: "Tenant satisfaction is directly connected to maintenance responsiveness. A two-day service gap from a vehicle breakdown can generate three weeks of tenant complaints and affect renewal decisions. The property management vehicle is operational infrastructure.",
+    badResponse: "PM vehicle downtime creates tenant service failures. Proactive maintenance prevents them.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If your property managers were on a scheduled maintenance program — vehicles serviced proactively, breakdowns minimized — how would that improve the consistency of your property service delivery and your tenant satisfaction scores?",
+    goodResponse: "Reliable property management vehicles mean reliable property management. Let me walk you through what a property management fleet program looks like and what firms our size typically put in it.",
+    badResponse: "A maintenance program keeps your PMs on the road and your tenants happy. Let's build one.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const AUTO_REAL_ESTATE_S3 = [
+  {
+    phase: 'situation',
+    question: "Does your firm have any dedicated company vehicles — like a van for property management, a vehicle for the principal, or anything branded — or is everything personal vehicle?",
+    goodResponse: "Company vehicles in real estate range from a single principal's car to a whole property management fleet. Understanding what you're running — even if it's just one or two vehicles — tells me what a service program would look like.",
+    badResponse: "We maintain company vehicles for real estate firms of all sizes.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "For any company-owned vehicles, is there a formal maintenance schedule being followed, or is service happening reactively — when something breaks or a warning light comes on?",
+    goodResponse: "Reactive maintenance is almost always more expensive than scheduled maintenance over the life of a vehicle. It also means more unexpected downtime. What does your current maintenance process look like for company vehicles?",
+    badResponse: "Reactive maintenance costs more and creates more downtime. We convert firms to proactive schedules.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If a company vehicle fails unexpectedly during a critical period — say during an active listing campaign or a high-volume rental season — what's the operational and financial impact of that downtime?",
+    goodResponse: "Company vehicle downtime in real estate always happens at the worst possible time. The cost isn't just the repair — it's the deals and tenant responses that didn't happen. How often do you have unexpected vehicle issues now?",
+    badResponse: "Unexpected vehicle failures cost more than repairs — they cost deals. Scheduled maintenance prevents that.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If all your company vehicles were on a structured service schedule — predictable costs, minimal surprises, all tracked in one account — how would that simplify your vehicle management and reduce the operational risk to your business?",
+    goodResponse: "A structured vehicle program turns vehicle maintenance from a reactive fire drill into a predictable overhead line. Let me walk you through what we offer real estate firms and what the setup looks like.",
+    badResponse: "A structured program eliminates vehicle surprises. Let's get your vehicles on a schedule.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════════
+// REALESTATE INDUSTRY (player is a real estate agent/broker selling)
+// ═══════════════════════════════════════════════════════════════════
+
+const RE_OFFICE_PROFESSIONAL_S1 = [
+  {
+    phase: 'situation',
+    question: "Is your firm currently leasing or owning your office space — and when does your current lease come up for renewal or renegotiation?",
+    goodResponse: "Lease timing is everything. Firms that come to us 12-18 months ahead of expiration have leverage. Firms that wait until 60 days out sign whatever the landlord wants. When's your renewal window?",
+    badResponse: "We help professional firms negotiate leases and find better office space.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "Has your headcount or office footprint changed since you signed your current lease — are you paying for space you don't use, or cramped into space that doesn't fit the team you have now?",
+    goodResponse: "Office space misalignment is one of the most common and most expensive inefficiencies in professional service firms. Either you're paying for square footage that's sitting empty, or your team is working in conditions that affect productivity and recruiting. Which direction is your current situation?",
+    badResponse: "We help firms right-size their office space for their current team and growth plan.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If you're in a lease that doesn't match your current footprint — either too large or too small — what's the monthly dollar cost of that misalignment, and how long do you have to live with it before relief is possible?",
+    goodResponse: "Lease misalignment costs are very real and very persistent. Overpaying for space you don't use is a direct P&L hit every month. Cramped space drives attrition and affects talent acquisition. Both are fixable with the right real estate strategy — ideally before the lease locks you in again.",
+    badResponse: "We help firms right-size and renegotiate so they're not paying for misaligned space.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If you had a real estate advisor working on your behalf — evaluating comparable spaces, benchmarking your current rent against market, and positioning you to negotiate from strength at renewal — how much do you think you could save or gain compared to going it alone?",
+    goodResponse: "Tenant representation costs you nothing — we're compensated by the landlord side — but the leverage we bring to the negotiation typically saves clients 15-30% on their lease terms. Let me show you a few comparable spaces and benchmark your current deal against the market.",
+    badResponse: "We save firms money on leases through market knowledge and negotiation. Let's review your current deal.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_OFFICE_PROFESSIONAL_S2 = [
+  {
+    phase: 'situation',
+    question: "Are your partners or principals personally invested in any commercial or residential real estate outside the firm — investment properties, building ownership — or is the firm's exposure to real estate limited to the office lease?",
+    goodResponse: "Many successful professional service firm partners have real estate investment interests separately from the firm. Understanding the full picture — both business and personal — tells me where I might be most useful to you.",
+    badResponse: "We work with professional service firm partners on both commercial and investment real estate.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "For any investment properties — whether residential rentals, commercial space, or something else — are you managing those yourself, and is the portfolio performing the way you hoped when you made those investments?",
+    goodResponse: "Self-managed investment properties are a significant time and attention drain for busy professionals. And properties that were penciling well when purchased sometimes need a fresh look at the market — rents move, values change. What does your current portfolio look like?",
+    badResponse: "We help busy professionals evaluate and optimize investment real estate portfolios.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If you're self-managing investment properties and spending 5-10 hours a month on tenant issues, maintenance coordination, and accounting — at your professional hourly rate, what does that time actually cost you compared to what the properties are generating?",
+    goodResponse: "This is a calculation that stops a lot of professionals cold. Time spent managing a $200/month cash flow property at a $400/hour professional is a deeply negative ROI proposition. The question isn't just whether the property makes money — it's whether it makes money relative to your time.",
+    badResponse: "Self-managing properties rarely makes financial sense for high-billing professionals. We can help.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If you had a real estate advisor who could audit your current portfolio, identify underperforming assets to sell, and help you reinvest into properties that generate strong returns without your active management — how would that change your relationship with real estate as a wealth-building tool?",
+    goodResponse: "That's what smart real estate investment looks like for busy professionals — the portfolio works for you, not the other way around. Let me walk you through a portfolio review process and show you what the market looks like right now for repositioning.",
+    badResponse: "A managed investment strategy frees you from landlord work. Let's review your portfolio.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_OFFICE_PROFESSIONAL_S3 = [
+  {
+    phase: 'situation',
+    question: "Is your firm in a standalone building you own, a multi-tenant professional building, or a shared co-working type arrangement — and how long have you been in the current location?",
+    goodResponse: "Location tenure and property type tell me a lot about the strategic options available. A firm that owns its building has different leverage than one that's month-to-month in a co-working space. Where are you in that spectrum?",
+    badResponse: "We help firms across all occupancy types — owned, leased, co-working — optimize their real estate.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If you're in a multi-tenant building, are you satisfied with the location — proximity to clients, parking, building quality — or are there things about the space that you've been tolerating but would change if you were starting fresh?",
+    goodResponse: "Office locations often accumulate workarounds over time. Parking issues, aging infrastructure, inconvenient client access — firms tolerate them because moving feels hard. But the market usually has better options at comparable or lower cost than people expect. What's the main thing you'd change?",
+    badResponse: "We find better spaces for firms that have outgrown or are tolerating their current location.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If those location friction points — the parking, the dated building, the inconvenient location — are affecting how clients perceive your firm when they visit, what's the reputational cost of the first impression your office is making?",
+    goodResponse: "Office environment is a proxy for firm quality in the minds of clients and recruits. A firm in a well-appointed, well-located office signals stability and success. A firm in a dated, inconvenient space signals something else — even if unintentionally. Have you had client feedback about the space?",
+    badResponse: "Office quality affects client and recruit perception. We help firms upgrade their image through better space.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If I showed you two or three spaces — better location, better building quality, comparable rent to what you're paying now — and we had a competitive lease process with multiple options, what would it mean for your firm's image, recruiting, and client confidence?",
+    goodResponse: "That's usually what firms find when they actually run a competitive search — there are better options at similar costs, but no one's gone looking. Let me pull three comps in your market and show you what's possible.",
+    badResponse: "Better space at comparable cost is usually available. Let me show you what's out there.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_TECH_COMPANY_S1 = [
+  {
+    phase: 'situation',
+    question: "Are you currently in a traditional office lease, a co-working arrangement, or fully remote — and is the current setup intentional or something that evolved organically as the company grew?",
+    goodResponse: "Tech companies end up in a huge range of office situations — some strategic, some accidental. Understanding what you have and why you have it tells me whether there's an opportunity to optimize or whether you're exactly where you want to be.",
+    badResponse: "We help tech companies find and negotiate office space that matches their growth stage.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If you're in a co-working space or standard office, is the current setup creating friction around hiring — either because talent doesn't want to come in, the space doesn't reflect your company culture, or it's too small for the team you're trying to build?",
+    goodResponse: "Office environment is a recruiting variable for tech companies. Candidates evaluate your space. A cramped or generic co-working setup can signal an early-stage company that's still figuring things out — which matters when you're competing for senior talent. What's the candidate feedback been like?",
+    badResponse: "We help tech companies find spaces that support recruiting and culture.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If your office environment is costing you even one senior hire per quarter — because the space doesn't inspire confidence or match the culture you're pitching — what does that talent gap cost you in terms of product velocity and revenue?",
+    goodResponse: "One missed senior engineering or product hire can delay a product launch by a quarter. That's a real revenue impact, and the office is a recruitng input that's often overlooked in favor of comp and equity. The ROI on the right space is often very high.",
+    badResponse: "A better office accelerates recruiting. That's a revenue multiplier for growing tech companies.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If you had a space designed around how your team actually works — collaborative zones, focus rooms, the aesthetic that matches your brand — and you got there without overpaying for more square footage than you need, how would that change your recruiting pitch and team culture?",
+    goodResponse: "The right office for a tech company is a cultural artifact, not just a cost center. Let me show you a few spaces that have worked well for companies at your stage — the right size, the right vibe, the right deal structure.",
+    badResponse: "The right space is a recruiting and retention tool. Let me find it for you.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_TECH_COMPANY_S2 = [
+  {
+    phase: 'situation',
+    question: "Are you anticipating a significant headcount change in the next 12-24 months — a hiring push, a funding round that unlocks growth, or a potential contraction — and does your current space have the flexibility to accommodate that?",
+    goodResponse: "Tech company space needs are volatile. A funding round can double headcount in 18 months, or a pivot can cut it by 40%. Understanding your trajectory tells me whether you need flexible terms, expansion options, or a different approach entirely.",
+    badResponse: "We help tech companies find flexible space that can scale with their growth.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If you're locked into a fixed lease that doesn't scale with your headcount — either you grow out of the space and have nowhere to put people, or you shrink and you're paying for empty desks — what does that inflexibility cost you?",
+    goodResponse: "Fixed leases are the enemy of tech company agility. The companies that end up in the best real estate positions are the ones that negotiate flexibility — expansion options, contraction rights, sublease rights — upfront. Did your current lease have any of those?",
+    badResponse: "Fixed leases kill flexibility. We negotiate flexible terms for tech companies from the start.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If you hit a high-growth period and your office can't accommodate the team — desks in hallways, no private spaces for calls, culture degrading from density — what's the productivity and attrition impact while you try to find a solution mid-lease?",
+    goodResponse: "Real estate bottlenecks during growth phases are one of the most disruptive operational problems a tech company faces. And solving them from a locked-in lease position is expensive — subletting, renegotiating, paying penalty costs. The solution is always best architected before the problem.",
+    badResponse: "Mid-lease real estate crunches are expensive and disruptive. We prevent them with the right lease structure.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If your next lease had built-in flexibility — expansion options at pre-negotiated rates, a sublease right if you needed to scale down, and a term that matched your funding runway — how would that reduce the real estate risk to your growth plans?",
+    goodResponse: "Flexibility clauses are negotiable — but only if you ask, and only if you have a broker who knows how to ask. Let me show you what a tech-company-optimized lease structure looks like and what's achievable in this market.",
+    badResponse: "The right lease structure gives you flexibility to grow or contract without penalty. Let's build it.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_TECH_COMPANY_S3 = [
+  {
+    phase: 'situation',
+    question: "Has the company considered using office space as a talent signal — a space that reflects your brand, your values, your product — or is the office primarily a functional cost center in how leadership thinks about it?",
+    goodResponse: "The most talent-competitive tech companies treat their office as a brand statement. It's a recruiting tool, a culture reinforcement mechanism, a client impression point. Understanding how your leadership thinks about the space tells me what kind of value I can add.",
+    badResponse: "We help tech companies find office space that's a brand and culture statement, not just overhead.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If the current space doesn't reflect the brand or culture you're trying to build — maybe it's generic, dated, or just not what you'd choose if you were starting fresh — is that creating any tension in how your team experiences coming to work versus the remote option?",
+    goodResponse: "The return-to-office dynamic is heavily influenced by the quality of the office experience. Employees who have a better environment at home than at work will choose home. A space that's genuinely better than home — collaboration, energy, amenities — is what shifts that balance. What's the current vibe of your space?",
+    badResponse: "Poor office experience drives remote preference. We find spaces that compete with the home office.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If your office isn't compelling enough to bring people in voluntarily — and your hybrid or return-to-office policy is met with friction — what's the cost in collaboration quality, culture cohesion, and the in-person serendipity that drives product innovation?",
+    goodResponse: "The productivity and culture cost of poor in-person attendance is hard to quantify but very real. Decisions that happen in a room are different from Slack threads. Mentorship doesn't happen on Zoom. The office environment is a collaboration infrastructure decision.",
+    badResponse: "Poor in-person attendance has real culture and collaboration costs. The right space fixes that.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If I found you a space — the right neighborhood, the right aesthetic for your brand, the right collaboration layout — that people actually wanted to come to work in, how would that change your culture, your recruiting pitch, and your team's day-to-day energy?",
+    goodResponse: "The right space is a culture investment that pays dividends in retention, recruiting, and collaboration. Let me put together a shortlist of spaces that I think would work for your team's profile and your brand.",
+    badResponse: "A space people want to be in solves the return-to-office problem. Let me find that space for you.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_HEALTHCARE_S1 = [
+  {
+    phase: 'situation',
+    question: "Is your practice in a space you own or lease — and is that location still meeting your patient volume capacity, or are you running into physical constraints like waiting room overflow or not enough exam rooms?",
+    goodResponse: "Healthcare practices outgrow their space in ways that directly affect patient throughput and revenue. An exam room shortage is a revenue cap. Understanding your current physical constraints tells me what kind of real estate strategy makes sense.",
+    badResponse: "We help healthcare practices find, lease, or buy the right clinical space.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If you're at capacity in your current space — whether that's operatories, exam rooms, or waiting room — are you turning away patients or running scheduling delays that are affecting patient satisfaction and revenue?",
+    goodResponse: "A practice that's physically at capacity is leaving revenue on the table with every scheduling delay or turned-away patient. And those patients don't always wait — they find a competitor. What does your current wait time for a new patient appointment look like?",
+    badResponse: "Physical capacity constraints cap revenue and drive patients to competitors. We solve that.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If you're turning away or delaying 10-15 new patient appointments per month because of space constraints — at your average patient lifetime value — how much revenue is your current building costing you annually?",
+    goodResponse: "Most practices do this math once and never look at space the same way again. Even 10 turned-away patients per month at a modest lifetime value is a six-figure annual revenue leak. The right expansion or relocation often pays for itself in under two years.",
+    badResponse: "The revenue cost of physical capacity constraints usually justifies expansion. Let's run the numbers.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If I found you a space that added the exam rooms or operatories you need — in a comparable or better location, with a lease structured around your practice financials — how would that expansion change your revenue ceiling and patient access?",
+    goodResponse: "Healthcare real estate requires someone who understands clinical space requirements, regulatory build-out, and medical lease structures. Let me walk you through a few options in your market and model the revenue impact of the expansion.",
+    badResponse: "The right clinical space removes your revenue ceiling. Let me find the options for you.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_HEALTHCARE_S2 = [
+  {
+    phase: 'situation',
+    question: "Have you ever considered owning the building your practice operates in rather than leasing — or is building ownership not something you've explored?",
+    goodResponse: "Owner-occupied medical buildings are one of the best wealth-building strategies for successful practice owners. The practice pays the mortgage, you build equity, and at retirement the building is often as valuable as the practice. Have you looked at any properties in your market?",
+    badResponse: "We help practice owners transition from leasing to owning their clinical building.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "As a tenant, has your landlord ever raised the rent significantly at renewal, or have you felt constrained in your ability to modify the clinical space — signage, build-out, HVAC, layout — because you need landlord approval?",
+    goodResponse: "Tenant constraints are the hidden cost of leasing for healthcare practices. Rent increases at renewal, build-out approval delays, inability to add equipment or modify the clinical flow — all of these are problems that disappear when you own. What's been the most frustrating landlord constraint you've dealt with?",
+    badResponse: "Tenant constraints — rent increases, build-out approvals — go away when you own the building.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If your rent increases 15-20% at your next renewal — which is not unusual in medical buildings — what does that do to your practice's overhead ratio, and how does that affect your profitability and your ability to invest in staff, equipment, or expansion?",
+    goodResponse: "A 15-20% rent spike on a practice that's spending $8-12k/month on space is a $15-20k/year hit to the bottom line. That's a full staff salary, or a significant equipment lease payment. Practice owners who own their buildings don't face that uncertainty.",
+    badResponse: "Rent spikes at renewal are a real P&L risk. Building ownership eliminates that uncertainty.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If I showed you a building purchase that penciled out where your mortgage payment was comparable to or only modestly higher than your current rent — and you began building equity instead of writing a rent check every month — how would that change your long-term wealth picture as a practice owner?",
+    goodResponse: "The ownership math is often better than people expect, especially with SBA 504 loans designed for owner-occupied medical buildings. Let me run a comparison for your current rent against a purchase scenario and show you what the equity build looks like over 10 years.",
+    badResponse: "Ownership often pencils close to renting — but you build equity instead of paying a landlord. Let's model it.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_HEALTHCARE_S3 = [
+  {
+    phase: 'situation',
+    question: "Are you considering adding a second location — satellite practice, additional clinic — and have you started evaluating what that looks like from a real estate standpoint?",
+    goodResponse: "Multi-location expansion is one of the most common growth strategies for successful healthcare practices — and real estate strategy is usually the first major decision. Understanding where you are in that thinking tells me how I can help.",
+    badResponse: "We help growing healthcare practices find and negotiate their second or third location.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If you're evaluating a second location, are you confident about the right market — the right zip code, the right patient demographics, the right competitive landscape — or is that analysis still fuzzy?",
+    goodResponse: "Location selection for a second healthcare site is a data problem as much as a real estate problem. Patient demographic density, proximity to referral sources, insurance coverage rates, competitor concentration — all of it informs whether a location will perform. What does your current thinking on location look like?",
+    badResponse: "We use demographic and competitive data to identify high-probability second-site locations for practices.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If you select a second location based on gut instinct or general availability — rather than data on patient demographics and competition — and the site underperforms, what does that cost you in lease obligations, build-out investment, and staff you hired for the new location?",
+    goodResponse: "A failed second location in healthcare is an expensive lesson. You're typically looking at $200-500k in build-out, a multi-year lease, staffing costs — all committed before the first patient. The site selection analysis that happens before those commitments is the highest-leverage investment you can make.",
+    badResponse: "Wrong location selection for a second site is a very expensive mistake. Data-driven site selection prevents it.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If you had a real estate partner who could run a market analysis, identify the highest-probability zip codes for your second location, and then negotiate the lease and build-out for that site — how much confidence would that add to the expansion decision?",
+    goodResponse: "Healthcare expansion with data-driven site selection and expert negotiation is a very different proposition from winging it. Let me pull the demographic and competitive data for your target markets and show you what the analysis looks like before you commit to anything.",
+    badResponse: "Data-driven site selection and expert negotiation take the risk out of expansion. Let's start with the analysis.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_RETAIL_FOOD_S1 = [
+  {
+    phase: 'situation',
+    question: "Is your current location owned or leased, and when does your lease renew — are you thinking about staying put, expanding, or is there a point at which you've considered a second location?",
+    goodResponse: "For retail and food businesses, the lease is often the biggest fixed cost and the biggest strategic lever. Understanding your timeline and your growth thinking tells me where the real opportunity might be.",
+    badResponse: "We work with retail and food businesses on leases, renewals, and expansion locations.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "How satisfied are you with the foot traffic and customer demographics of your current location — is the location working as hard for you as you need it to, or are there traffic or visibility issues you've had to work around?",
+    goodResponse: "For retail and food, location is the most deterministic factor in success outside of the product itself. Poor foot traffic, wrong demographic mix, visibility issues — these are problems that marketing can only partially compensate for. What's your current traffic situation look like?",
+    badResponse: "We help retail and food businesses find high-traffic locations that work harder for the business.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If your current location is in a lower-traffic area than ideal — and you're spending on marketing to compensate — what does that marketing spend cost you annually that you wouldn't need in a higher-traffic location?",
+    goodResponse: "The math on a better location versus more marketing spend is often compelling. A higher-rent, higher-traffic location can be cheaper than the marketing budget required to drive traffic to a lower-visibility spot. It's worth modeling. What are you currently spending on customer acquisition?",
+    badResponse: "Marketing to compensate for poor location is often more expensive than a better lease. Let's model it.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If I found you a higher-traffic location — better visibility, stronger demographics for your customer profile — at a total occupancy cost that's justifiable given the revenue uplift, how would that change your growth trajectory?",
+    goodResponse: "The right location for a retail or food concept can change the entire trajectory of the business. Let me pull traffic data and available spaces in your target trade area and show you what the options look like.",
+    badResponse: "The right location changes the revenue trajectory. Let me find the options in your market.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_RETAIL_FOOD_S2 = [
+  {
+    phase: 'situation',
+    question: "When you signed your current lease, did you negotiate any tenant improvement allowance from the landlord — money toward build-out, fixtures, or equipment — or did you build out the space entirely at your own cost?",
+    goodResponse: "TI allowances are one of the most valuable and underutilized negotiating points in retail and food leases. Landlords budget for them; most tenants don't know to ask. Understanding what you've gotten historically tells me what you might be leaving on the table at renewal.",
+    badResponse: "TI allowances are standard in retail leases and most tenants don't maximize them. We do.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If you didn't get a TI allowance — or got less than the market rate — and funded the full build-out yourself, how long did it take to recoup that capital investment from operating cash flow?",
+    goodResponse: "Build-out capital that you funded yourself takes years to recoup from operating margins. That's capital that could have been used for inventory, marketing, or working capital. TI allowances are essentially free money — but only if you know how to negotiate for them.",
+    badResponse: "Self-funded build-outs tie up capital for years. TI allowances return that capital to the business.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If your next location or renewal has a $100-150k build-out requirement — and you don't negotiate a TI allowance that covers a significant portion of it — what does that capital drain do to your liquidity and your ability to manage the first 6-12 months of operation?",
+    goodResponse: "The first year of a new location is always cash-intensive. Tying up $100k+ in build-out capital that a skilled negotiator might have gotten from the landlord is a significant liquidity risk. That money staying in your pocket changes the risk profile of the expansion.",
+    badResponse: "Unfunded build-out capital creates first-year liquidity risk. We recover that through negotiation.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If your next lease negotiation included a TI allowance that covered most of the build-out cost — plus favorable rent escalation caps and an option to expand or renew at pre-agreed terms — how much would that improve the financial case for expansion?",
+    goodResponse: "A well-negotiated lease can be worth $150-300k in TI, cost avoidance, and flexibility for a retail or food operator. That changes the return on your expansion investment significantly. Let me benchmark your current deal and show you what's achievable.",
+    badResponse: "A well-negotiated lease is worth six figures in value. Let me show you what we can get you.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_RETAIL_FOOD_S3 = [
+  {
+    phase: 'situation',
+    question: "Are you in a standalone building, a strip center, or an inline mall or mixed-use building — and how does the co-tenancy in your center affect your customer traffic?",
+    goodResponse: "Co-tenancy is one of the most underanalyzed variables in retail and food location decisions. An anchor tenant that drives traffic — a grocery store, a gym, a national brand — can be enormously valuable. The wrong neighbor can be a drag. Who's driving traffic to your center today?",
+    badResponse: "We evaluate co-tenancy and anchor quality when identifying locations for retail and food clients.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "Have you seen your traffic affected by changes in the center — an anchor tenant closing, a complementary neighbor leaving, or new competition moving into the same complex?",
+    goodResponse: "Co-tenancy risk is one of the most insidious lease risks for retail and food. An anchor closes, foot traffic drops 30%, and you're locked in a lease for two more years. Most tenants don't have co-tenancy clauses protecting them. Does your current lease have any co-tenancy protection?",
+    badResponse: "Co-tenancy risk without contractual protection is a real threat to retail and food businesses.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If your anchor tenant were to close or vacate — and your foot traffic dropped 20-30% as a result — how long could you sustain your current lease cost on reduced revenue before it became an existential problem?",
+    goodResponse: "The math on anchor-dependent businesses is stark. A 25% traffic reduction with fixed lease costs can turn a profitable operation into a cash-burning one very quickly. Co-tenancy clauses that allow rent reduction or early exit if the anchor leaves are a standard protection — but most tenants don't have them.",
+    badResponse: "Anchor closure risk without contractual protection is an existential threat. We negotiate co-tenancy clauses.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If your next lease included co-tenancy protections — rent reduction rights or early exit rights if key neighbors leave — along with strong anchor quality at signing, how would that reduce the location risk in your next commitment?",
+    goodResponse: "Co-tenancy protections are negotiable but you need to know to ask for them and how to structure them. Let me pull the co-tenancy history on any center you're considering and show you how to build those protections into the lease.",
+    badResponse: "The right lease protections eliminate co-tenancy risk. We know how to negotiate them.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_TRADES_CONTRACTOR_S1 = [
+  {
+    phase: 'situation',
+    question: "Do you operate out of a permanent commercial location — a shop, a warehouse, an office — or are you primarily a field-based operation that runs from a home office or small facility?",
+    goodResponse: "Trades contractors run the gamut from pure field operations to companies with substantial shop and warehousing needs. Understanding your current setup tells me whether the real estate conversation is about finding the right facility or about something else.",
+    badResponse: "We help trades contractors find commercial space for shops, warehouses, or office facilities.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If you do have a shop or warehouse, is the current space giving you enough room for equipment storage, materials inventory, and vehicle parking — or are you running out of room as the company grows?",
+    goodResponse: "Space constraints for trades contractors usually show up first as vehicle parking issues, then materials overflow, then equipment that can't fit in the shop. It slows you down, creates inefficiency, and sometimes creates safety issues. What's the primary constraint you're hitting now?",
+    badResponse: "We help contractors find larger shop and warehouse space as their operations grow.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If your material and equipment storage is constrained — and your crews are spending time hunting for materials or making extra supply runs because you can't stock adequately — what does that inefficiency cost you in labor hours per week?",
+    goodResponse: "Labor efficiency losses from inadequate facility space are a real but often unmeasured cost. If three crews each lose 30 minutes a day to disorganization or supply runs that adequate storage would eliminate, that's 7+ hours of billable labor per week. At field labor rates, that's a significant annual number.",
+    badResponse: "Facility space constraints create labor inefficiency. The right facility pays for itself in crew productivity.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If I found you a facility — right square footage for your shop, warehouse, and vehicles, right location relative to your primary service area — that solved the space constraint and improved crew efficiency, how would that change your operational capacity?",
+    goodResponse: "The right facility is an operational efficiency investment that pays back in crew productivity and capacity to take on more work. Let me show you what's available in your service area for industrial and flex space.",
+    badResponse: "The right facility unlocks operational capacity. Let me pull what's available in your market.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_TRADES_CONTRACTOR_S2 = [
+  {
+    phase: 'situation',
+    question: "When you're bidding jobs in specific geographic areas, is your facility location a factor in your competitiveness — are there markets you're losing bids on because your travel time makes you less competitive on price?",
+    goodResponse: "Location-to-market distance is a real cost variable for trades contractors. Windshield time and fuel are overhead — and if a competitor is 20 minutes closer to the job, they're bidding with lower overhead. Understanding your service geography helps me think about where the right facility location would be.",
+    badResponse: "We help contractors evaluate facility locations relative to their primary markets.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "Are there specific submarkets or neighborhoods where you're consistently losing bids to local competitors — and do you think proximity is a factor in that competitive disadvantage?",
+    goodResponse: "Geographic competitive disadvantage is a real issue for contractors whose facility is poorly located relative to growth markets. A second location or a relocated facility can open markets that were previously uncompetitive. Which submarkets are you trying to crack?",
+    badResponse: "We help contractors reposition or add facilities to improve competitive access to growth markets.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If you're losing 2-3 bids per month in a high-value submarket because of your location disadvantage — and those are jobs worth $15-25k each — what's the annual revenue you're leaving in that market?",
+    goodResponse: "Three $20k jobs per month in an underserved market is $720k in annual revenue that's competitively blocked by your current facility location. A second, strategically placed facility might cost $3-4k/month and open $600k+ in annual revenue potential. That math usually works.",
+    badResponse: "Location-blocked revenue is real. A strategically placed second facility can unlock it.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If I found you a small satellite facility — even just a storage unit with office space — in your target market that would eliminate the travel-cost disadvantage and let you compete equally on price in that area, what would that market access mean for your revenue growth?",
+    goodResponse: "Satellite facilities for trades contractors are often cheaper and simpler than people expect. Let me pull industrial and flex-space options in your target submarket and we can model the revenue upside against the occupancy cost.",
+    badResponse: "A satellite facility can open new markets at modest cost. Let me show you what's available.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_TRADES_CONTRACTOR_S3 = [
+  {
+    phase: 'situation',
+    question: "Have you considered whether it makes more financial sense to own the building your business operates from rather than continue leasing — especially given where real estate values have moved?",
+    goodResponse: "Owner-occupied commercial real estate is one of the best long-term wealth strategies for trades business owners. The business funds the mortgage, you build equity, and the building often appreciates in value while you're focused on the business. Have you looked at any properties?",
+    badResponse: "We help trades business owners evaluate building ownership versus continued leasing.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If you're currently leasing your shop or yard, are there things you'd do differently with the space — additional build-out, improved drainage, better electrical for equipment — if you owned it rather than needing landlord approval?",
+    goodResponse: "Tenants in industrial and flex space constantly run into improvement limitations. Adding compressed air lines, improving drainage for vehicle wash-down, upgrading electrical for welding equipment — landlords often restrict or make these improvements complicated. What's the constraint you hit most often?",
+    badResponse: "Ownership eliminates landlord restrictions on facility improvements. That matters for trades businesses.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If you can't make the facility improvements you need as a tenant — and that's limiting your operational efficiency or the types of work you can take on — what jobs or service lines are you unable to pursue because of facility constraints?",
+    goodResponse: "Facility constraints limiting service lines are a direct revenue cap. A contractor who can't add the right equipment or infrastructure because of lease restrictions is leaving market expansion on the table. Ownership removes that ceiling.",
+    badResponse: "Lease restrictions on improvements cap your service lines and revenue. Ownership removes that constraint.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If you owned the right facility — free to build it out exactly as your operation needs, building equity while your business pays the mortgage — how would that change both your operational capability and your long-term financial picture?",
+    goodResponse: "Building ownership is the wealth play that separates trades business owners who retire well from those who don't. Let me run the ownership math against your current lease and show you what SBA financing looks like for owner-occupied industrial property.",
+    badResponse: "Building ownership builds wealth and operational freedom. Let's model what the purchase scenario looks like.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_AUTO_SERVICES_S1 = [
+  {
+    phase: 'situation',
+    question: "Is your shop in a space you own or lease, and how long have you been at this location — are you established here or considering whether this is still the right spot for the business?",
+    goodResponse: "Auto service businesses are highly location-dependent. Bay count, lot size, visibility, traffic — all of it affects capacity and customer access. Understanding your situation tells me what kind of real estate conversation is most valuable.",
+    badResponse: "We work with auto service businesses on leases, purchases, and relocations.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "Does your current location have enough lot space for customer queuing and vehicle storage — or do you lose business because cars back up into the street or customers can't find parking when they arrive?",
+    goodResponse: "Lot constraints are one of the most underappreciated capacity problems for auto service shops. If the visual cue of a full lot keeps customers driving past, or if vehicle storage overflow creates liability and neighbor issues, the physical site is capping your revenue. What does your lot situation look like on a busy day?",
+    badResponse: "We help auto service shops find locations with the lot and bay configurations their volume requires.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If customers drive by during peak hours, see an overfull lot, and go to the competitor down the street — how many of those customers do you think you're losing per week, and does that lost business justify a look at a better-configured location?",
+    goodResponse: "Lost-customer-at-the-driveway is a volume problem that shows up nowhere in your books but is very real. If you're losing 20 customers per week to lot congestion, and your average ticket is $300, that's $6k/week or $300k/year in lost revenue. That changes the relocation math significantly.",
+    badResponse: "Lost customers from lot congestion represent real, measurable revenue. Let's calculate it.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If I found you a site with more bays, better lot configuration, and comparable or better traffic visibility — at a total occupancy cost that works with your margins — how would that change your daily capacity and your ability to grow revenue?",
+    goodResponse: "The right site for an auto service business is a revenue multiplier. Let me pull available automotive-zoned properties in your market and show you what the options look like.",
+    badResponse: "The right site removes your capacity ceiling. Let me show you what's available.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_AUTO_SERVICES_S2 = [
+  {
+    phase: 'situation',
+    question: "How many bays do you currently have, and are you at the point where adding bays is limited by your current facility rather than your ability to find or keep qualified technicians?",
+    goodResponse: "Bay count is the primary capacity constraint for most auto service operations. Once you've solved the technician problem, the next ceiling is usually the physical space. Understanding where you are in that progression tells me if a facility conversation makes sense.",
+    badResponse: "We help auto service shops expand bay count by finding facilities that support their volume.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If you're turning away same-day or next-day service requests because you don't have open bay time — even when you have technicians available — is that a facility constraint or a scheduling constraint?",
+    goodResponse: "When the constraint is bays, not techs, you're leaving money on the table every day. A technician who could be billing 8 hours is billing 6 because there's no bay. That labor efficiency loss compounds directly into your gross profit.",
+    badResponse: "Bay-constrained capacity with available technicians is a facility problem. We solve it with the right location.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If each of your technicians is producing 10-15% fewer billable hours than they could because bays are the constraint — not their ability — what does that lost production cost you in annual gross profit?",
+    goodResponse: "Technician labor utilization is the engine of auto service profitability. A 10% improvement in labor utilization across a full team can mean $80-120k in additional annual gross profit. If a facility upgrade achieves that, the lease cost is easily justified.",
+    badResponse: "Underutilized technician hours from bay constraints are a direct gross profit leak. We fix that.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If I found a facility with two or four more bays than you have now — in a location with comparable or better traffic — and the occupancy cost was justified by the additional technician utilization, how would that change your shop's annual revenue ceiling?",
+    goodResponse: "The incremental revenue per bay is very calculable for auto service businesses. Let me pull automotive-zoned properties with the right bay count for your market and model the revenue-per-bay math against the occupancy cost.",
+    badResponse: "More bays mean more technician utilization and more revenue. Let's find the right facility.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_AUTO_SERVICES_S3 = [
+  {
+    phase: 'situation',
+    question: "Have you looked at whether it makes sense to own the building rather than lease — particularly for an auto service business where the automotive-zoned commercial properties in good locations tend to hold their value well?",
+    goodResponse: "Automotive-use commercial real estate is actually a very strong ownership proposition. The zoning restrictions that make it hard to find auto-use properties also mean the ones that exist hold value and appreciate well. Have you explored what an ownership scenario would look like for your business?",
+    badResponse: "We help auto service business owners evaluate building ownership versus leasing.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "As a tenant in an automotive property, are there capital improvements you'd make to the bays, the lift equipment infrastructure, or the lot if you owned the building — improvements your landlord won't approve or that don't make financial sense as a tenant?",
+    goodResponse: "Auto service tenants face constant friction on improvements. Upgrading pit drainage, adding dedicated EV charging circuits, improving bay lighting for diagnostic work — landlords who aren't in the business often don't understand the need and won't fund it. What's the improvement you can't make as a tenant?",
+    badResponse: "Tenant restrictions on shop improvements are a constant friction for auto service operators. Ownership eliminates it.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If you're unable to upgrade your shop infrastructure as a tenant — EV-capable lifts, better diagnostics bay, improved drainage — and EV service becomes a significant portion of the market in the next 5-7 years, what's the competitive risk of being in a building that can't be upgraded?",
+    goodResponse: "The EV transition is a real infrastructure decision for auto service businesses. Shops that own their building can make the capital improvements needed to service EVs competitively. Shops in inflexible leases may not be able to. That's a multi-year competitive risk worth thinking about now.",
+    badResponse: "EV infrastructure constraints in a leased shop are a long-term competitive risk. Ownership solves it.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If you owned an automotive property — freedom to upgrade the infrastructure you need, building equity while the business funds the mortgage, positioned for the EV transition on your own terms — how would that change both your competitive position and your long-term exit value?",
+    goodResponse: "Owning a well-located, automotive-use commercial property is a strong wealth-building and business-value play. Let me show you what's available in your market and run the ownership math versus your current lease cost.",
+    badResponse: "Building ownership is a wealth and competitive positioning play. Let's model the numbers for you.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_FINANCIAL_SERVICES_S1 = [
+  {
+    phase: 'situation',
+    question: "Is your firm in its current office location by design — client access, prestige address, proximity to colleagues — or is it more a matter of where you landed and haven't had reason to move?",
+    goodResponse: "For financial services firms, office location carries brand weight. A prestigious address in a recognized financial district signals something to clients and recruits. Understanding whether the location is intentional or inherited tells me whether there's a strategic conversation to have.",
+    badResponse: "We help financial services firms find locations that signal brand, credibility, and client access.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "For client-facing meetings — wealth management reviews, new account consultations, financial planning sessions — is your conference room and reception environment creating the first impression you want clients to have of the firm?",
+    goodResponse: "In financial services, the office environment is a trust signal. A dated or generic office can create subconscious doubt about a firm's success, stability, or attention to detail — even for a firm that performs extremely well. What's the client experience like when someone walks in for the first time?",
+    badResponse: "The office environment is a trust-building element for financial services firms. We find spaces that build it.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If a prospective high-net-worth client walks into your office for an initial consultation — and the environment doesn't match the caliber of service you provide — how does that visual mismatch affect your close rate on new accounts?",
+    goodResponse: "High-net-worth clients make unconscious judgments about firm quality based on the environment. A space that doesn't match the fee level you charge creates a dissonance that can undermine your pitch, even when your investment philosophy and track record are strong. Have you ever gotten feedback about the office from a client or prospect?",
+    badResponse: "Office environment mismatch with service quality costs you high-net-worth account conversions.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If you were in a space that was visually aligned with the quality of your firm — a premium address, a well-appointed reception, conference rooms that conveyed stability and sophistication — how would that change the first impression you make on prospective clients and your close rate?",
+    goodResponse: "The ROI on the right financial services office is measured in new accounts closed. Let me put together a shortlist of spaces — right address, right aesthetic, right deal structure for your firm's overhead — and show you what's available.",
+    badResponse: "The right space converts more prospects. Let me find the options that fit your firm's profile.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_FINANCIAL_SERVICES_S2 = [
+  {
+    phase: 'situation',
+    question: "For your advisors who manage a significant book of business — are they working from the central office, or do you have satellite offices or home office arrangements that bring them closer to client concentrations?",
+    goodResponse: "Advisor proximity to client clusters is a retention variable for wealth management firms. An advisor whose clients are all 45 minutes north but whose office is downtown is vulnerable to a regional firm that offers to set them up closer to their book. Understanding your geographic distribution tells me if there's a strategic gap.",
+    badResponse: "We help financial services firms evaluate satellite office strategies for advisor retention.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "Have you lost a high-producing advisor — or had one recruited away — where proximity to their client book or the quality of their work environment was a contributing factor in their decision to leave?",
+    goodResponse: "Advisor attrition is one of the most expensive events for a wealth management firm. Clients often follow the advisor, not the firm. If office quality or location was a factor in a departure, that's a fixable problem — and the cost of fixing it is almost always less than the AUM that walked out the door.",
+    badResponse: "Advisor attrition from office quality or location issues is a fixable, costly problem. We fix the location side.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If a top advisor managing $200-400M in AUM left partly because of a satellite office arrangement a competitor offered them closer to their client cluster — what does that AUM attrition cost the firm in revenue, and how long does it take to rebuild that book?",
+    goodResponse: "Rebuilding a $200-300M book takes years and is never fully complete. The economics of a satellite office — even $5-8k/month — are trivially small compared to the revenue on a large AUM book. It's an advisor retention tool with a very measurable ROI.",
+    badResponse: "The cost of an advisor retention satellite office is a fraction of the AUM it protects. Let's model it.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If you had satellite offices in the geographic clusters where your highest-producing advisors' clients are concentrated — giving those advisors a professional home closer to their books — how would that change your advisor retention and your competitive position in those markets?",
+    goodResponse: "Satellite offices as advisor retention tools are a standard playbook for growing wealth management firms. Let me map your advisors' client distributions and identify the two or three geographic clusters where a small office would make the biggest retention difference.",
+    badResponse: "Strategic satellite offices are an advisor retention investment. Let me identify the right locations for your firm.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_FINANCIAL_SERVICES_S3 = [
+  {
+    phase: 'situation',
+    question: "Has the firm ever considered owning the building rather than leasing — particularly given that a commercial building is itself an investment thesis that aligns with what you advise clients on?",
+    goodResponse: "Financial services firm principals who own their building have a quiet credibility advantage — they've made the same kind of real estate investment decision they might advise clients to make. It's also just a very sound financial decision when the math works. Have you looked at ownership before?",
+    badResponse: "Financial services firms are well-suited to building ownership — it's a sound investment aligned with your practice.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "Have you run the ownership math on your current space — what you're paying in rent versus what a mortgage payment would be, and what the equity build looks like over the same period?",
+    goodResponse: "Most firm principals who run this math are surprised. In many markets, the mortgage on a comparably sized professional building is within 10-20% of the lease cost — and every mortgage payment builds equity rather than leaving it with the landlord. Has your team modeled that scenario?",
+    badResponse: "The ownership math usually surprises professionals who run it for the first time. Let's run it.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "Over the next 10-15 years — the period a typical professional firm owner might be in a space before considering a sale or retirement — what's the equity and appreciation value you're foregoing by continuing to lease rather than own?",
+    goodResponse: "In most markets, a commercial building held for 10-15 years will double in value while you pay it down with business cash flow. The equity at exit can be as valuable as the business itself. For professionals advising clients on wealth accumulation, it's almost a fiduciary question to ask whether you're following that advice yourself.",
+    badResponse: "Leasing foregoes substantial equity and appreciation over a 10-15 year horizon. The math is compelling.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If I showed you two or three available properties that could work for your firm — modeled the purchase scenario against your current rent with SBA or conventional financing — and it penciled at close to breakeven on cash flow while building substantial equity, would you have the conversation?",
+    goodResponse: "This is often the most valuable real estate conversation for successful professional firm owners. Let me pull available properties in your target area and build a quick ownership-versus-leasing model so you can see the numbers clearly.",
+    badResponse: "Let me build the ownership model for your firm. The numbers usually make a compelling case.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_REAL_ESTATE_S1 = [
+  {
+    phase: 'situation',
+    question: "I'll be upfront — a real estate agent approaching another real estate firm is a bit unusual. But I'm curious: does your brokerage handle commercial real estate transactions, or are you purely residential?",
+    goodResponse: "There's actually a real referral opportunity between residential and commercial specialists. Residential clients frequently ask about investment properties, commercial clients frequently ask about residential — and most agents don't have depth in both. A structured referral relationship benefits both sides.",
+    badResponse: "We could explore a referral partnership for transaction types outside your focus.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "When your residential clients ask about investment properties — small multifamily, commercial, 1031 exchanges — are you able to fully serve that need in-house, or do those clients end up going elsewhere for the commercial side?",
+    goodResponse: "Residential to commercial referral leakage is a real client retention issue. A high-net-worth residential client who asks their residential agent about a 1031 exchange into commercial real estate — and gets referred out cold — is a client who starts a relationship with another firm. A warm referral partnership keeps them in your orbit.",
+    badResponse: "Client referral leakage to other firms on commercial inquiries is a retention issue we can solve together.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If you're referring 5-10 clients a year to commercial firms with no formal arrangement — and those clients end up with strong commercial relationships that compete for their future residential business — what's the referral leakage cost over time?",
+    goodResponse: "Unstructured client handoffs to other firms are relationship risks. Without a formal, mutual referral structure, there's no guarantee of reciprocity or client return. The clients you refer out informally sometimes come back; often they don't. A formal structure changes that dynamic.",
+    badResponse: "Informal referrals are relationship risks. A formal mutual referral structure protects client retention on both sides.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If we formalized a mutual referral relationship — I send you residential buyers who come through commercial transactions, you send me commercial inquiries from your residential clients — how would that structured partnership benefit both firms?",
+    goodResponse: "Structured referral partnerships between residential and commercial specialists are a proven model. Let me put together a simple referral framework and show you how other firms we've partnered with have made it work.",
+    badResponse: "A formal referral partnership benefits both sides. Let me draft a simple structure for us to consider.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_REAL_ESTATE_S2 = [
+  {
+    phase: 'situation',
+    question: "Does your team handle property management, or are you purely a transactional brokerage — and if you're not in property management, how do you handle clients who want ongoing asset management after a sale?",
+    goodResponse: "The brokerage-to-property management pipeline is an underexploited revenue opportunity for many transactional firms. Understanding where you land on that spectrum tells me whether there's a partnership or service gap that's worth exploring.",
+    badResponse: "We work with brokerages on property management partnerships for post-sale client retention.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If you close a residential investment property transaction — and the buyer then needs a property manager — do you have a reliable referral relationship, or does that client end up finding their own property manager without your involvement?",
+    goodResponse: "Post-transaction client relationship loss is a structural problem for transactional brokerages. The investment property buyer you worked with is a repeat client — if their property management experience is good, they'll expand the portfolio through you. If you have no touch point after closing, that relationship atrophies.",
+    badResponse: "Post-transaction client attrition is a revenue leakage problem for transactional brokerages. We solve it.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If even 30% of your investment property buyers go elsewhere for property management — and that firm builds the ongoing relationship — what percentage of that repeat business comes back to you versus the firm that manages their properties?",
+    goodResponse: "Property managers have enormous influence over where clients transact next. An investor who trusts their property manager's recommendation will often buy their next property through an agent that property manager refers. If that's not you, you've handed a referral stream to someone else.",
+    badResponse: "Property management relationships influence where investors transact next. You should own that referral channel.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If your brokerage had a preferred property management partner — one you could introduce to every investor client at closing — and that partner returned acquisition referrals to you exclusively, how would that closed loop change your repeat and referral business from investors?",
+    goodResponse: "A closed-loop brokerage-property management partnership is a repeat business engine. Let me walk you through how I've structured this type of relationship with other brokerages and what the referral flow has looked like.",
+    badResponse: "A brokerage-PM partnership is a repeat business engine. Let me show you how it works.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+
+const RE_REAL_ESTATE_S3 = [
+  {
+    phase: 'situation',
+    question: "Is your brokerage focused on a specific geographic market or property type — or are you a general brokerage competing across all asset classes and neighborhoods?",
+    goodResponse: "Market specialization versus generalism is a real strategic choice for brokerages. Specialists often out-compete generalists in their niche but lose deals outside it. Understanding your positioning tells me where a partnership or referral relationship might create mutual value.",
+    badResponse: "We explore partnership and referral arrangements between specialized and general brokerages.",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions', framework: 'SPIN – Situation',
+  },
+  {
+    phase: 'problem',
+    question: "If you're a general brokerage, are there property types or submarkets where you're consistently losing to specialists — a luxury boutique, a commercial-only firm, an investment property specialist — and you're capturing a smaller share than you should?",
+    goodResponse: "General brokerages lose to specialists in specific niches consistently. The client who wants an experienced luxury specialist or an investment-focused buyer's agent often goes to the specialist firm even if they know a generalist agent. Where are you feeling that competitive pressure most?",
+    badResponse: "Generalist brokerages lose niche business to specialists. A partnership with a specialist adds that capability.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions', framework: 'SPIN – Problem',
+  },
+  {
+    phase: 'implication',
+    question: "If you're losing 20-30 luxury or investment transactions per year to specialist competitors — at average commission levels in those categories — what does that revenue loss represent, and is it enough to justify adding a specialist partnership or expanding into that niche?",
+    goodResponse: "Niche transaction loss is often much larger than brokerages realize when they aggregate it. Twenty luxury transactions at a higher average commission might represent 30-40% of total potential revenue in that submarket. A structured specialist partnership captures that without the overhead of building the capability in-house.",
+    badResponse: "Niche transaction losses aggregate to significant revenue. A partnership captures it without overhead.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions', framework: 'SPIN – Implication',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If we established a formal referral partnership — you send me clients who fall into my specialty, I send you general residential and commercial work outside my niche — how would that fill the gaps in both our pipelines and reduce the business you're losing to competitors?",
+    goodResponse: "Specialist-generalist referral partnerships are how smart brokerages compete against larger firms. Let me outline what a formal partnership could look like and show you the referral categories where I think we'd see the most mutual benefit.",
+    badResponse: "A formal specialty referral partnership closes the competitive gaps for both firms. Let me draft the terms.",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff', framework: 'SPIN – Need-Payoff',
+  },
+];
+

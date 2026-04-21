@@ -488,10 +488,50 @@ export const DISCOVERY_QUESTIONS = [
   },
 ];
 
-// ── Dynamic discovery questions based on player industry + prospect type ───
-// Generates 4 SPIN questions that make sense for what the player is SELLING
-// to the specific type of business they're talking to.
-export function generateDiscoveryQuestions(playerIndustry, prospect) {
+// ── Prospect category resolver ──────────────────────────────
+// Maps a prospect's business type string → one of 8 canonical categories
+// used as keys in DISCOVERY_QUESTION_BANK and ICP_FIT_MATRIX
+export function getProspectCategory(bizType) {
+  const t = (bizType || '').toLowerCase();
+  if (t.includes('law') || t.includes('legal') || t.includes('attorney') ||
+      t.includes('cpa') || t.includes('accounting') || t.includes('audit') ||
+      t.includes('hr') || t.includes('management consult') || t.includes('advisory') ||
+      t.includes('staffing') || t.includes('consulting'))
+    return 'office_professional';
+  if (t.includes('software') || t.includes('saas') || t.includes('dev') ||
+      t.includes('tech') || t.includes('analytics') || t.includes('startup') ||
+      t.includes('app') || t.includes('digital agency') || t.includes('it firm'))
+    return 'tech_company';
+  if (t.includes('medical') || t.includes('health') || t.includes('clinic') ||
+      t.includes('dental') || t.includes('wellness') || t.includes('pharmacy') ||
+      t.includes('hospital') || t.includes('therapy') || t.includes('chiro'))
+    return 'healthcare';
+  if (t.includes('restaurant') || t.includes('café') || t.includes('cafe') ||
+      t.includes('coffee') || t.includes('food') || t.includes('bakery') ||
+      t.includes('retail') || t.includes('boutique') || t.includes('shop') ||
+      t.includes('store') || t.includes('salon') || t.includes('barbershop'))
+    return 'retail_food';
+  if (t.includes('contractor') || t.includes('construction') || t.includes('electric') ||
+      t.includes('plumb') || t.includes('hvac') || t.includes('fabricat') ||
+      t.includes('manufactur') || t.includes('industrial') || t.includes('landscap'))
+    return 'trades_contractor';
+  if (t.includes('auto') || t.includes('dealer') || t.includes('repair') ||
+      t.includes('fleet') || t.includes('detailing') || t.includes('car'))
+    return 'auto_services';
+  if (t.includes('bank') || t.includes('insurance') || t.includes('wealth') ||
+      t.includes('financial advisory') || t.includes('brokerage') ||
+      t.includes('mortgage') || t.includes('credit union'))
+    return 'financial_services';
+  if (t.includes('real estate') || t.includes('property') || t.includes('broker') ||
+      t.includes('realty') || t.includes('developer') || t.includes('landlord'))
+    return 'real_estate';
+  // default — treat as office professional (most versatile)
+  return 'office_professional';
+}
+
+// ── Dynamic discovery questions (legacy fallback — superseded by questions.js bank) ──
+// Kept for reference; engine.js now uses DISCOVERY_QUESTION_BANK from questions.js
+function generateDiscoveryQuestions(playerIndustry, prospect) {
   const pType = (prospect.type || '').toLowerCase();
   const pPain = prospect.pain || 'operational inefficiencies';
   const pOwner = prospect.owner || 'them';
