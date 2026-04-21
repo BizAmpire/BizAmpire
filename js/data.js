@@ -505,7 +505,7 @@ export function generateDiscoveryQuestions(playerIndustry, prospect) {
     construction: { service: 'construction & renovation services', verb: 'handle your build-outs', unit: 'project costs' },
     auto:         { service: 'vehicle maintenance & fleet services', verb: 'keep your vehicles running', unit: 'vehicle downtime' },
     realestate:   { service: 'real estate & property management', verb: 'manage your properties', unit: 'vacancy costs' },
-    health:       { service: 'healthcare & wellness services', verb: 'support your team's health', unit: 'healthcare overhead' },
+    health:       { service: 'healthcare & wellness services', verb: "support your team's health", unit: 'healthcare overhead' },
     consulting:   { service: 'operations & strategy consulting', verb: 'optimize your operations', unit: 'inefficiency costs' },
   };
 
@@ -563,7 +563,7 @@ export function generateDiscoveryQuestions(playerIndustry, prospect) {
     {
       phase: 'need_payoff',
       question: `If you had ${ps.service} completely handled — not a worry, just running — what would you actually spend that time and energy on instead?`,
-      goodResponse: `That's exactly what I help ${pc.has.replace('a ', '')} owners get back. Not just fixing the ${ps.unit} problem, but freeing you to focus on ${prospect.pain?.includes('growth') || prospect.pain?.includes('revenue') ? 'growing revenue' : 'what you're actually good at'}. Is that worth 20 minutes to explore?`,
+      goodResponse: `That's exactly what I help ${pc.has.replace('a ', '')} owners get back. Not just fixing the ${ps.unit} problem, but freeing you to focus on ${prospect.pain?.includes('growth') || prospect.pain?.includes('revenue') ? 'growing revenue' : "what you're actually good at"}. Is that worth 20 minutes to explore?`,
       badResponse: `That's the goal. Let me tell you a bit about what we do...`,
       rapportOnGood: 3, rapportOnBad: 0,
       skillTag: 'need_payoff',
