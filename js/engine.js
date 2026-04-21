@@ -10,8 +10,23 @@ import {
   getProspectCategory
 } from './data.js';
 import {
-  DISCOVERY_QUESTION_BANK, ICP_FIT_MATRIX, FIT_DIALOGUE
-} from './questions.js';
+  ICP_FIT_MATRIX, FIT_DIALOGUE
+} from './q_shared.js';
+
+// Per-industry question files — dynamically imported at encounter start
+// Each file is ~60-75KB instead of the full 676KB questions.js
+const _questionCache = {};
+async function loadIndustryQuestions(industry) {
+  if (_questionCache[industry]) return _questionCache[industry];
+  try {
+    const mod = await import(`./q_${industry}.js`);
+    _questionCache[industry] = mod.QUESTIONS;
+    return mod.QUESTIONS;
+  } catch(e) {
+    console.warn('[BizAmpire] Failed to load q_' + industry + '.js:', e.message);
+    return null;
+  }
+}
 
 // ── Constants ────────────────────────────────────────────────
 const TILE = 48;
@@ -562,7 +577,7 @@ export class BizAmpireEngine {
     }
   }
 
-  _startEncounter(business) {
+  async _startEncounter(business) {
     if (business.cooldownDays > 0) {
       this.ui.showToast(`${business.owner} is still cooling off. Come back in ${business.cooldownDays} day${business.cooldownDays > 1 ? 's' : ''}.`, 'warn');
       return;
@@ -588,14 +603,16 @@ export class BizAmpireEngine {
     const prospectCategory = getProspectCategory(business.type);
     const fitScore = (ICP_FIT_MATRIX[playerIndustry] || {})[prospectCategory] ?? 2;
 
-    // Pick a random question set from the bank for this industry × prospect combo
-    const bankSets = (DISCOVERY_QUESTION_BANK[playerIndustry] || {})[prospectCategory];
+    // Dynamically load only the player's industry question file (~70KB vs 676KB)
+    const industryBank = await loadIndustryQuestions(playerIndustry);
+    const bankSets = industryBank ? industryBank[prospectCategory] : null;
     const setIdx = bankSets ? Math.floor(Math.random() * bankSets.length) : -1;
     const generatedQuestions = bankSets
       ? bankSets[setIdx]
-      : DISCOVERY_QUESTIONS;  // fallback to static questions if somehow not found
+      : DISCOVERY_QUESTIONS;  // fallback to static questions if file load fails
     console.log(`[BizAmpire] Encounter: player=${playerIndustry} prospect=${prospectCategory} fit=${fitScore} set=${setIdx >= 0 ? setIdx : 'FALLBACK'} biz="${business.type}"`);
-    if (!bankSets) console.warn(`[BizAmpire] No question bank entry for ${playerIndustry}/${prospectCategory} — using static fallback`);
+    if (!bankSets) console.warn(`[BizAmpire] No question bank for ${playerIndustry}/${prospectCategory}`);
+    if (fitScore === 0) console.log(`[BizAmpire] Poor ICP fit — showing fit block`);
 
     // Fit dialogue for score 0 or 1
     const fitDialogue = FIT_DIALOGUE[`score_${fitScore}`] || null;
