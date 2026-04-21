@@ -452,7 +452,7 @@ export const ENCOUNTER_PHASES = {
 export const DISCOVERY_QUESTIONS = [
   {
     phase: 'situation',
-    question: "How are you currently handling {painCategory} in your business?",
+    question: "How are you currently handling the challenge you mentioned — walk me through what that looks like day to day?",
     goodResponse: "It sounds like you're doing it manually — that works at your current scale, but where does it break down?",
     badResponse: "Oh interesting. And how long has that been the case?",
     rapportOnGood: 1, rapportOnBad: 0,
@@ -493,39 +493,68 @@ export const DISCOVERY_QUESTIONS = [
 // used as keys in DISCOVERY_QUESTION_BANK and ICP_FIT_MATRIX
 export function getProspectCategory(bizType) {
   const t = (bizType || '').toLowerCase();
-  if (t.includes('law') || t.includes('legal') || t.includes('attorney') ||
-      t.includes('cpa') || t.includes('accounting') || t.includes('audit') ||
-      t.includes('hr') || t.includes('management consult') || t.includes('advisory') ||
-      t.includes('staffing') || t.includes('consulting'))
-    return 'office_professional';
-  if (t.includes('software') || t.includes('saas') || t.includes('dev') ||
-      t.includes('tech') || t.includes('analytics') || t.includes('startup') ||
-      t.includes('app') || t.includes('digital agency') || t.includes('it firm'))
+
+  // ── Check most specific / easily-confused terms FIRST ────────
+
+  // Auto / vehicle — check before 'shop'/'repair' hit retail bucket
+  if (t.includes('auto') || t.includes('dealership') || t.includes('dealer') ||
+      t.includes('fleet') || t.includes('detailing') || t.includes('car wash') ||
+      t.includes('auto repair') || t.includes('mechanic'))
+    return 'auto_services';
+
+  // Financial services — check 'advisory'/'brokerage' before office_professional catches 'advisory'
+  if (t.includes('bank') || t.includes('insurance') || t.includes('wealth') ||
+      t.includes('financial advisory') || t.includes('brokerage') ||
+      t.includes('mortgage') || t.includes('credit union') || t.includes('investment') ||
+      t.includes('financial services') || t.includes('asset management'))
+    return 'financial_services';
+
+  // Real estate — check 'broker' before office_professional
+  if (t.includes('real estate') || t.includes('property management') ||
+      t.includes('realty') || t.includes('real estate agency') ||
+      t.includes('real estate broker') || t.includes('developer') || t.includes('landlord'))
+    return 'real_estate';
+
+  // Tech / digital — check 'agency' variants before office_professional catches 'consulting'
+  if (t.includes('software') || t.includes('saas') || t.includes('dev shop') ||
+      t.includes('tech company') || t.includes('analytics') || t.includes('startup') ||
+      t.includes('marketing agency') || t.includes('digital agency') || t.includes('media agency') ||
+      t.includes('ad agency') || t.includes('creative agency') ||
+      t.includes('it firm') || t.includes('it company') || t.includes('it services'))
     return 'tech_company';
-  if (t.includes('medical') || t.includes('health') || t.includes('clinic') ||
-      t.includes('dental') || t.includes('wellness') || t.includes('pharmacy') ||
-      t.includes('hospital') || t.includes('therapy') || t.includes('chiro'))
+
+  // Healthcare — specific enough, low collision risk
+  if (t.includes('medical') || t.includes('healthcare') || t.includes('clinic') ||
+      t.includes('dental') || t.includes('dentist') || t.includes('wellness') ||
+      t.includes('pharmacy') || t.includes('hospital') || t.includes('therapy') ||
+      t.includes('chiro') || t.includes('optom') || t.includes('pediatric') ||
+      t.includes('urgent care') || t.includes('health practice'))
     return 'healthcare';
+
+  // Trades / contractors — check 'repair shop' only if not already caught by auto above
+  if (t.includes('contractor') || t.includes('construction') || t.includes('electrical') ||
+      t.includes('plumb') || t.includes('hvac') || t.includes('fabricat') ||
+      t.includes('manufactur') || t.includes('industrial') || t.includes('landscap') ||
+      t.includes('roofing') || t.includes('painting') || t.includes('welding') ||
+      t.includes('repair shop'))
+    return 'trades_contractor';
+
+  // Retail / food / consumer — 'shop'/'store' caught here (after auto & trades)
   if (t.includes('restaurant') || t.includes('café') || t.includes('cafe') ||
       t.includes('coffee') || t.includes('food') || t.includes('bakery') ||
       t.includes('retail') || t.includes('boutique') || t.includes('shop') ||
-      t.includes('store') || t.includes('salon') || t.includes('barbershop'))
+      t.includes('store') || t.includes('salon') || t.includes('barbershop') ||
+      t.includes('gym') || t.includes('fitness') || t.includes('spa'))
     return 'retail_food';
-  if (t.includes('contractor') || t.includes('construction') || t.includes('electric') ||
-      t.includes('plumb') || t.includes('hvac') || t.includes('fabricat') ||
-      t.includes('manufactur') || t.includes('industrial') || t.includes('landscap'))
-    return 'trades_contractor';
-  if (t.includes('auto') || t.includes('dealer') || t.includes('repair') ||
-      t.includes('fleet') || t.includes('detailing') || t.includes('car'))
-    return 'auto_services';
-  if (t.includes('bank') || t.includes('insurance') || t.includes('wealth') ||
-      t.includes('financial advisory') || t.includes('brokerage') ||
-      t.includes('mortgage') || t.includes('credit union'))
-    return 'financial_services';
-  if (t.includes('real estate') || t.includes('property') || t.includes('broker') ||
-      t.includes('realty') || t.includes('developer') || t.includes('landlord'))
-    return 'real_estate';
-  // default — treat as office professional (most versatile)
+
+  // Office professional — law, accounting, HR, consulting (catch-all for B2B services)
+  if (t.includes('law firm') || t.includes('legal') || t.includes('attorney') ||
+      t.includes('cpa') || t.includes('accounting') || t.includes('audit') ||
+      t.includes('hr') || t.includes('management consult') || t.includes('staffing') ||
+      t.includes('consulting') || t.includes('advisory firm') || t.includes('advisory group'))
+    return 'office_professional';
+
+  // Default — office professional is the safest fallback for unlisted B2B types
   return 'office_professional';
 }
 

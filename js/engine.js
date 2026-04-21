@@ -590,9 +590,12 @@ export class BizAmpireEngine {
 
     // Pick a random question set from the bank for this industry × prospect combo
     const bankSets = (DISCOVERY_QUESTION_BANK[playerIndustry] || {})[prospectCategory];
+    const setIdx = bankSets ? Math.floor(Math.random() * bankSets.length) : -1;
     const generatedQuestions = bankSets
-      ? bankSets[Math.floor(Math.random() * bankSets.length)]
+      ? bankSets[setIdx]
       : DISCOVERY_QUESTIONS;  // fallback to static questions if somehow not found
+    console.log(`[BizAmpire] Encounter: player=${playerIndustry} prospect=${prospectCategory} fit=${fitScore} set=${setIdx >= 0 ? setIdx : 'FALLBACK'} biz="${business.type}"`);
+    if (!bankSets) console.warn(`[BizAmpire] No question bank entry for ${playerIndustry}/${prospectCategory} — using static fallback`);
 
     // Fit dialogue for score 0 or 1
     const fitDialogue = FIT_DIALOGUE[`score_${fitScore}`] || null;
