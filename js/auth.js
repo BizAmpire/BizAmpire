@@ -1,112 +1,166 @@
 // ═══════════════════════════════════════════════════════════
-//  BizAmpire — Auth & Save System
-//  Handles: sign-in (email + Google stub), guest mode,
-//           save/load with graceful degradation,
+//  BizAmpire — Auth & Save System (Supabase)
+//  Handles: email/password, magic link, guest mode,
+//           cloud saves (Supabase), local fallback,
 //           auto-save, HUD indicator
 // ═══════════════════════════════════════════════════════════
 
-// ── Safe Storage (degrades to in-memory when storage unavailable) ───
+// ── Supabase Client ──────────────────────────────────────────
+// Supabase loaded via <script src="js/supabase.min.js"> before this module
+const SUPABASE_URL  = 'https://pfcegzcbpywmrruwlgdw.supabase.co';
+const SUPABASE_KEY  = 'sb_publishable_28TdBif96AmznzbEqWMINg_PnMvitw8';
+// Guard: if supabase.min.js failed to load, fall back to a no-op stub so the
+// module can still parse and boot() can run (auth will just be unavailable)
+const supabase = (window.supabase && window.supabase.createClient)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : {
+      auth: {
+        getSession:      () => Promise.resolve({ data: { session: null }, error: null }),
+        signInWithPassword: () => Promise.resolve({ data: {}, error: { message: 'Auth unavailable — please reload.' } }),
+        signUp:          () => Promise.resolve({ data: {}, error: { message: 'Auth unavailable — please reload.' } }),
+        signInWithOtp:   () => Promise.resolve({ data: {}, error: { message: 'Auth unavailable — please reload.' } }),
+        signOut:         () => Promise.resolve({}),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      },
+      from: () => ({ select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: null }), order: () => ({ limit: () => Promise.resolve({ data: [], error: null }) }) }), upsert: () => Promise.resolve({ error: null }) }) }),
+    };
+
+// ── Safe Local Storage (fallback when storage unavailable) ───
 const _mem = {};
 const store = {
-  get(k) {
-    try { const s = window['local'+'Storage']; return s ? s.getItem(k) : (_mem[k] ?? null); }
-    catch { return _mem[k] ?? null; }
-  },
-  set(k, v) {
-    try { const s = window['local'+'Storage']; if (s) s.setItem(k, v); }
-    catch { /* ignore */ }
-    _mem[k] = v;
-  },
-  remove(k) {
-    try { const s = window['local'+'Storage']; if (s) s.removeItem(k); }
-    catch { /* ignore */ }
-    delete _mem[k];
-  },
+  get(k)    { try { const s = window['local'+'Storage']; return s ? s.getItem(k) : (_mem[k] ?? null); } catch { return _mem[k] ?? null; } },
+  set(k, v) { try { const s = window['local'+'Storage']; if (s) s.setItem(k, v); } catch {} _mem[k] = v; },
+  remove(k) { try { const s = window['local'+'Storage']; if (s) s.removeItem(k); } catch {} delete _mem[k]; },
 };
 
-// ── Storage Keys ─────────────────────────────────────────────
-const SAVE_KEY_GUEST  = 'bq_save_guest';
-const AUTH_KEY        = 'bq_auth_user';
-const SAVE_KEY_PREFIX = 'bq_save_';
+const SAVE_KEY_GUEST  = 'ba_save_guest';
+const SAVE_KEY_PREFIX = 'ba_save_';
 
 // ── Auth State ───────────────────────────────────────────────
 export const Auth = {
-  user: null,
-  isGuest: false,
+  user:        null,  // { id, email, name, provider }
+  isGuest:     false,
+  _session:    null,  // raw Supabase session
 
-  init() {
+  // Called once on page load — restores session from Supabase
+  // Always resolves within 3s so a slow/blocked network can't freeze the boot screen
+  async init() {
+    const timeout = new Promise(resolve => setTimeout(resolve, 3000));
     try {
-      const raw = store.get(AUTH_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        this.user = parsed;
-        this.isGuest = parsed.provider === 'guest';
+      const sessionReq = supabase.auth.getSession();
+      const result = await Promise.race([sessionReq, timeout]);
+      const session = result?.data?.session;
+      if (session?.user) {
+        this._setFromSession(session);
+      } else {
+        // Fall back to locally cached user (guest or previously signed-in)
+        try {
+          const raw = store.get('ba_auth_user');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            this.user    = parsed;
+            this.isGuest = parsed.provider === 'guest';
+          }
+        } catch {}
       }
-    } catch { /* ignore */ }
+    } catch {
+      // Network error — fall back to local cache silently
+      try {
+        const raw = store.get('ba_auth_user');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          this.user    = parsed;
+          this.isGuest = parsed.provider === 'guest';
+        }
+      } catch {}
+    }
+
+    // Listen for auth state changes (OAuth redirects, sign-outs)
+    supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        this._setFromSession(session);
+        window.__bizampireAuth?.updateTitle?.();
+      } else if (!this.isGuest) {
+        this.user    = null;
+        this.isGuest = false;
+        window.__bizampireAuth?.updateTitle?.();
+      }
+    });
+
     return this;
   },
 
-  _persist() {
-    if (this.user) store.set(AUTH_KEY, JSON.stringify(this.user));
-    else store.remove(AUTH_KEY);
+  _setFromSession(session) {
+    const u      = session.user;
+    this._session = session;
+    this.user    = {
+      id:       u.id,
+      email:    u.email,
+      name:     u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || 'Player',
+      provider: u.app_metadata?.provider || 'email',
+    };
+    this.isGuest = false;
+    store.set('ba_auth_user', JSON.stringify(this.user));
   },
 
-  signInWithEmail(email, password) {
+  // ── Email + Password ───────────────────────────────────────
+  async signInWithEmail(email, password) {
     if (!email || !password) return { error: 'Please enter email and password.' };
     if (!email.includes('@')) return { error: 'Please enter a valid email address.' };
-    if (password.length < 6) return { error: 'Password must be at least 6 characters.' };
-
-    const accountKey = 'bq_account_' + btoa(email.toLowerCase());
-    const existing   = store.get(accountKey);
-    if (existing) {
-      const acct = JSON.parse(existing);
-      if (acct.password !== btoa(password)) return { error: 'Incorrect password.' };
-      this.user = { id: acct.id, email: acct.email, name: acct.name, provider: 'email' };
-    } else {
-      return { error: 'No account found. Use "Create Account" to register.' };
-    }
-    this.isGuest = false;
-    this._persist();
-    return { ok: true };
+    if (password.length < 6)  return { error: 'Password must be at least 6 characters.' };
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return { error: error.message };
+      this._setFromSession(data.session);
+      return { ok: true };
+    } catch (e) { return { error: 'Sign in failed. Please try again.' }; }
   },
 
-  registerWithEmail(email, password, name) {
+  async registerWithEmail(email, password, name) {
     if (!email || !password) return { error: 'Please fill in all fields.' };
     if (!email.includes('@')) return { error: 'Please enter a valid email address.' };
-    if (password.length < 6) return { error: 'Password must be at least 6 characters.' };
-
-    const accountKey = 'bq_account_' + btoa(email.toLowerCase());
-    if (store.get(accountKey)) return { error: 'An account with this email already exists.' };
-
-    const id   = 'user_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
-    const acct = { id, email: email.toLowerCase(), name: name || email.split('@')[0], password: btoa(password) };
-    store.set(accountKey, JSON.stringify(acct));
-    this.user = { id, email: acct.email, name: acct.name, provider: 'email' };
-    this.isGuest = false;
-    this._persist();
-    return { ok: true };
+    if (password.length < 6)  return { error: 'Password must be at least 6 characters.' };
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email, password,
+        options: { data: { full_name: name || email.split('@')[0] } },
+      });
+      if (error) return { error: error.message };
+      // If email confirmation is required, session will be null
+      if (!data.session) return { ok: true, confirm: true };
+      this._setFromSession(data.session);
+      return { ok: true };
+    } catch (e) { return { error: 'Registration failed. Please try again.' }; }
   },
 
+  // ── Magic Link (passwordless) ─────────────────────────────
+  async sendMagicLink(email) {
+    if (!email || !email.includes('@')) return { error: 'Please enter a valid email address.' };
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: 'https://bizampire.com' },
+      });
+      if (error) return { error: error.message };
+      return { ok: true };
+    } catch (e) { return { error: 'Could not send magic link. Please try again.' }; }
+  },
+
+  // ── Guest ─────────────────────────────────────────────────
   continueAsGuest() {
-    this.user = { id: 'guest_' + Date.now(), email: null, name: 'Guest', provider: 'guest' };
+    this.user    = { id: 'guest_' + Date.now(), email: null, name: 'Guest', provider: 'guest' };
     this.isGuest = true;
-    this._persist();
+    store.set('ba_auth_user', JSON.stringify(this.user));
     return { ok: true };
   },
 
-  signInWithGoogle() {
-    // Demo stub — integrate Firebase/Supabase for production
-    const id  = 'google_' + Date.now();
-    this.user = { id, email: id + '@google.bizampire', name: 'Google User', provider: 'google' };
-    this.isGuest = false;
-    this._persist();
-    return { ok: true, demo: true };
-  },
-
-  signOut() {
-    this.user    = null;
-    this.isGuest = false;
-    store.remove(AUTH_KEY);
+  // ── Sign Out ───────────────────────────────────────────────
+  async signOut() {
+    try { await supabase.auth.signOut(); } catch {}
+    this.user     = null;
+    this.isGuest  = false;
+    this._session = null;
+    store.remove('ba_auth_user');
   },
 
   get saveKey() {
@@ -118,55 +172,120 @@ export const Auth = {
     if (!this.user) return null;
     return this.isGuest ? 'Guest' : (this.user.name || this.user.email);
   },
+
+  get isSignedIn() {
+    return !!this.user && !this.isGuest;
+  },
 };
 
 // ── Save / Load ───────────────────────────────────────────────
 export const SaveSystem = {
-  save(state) {
-    if (!state) return false;
-    try {
-      const payload = {
-        version: 2,
-        savedAt: Date.now(),
-        businessName: state.businessName,
-        businessIndustry: state.businessIndustry,
-        businessDescription: state.businessDescription,
-        cash: state.cash,
-        totalDeals: state.totalDeals,
-        reputation: state.reputation,
-        level: state.level,
-        xp: state.xp,
-        sp: state.sp,
-        monthlyRevenue: state.monthlyRevenue,
-        monthlyOverhead: state.monthlyOverhead,
-        activeClients: state.activeClients,
-        employees: state.employees,
-        unlockedSkills: state.unlockedSkills,
-        unlockedDistricts: state.unlockedDistricts,
-        legacyArc: state.legacyArc,
-        journalEntries: state.journalEntries,
-        relationshipMap: state.relationshipMap,
-        competitorDeals: state.competitorDeals,
-        totalXpEarned: state.totalXpEarned,
-        survivalMode: state.survivalMode,
-        playerName: state.playerName,
-        businessPersonas: state.businessPersonas,
-      };
-      store.set(Auth.saveKey, JSON.stringify(payload));
-      return true;
-    } catch { return false; }
+
+  _buildPayload(state) {
+    // Snapshot mutable district/business state (warmth, closed, cooldown, lostToCompetitor)
+    const districtSnapshot = (state.districts || []).map(d => ({
+      id: d.id,
+      businesses: (d.businesses || []).map(b => ({
+        id:               b.id,
+        warmth:           b.warmth,
+        closed:           b.closed,
+        cooldownDays:     b.cooldownDays,
+        lostToCompetitor: b.lostToCompetitor,
+      })),
+    }));
+    return {
+      version:             3,
+      savedAt:             Date.now(),
+      businessName:        state.businessName,
+      businessIndustry:    state.businessIndustry,
+      businessDescription: state.businessDescription,
+      cash:                state.cash,
+      totalDeals:          state.totalDeals,
+      reputation:          state.reputation,
+      level:               state.level,
+      xp:                  state.xp,
+      skillPoints:         state.skillPoints,
+      monthlyRevenue:      state.monthlyRevenue,
+      monthlyOverhead:     state.monthlyOverhead,
+      activeClients:       state.activeClients,
+      employees:           state.employees,
+      unlockedSkills:      state.unlockedSkills,
+      unlockedDistricts:   state.unlockedDistricts,
+      milestonesReached:   state.milestonesReached,
+      legacyArc:           state.legacyArc,
+      journalEntries:      state.journalEntries,
+      relationshipMap:     state.relationshipMap,
+      competitorDeals:     state.competitorDeals,
+      totalXpEarned:       state.totalXpEarned,
+      survivalMode:        state.survivalMode,
+      playerName:          state.playerName,
+      businessPersonas:    state.businessPersonas,
+      monthTimer:          state.monthTimer,
+      daysSinceLastDeal:   state.daysSinceLastDeal,
+      districtSnapshot,
+    };
   },
 
-  load() {
+  // Save — cloud if signed in, local always as fallback
+  async save(state) {
+    if (!state) return false;
     try {
+      const payload = this._buildPayload(state);
+      const json    = JSON.stringify(payload);
+
+      // Always write local first (instant, offline-safe)
+      store.set(Auth.saveKey, json);
+
+      // Cloud save for signed-in users
+      if (Auth.isSignedIn) {
+        const { error } = await supabase
+          .from('saves')
+          .upsert(
+            { user_id: Auth.user.id, state: payload, updated_at: new Date().toISOString() },
+            { onConflict: 'user_id' }
+          );
+        if (error) console.warn('Cloud save failed, local save intact:', error.message);
+      }
+
+      return true;
+    } catch (e) { console.warn('Save error:', e); return false; }
+  },
+
+  // Load — cloud if signed in (fresher), else local
+  async load() {
+    try {
+      if (Auth.isSignedIn) {
+        const { data, error } = await supabase
+          .from('saves')
+          .select('state')
+          .eq('user_id', Auth.user.id)
+          .single();
+        if (!error && data?.state?.businessName) {
+          // Sync cloud save back to local
+          store.set(Auth.saveKey, JSON.stringify(data.state));
+          return data.state;
+        }
+      }
+      // Fallback to local
       const raw = store.get(Auth.saveKey);
       if (!raw) return null;
-      const data = JSON.parse(raw);
-      return (data.version && data.businessName) ? data : null;
+      const d = JSON.parse(raw);
+      // Accept v2 (legacy) and v3+ saves
+      return (d.version >= 2 && d.businessName) ? d : null;
     } catch { return null; }
   },
 
-  hasSave() { return !!this.load(); },
+  // Sync load — for UI rendering (local only, no async)
+  loadLocal() {
+    try {
+      const raw = store.get(Auth.saveKey);
+      if (!raw) return null;
+      const d = JSON.parse(raw);
+      return (d.version && d.businessName) ? d : null;
+    } catch { return null; }
+  },
+
+  hasSave()      { return !!this.loadLocal(); },
 
   hasGuestSave() {
     try {
@@ -182,14 +301,14 @@ export const SaveSystem = {
   getSaveSummary(data) {
     if (!data) return null;
     const ago = _timeAgo(data.savedAt);
-    return data.businessName + ' · Lv ' + (data.level||1) + ' · ' + (data.totalDeals||0) + ' deals · ' + ago;
+    return `${data.businessName} · Lv ${data.level || 1} · ${data.totalDeals || 0} deals · ${ago}`;
   },
 };
 
 // ── Auto-save ─────────────────────────────────────────────────
-let _autoSaveTimer = null;
-let _saveIndicator = null;
-let _saveText      = null;
+let _autoSaveTimer  = null;
+let _saveIndicator  = null;
+let _saveText       = null;
 
 export function initAutoSave(getState) {
   _saveIndicator = document.getElementById('save-indicator');
@@ -201,39 +320,38 @@ export function initAutoSave(getState) {
   }, 60_000);
 }
 
-export function triggerSave(state) {
+export async function triggerSave(state) {
   if (!state) return;
   _setSaving();
-  setTimeout(() => {
-    const ok = SaveSystem.save(state);
-    if (ok) _setSaved(); else _setSaveError();
-  }, 600);
+  const ok = await SaveSystem.save(state);
+  if (ok) _setSaved(); else _setSaveError();
 }
 
 function _setSaving() {
   if (_saveIndicator) _saveIndicator.className = 'save-indicator saving';
-  if (_saveText) _saveText.textContent = 'Saving...';
+  if (_saveText)      _saveText.textContent = 'Saving...';
 }
 function _setSaved() {
   if (_saveIndicator) _saveIndicator.className = 'save-indicator saved';
-  if (_saveText) _saveText.textContent = 'Saved';
+  if (_saveText)      _saveText.textContent = Auth.isSignedIn ? '☁ Saved' : 'Saved';
   setTimeout(() => {
     if (_saveIndicator) _saveIndicator.className = 'save-indicator';
-    if (_saveText) _saveText.textContent = 'Saved';
   }, 2500);
 }
 function _setSaveError() {
   if (_saveIndicator) _saveIndicator.className = 'save-indicator';
-  if (_saveText) _saveText.textContent = 'Save failed';
+  if (_saveText)      _saveText.textContent = 'Save failed';
 }
 
 // ── Auth UI ───────────────────────────────────────────────────
 export const AuthUI = {
-  _tab: 'signin',
+  _tab:        'signin',
   _onComplete: null,
+  _magicSent:  false,
 
   open(onComplete) {
     this._onComplete = onComplete;
+    this._magicSent  = false;
     const overlay = document.getElementById('auth-overlay');
     if (overlay) overlay.classList.add('open');
     this._switchTab('signin');
@@ -254,26 +372,32 @@ export const AuthUI = {
       el.parentNode.replaceChild(n, el);
       n.addEventListener('click', handler);
     };
-    replace('btn-auth-google',  () => this._google());
     replace('btn-auth-submit',  () => this._submit());
     replace('btn-auth-guest',   () => this._guest());
+    replace('btn-auth-magic',   () => this._magic());
+
+    document.getElementById('auth-tab-signin')?.addEventListener('click',    () => this._switchTab('signin'));
+    document.getElementById('auth-tab-register')?.addEventListener('click',  () => this._switchTab('register'));
+
     ['auth-email','auth-password','auth-displayname'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.addEventListener('keydown', e => { if (e.key==='Enter') this._submit(); });
+      if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') this._submit(); });
     });
   },
 
   _switchTab(tab) {
-    this._tab = tab;
-    document.getElementById('auth-tab-signin')?.classList.toggle('active', tab==='signin');
-    document.getElementById('auth-tab-register')?.classList.toggle('active', tab==='register');
+    this._tab       = tab;
+    this._magicSent = false;
+    document.getElementById('auth-tab-signin')?.classList.toggle('active',   tab === 'signin');
+    document.getElementById('auth-tab-register')?.classList.toggle('active', tab === 'register');
     const nameF = document.getElementById('auth-displayname');
-    if (nameF) nameF.style.display = tab==='register' ? 'block' : 'none';
+    if (nameF) nameF.style.display = tab === 'register' ? 'block' : 'none';
     const sub = document.getElementById('btn-auth-submit');
-    if (sub) sub.textContent = tab==='signin' ? 'Sign In' : 'Create Account';
+    if (sub) sub.textContent = tab === 'signin' ? 'Sign In' : 'Create Account';
     const pw = document.getElementById('auth-password');
-    if (pw) pw.setAttribute('autocomplete', tab==='register' ? 'new-password' : 'current-password');
+    if (pw) pw.setAttribute('autocomplete', tab === 'register' ? 'new-password' : 'current-password');
     this._clearError();
+    this._resetMagicBtn();
   },
 
   _clearError() {
@@ -282,37 +406,69 @@ export const AuthUI = {
     ['auth-email','auth-password'].forEach(id => document.getElementById(id)?.classList.remove('error'));
   },
 
-  _showError(msg) {
+  _showError(msg, isSuccess = false) {
     const el = document.getElementById('auth-error');
-    if (el) el.textContent = msg;
-  },
-
-  _google() {
-    Auth.signInWithGoogle();
-    this.close();
-    this._onComplete?.(Auth.user, SaveSystem.load());
-  },
-
-  _submit() {
-    this._clearError();
-    const email = document.getElementById('auth-email')?.value.trim()||'';
-    const pass  = document.getElementById('auth-password')?.value||'';
-    const name  = document.getElementById('auth-displayname')?.value.trim()||'';
-    const res   = this._tab==='signin'
-      ? Auth.signInWithEmail(email, pass)
-      : Auth.registerWithEmail(email, pass, name);
-    if (res.error) {
-      this._showError(res.error);
-    } else {
-      this.close();
-      this._onComplete?.(Auth.user, SaveSystem.load());
+    if (el) {
+      el.textContent = msg;
+      el.style.color = isSuccess ? 'var(--sage)' : 'var(--crimson)';
     }
   },
 
-  _guest() {
+  _resetMagicBtn() {
+    const btn = document.getElementById('btn-auth-magic');
+    if (btn) btn.textContent = '✉ Send Magic Link';
+  },
+
+  async _submit() {
+    this._clearError();
+    const email = document.getElementById('auth-email')?.value.trim() || '';
+    const pass  = document.getElementById('auth-password')?.value || '';
+    const name  = document.getElementById('auth-displayname')?.value.trim() || '';
+
+    const btn = document.getElementById('btn-auth-submit');
+    if (btn) btn.textContent = 'Please wait...';
+
+    const res = this._tab === 'signin'
+      ? await Auth.signInWithEmail(email, pass)
+      : await Auth.registerWithEmail(email, pass, name);
+
+    if (btn) btn.textContent = this._tab === 'signin' ? 'Sign In' : 'Create Account';
+
+    if (res.error) {
+      this._showError(res.error);
+    } else if (res.confirm) {
+      this._showError('Check your email to confirm your account, then sign in.', true);
+    } else {
+      this.close();
+      const save = await SaveSystem.load();
+      this._onComplete?.(Auth.user, save);
+    }
+  },
+
+  async _magic() {
+    if (this._magicSent) return;
+    this._clearError();
+    const email = document.getElementById('auth-email')?.value.trim() || '';
+    const btn   = document.getElementById('btn-auth-magic');
+
+    if (btn) btn.textContent = 'Sending...';
+    const res = await Auth.sendMagicLink(email);
+    if (btn) btn.textContent = '✉ Send Magic Link';
+
+    if (res.error) {
+      this._showError(res.error);
+    } else {
+      this._magicSent = true;
+      if (btn) btn.textContent = '✓ Link sent!';
+      this._showError('Magic link sent! Check your email and click the link to sign in.', true);
+    }
+  },
+
+  async _guest() {
     Auth.continueAsGuest();
     this.close();
-    this._onComplete?.(Auth.user, SaveSystem.load());
+    const save = SaveSystem.loadLocal();
+    this._onComplete?.(Auth.user, save);
   },
 };
 
@@ -322,10 +478,10 @@ window.__authSwitchTab = (tab) => AuthUI._switchTab(tab);
 function _timeAgo(ts) {
   if (!ts) return 'unknown';
   const d = Date.now() - ts;
-  const m = Math.floor(d/60000);
-  if (m < 1) return 'just now';
+  const m = Math.floor(d / 60000);
+  if (m < 1)  return 'just now';
   if (m < 60) return m + 'm ago';
-  const h = Math.floor(m/60);
+  const h = Math.floor(m / 60);
   if (h < 24) return h + 'h ago';
-  return Math.floor(h/24) + 'd ago';
+  return Math.floor(h / 24) + 'd ago';
 }

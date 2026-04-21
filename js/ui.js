@@ -9,6 +9,24 @@ import {
 } from './data.js';
 import { EncounterEngine } from './engine.js';
 
+// ── Pluralization helper ─────────────────────────────────────
+function pluralize(str) {
+  if (!str) return str;
+  const s = str.trim();
+  const low = s.toLowerCase();
+  // Ends in -cy → -cies (Agency → Agencies)
+  if (low.endsWith('cy')) return s.slice(0, -2) + 'ies';
+  // Ends in -sy → -sies (courtesy: uncommon but handled)
+  // Ends in -s, -sh, -ch, -x, -z → -es (Business → Businesses)
+  if (/(?:s|sh|ch|x|z)$/i.test(s)) return s + 'es';
+  // Ends in -fe → -ves
+  if (low.endsWith('fe')) return s.slice(0, -2) + 'ves';
+  // Ends in consonant + y → -ies
+  if (/[^aeiou]y$/i.test(s)) return s.slice(0, -1) + 'ies';
+  // Default → add s
+  return s + 's';
+}
+
 export class UIManager {
   constructor() {
     this.state = null;
@@ -64,7 +82,7 @@ export class UIManager {
       if (!el) return;
       if (s === name) {
         el.classList.remove('hidden');
-        el.style.display = '';
+        el.style.display = 'flex'; // explicit — never rely on CSS cascade
       } else {
         el.classList.add('hidden');
         el.style.display = 'none';
@@ -94,16 +112,8 @@ export class UIManager {
       const newBtn = newGameBtn.cloneNode(true);
       newGameBtn.parentNode.replaceChild(newBtn, newGameBtn);
       newBtn.addEventListener('click', () => {
-        const auth = window.__bizampireAuth;
-        if (auth && !auth.Auth.user) {
-          // Not signed in — open auth modal; on complete go to onboarding
-          auth.AuthUI.open((user, save) => {
-            window.__bizampireAuth?.updateTitle?.();
-            if (!save) this.showOnboarding();
-          });
-        } else {
-          this.showOnboarding();
-        }
+        // Go straight to onboarding — auth is prompted later when saving
+        this.showOnboarding();
       });
     }
     document.getElementById('btn-about')?.addEventListener('click', () => this.showToast('BizAmpire teaches real sales & business frameworks through an RPG. Every mechanic = a real lesson.', 'gold'), { once: true });
@@ -377,7 +387,7 @@ export class UIManager {
     return `
       <div class="encounter-header">
         <div class="prospect-info">
-          <div class="prospect-avatar ${biz.warmth >= 2 ? 'warm' : biz.warmth >= 3 ? 'advocate' : ''}">${biz.icon}</div>
+          <div class="prospect-avatar ${biz.warmth >= 3 ? 'advocate' : biz.warmth >= 2 ? 'warm' : ''}">${biz.icon}</div>
           <div>
             <div class="prospect-name">${biz.owner}</div>
             <div class="prospect-title">${biz.ownerTitle} · ${biz.name}</div>
@@ -504,7 +514,7 @@ export class UIManager {
         technique: null,
       },
       {
-        text: `"I noticed you have a ${biz.type}. I work specifically with ${biz.type}s in this area on ${biz.pain?.split(' ').slice(0,5).join(' ')}... — mind if I ask one question?"`,
+        text: `"I noticed you have a ${biz.type}. I work specifically with ${pluralize(biz.type)} in this area on ${biz.pain?.split(' ').slice(0,5).join(' ')}... — mind if I ask one question?"`,
         rapport: 1,
         label: 'Industry-specific opener',
         badge: 'Targeted',
@@ -644,7 +654,7 @@ export class UIManager {
         ${hasChallenger ? `
         <button class="choice-btn technique" data-pitch="technique">
           <span class="choice-key">3</span>
-          <span class="choice-text">"Most ${biz.type}s I work with think the problem is ${biz.pain?.split(' ').slice(0,5).join(' ')}... but what's really happening underneath is a systems gap. Here's what top performers in your space do differently to pull ahead."</span>
+          <span class="choice-text">"Most ${pluralize(biz.type)} I work with think the problem is ${biz.pain?.split(' ').slice(0,5).join(' ')}... but what's really happening underneath is a systems gap. Here's what top performers in your space do differently to pull ahead."</span>
           <span class="choice-badge" style="color:var(--violet)">🔬 Challenger Insight</span>
         </button>
         ` : ''}

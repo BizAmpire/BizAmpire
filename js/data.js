@@ -447,29 +447,7 @@ export const ENCOUNTER_PHASES = {
   },
 };
 
-// Generic opener responses (personalized by player industry in engine)
-export const OPENER_SCRIPTS = {
-  cold: [
-    {
-      text: "Hey, I happened to walk by and noticed your {businessType}. I work with {industryType} businesses in this area — do you have 2 minutes?",
-      rapport: 0,
-      technique: null,
-    },
-    {
-      text: "Hi, I'm [Player]. I've been helping {districtType} businesses solve {painCategory}. Mind if I ask — what's the biggest growth challenge you're dealing with right now?",
-      rapport: 1,
-      technique: 'Pattern Interrupt',
-      skillRequired: 'pattern_interrupt',
-    },
-  ],
-  warm: [
-    {
-      text: "Good to see you again! I've been thinking about what you mentioned last time — the {pain}. I found something that might be directly relevant.",
-      rapport: 2,
-      technique: 'Relationship Capital',
-    },
-  ],
-};
+// Note: Opener scripts are defined inline in UIManager._renderOpenerChoices()
 
 export const DISCOVERY_QUESTIONS = [
   {

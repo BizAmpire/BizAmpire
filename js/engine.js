@@ -5,7 +5,7 @@
 
 import {
   DISTRICTS, SKILL_TREE, ENCOUNTER_PHASES, OBJECTION_LIBRARY,
-  DISCOVERY_QUESTIONS, OPENER_SCRIPTS, MILESTONES, JOURNAL_PROMPTS,
+  DISCOVERY_QUESTIONS, MILESTONES, JOURNAL_PROMPTS,
   COMPETITORS, EMPLOYEE_ARCHETYPES, createInitialState
 } from './data.js';
 
@@ -26,7 +26,6 @@ function generateCityMap() {
       const isRoadH = (y % 8 === 4 || y % 8 === 5);
       const isRoadV = (x % 10 === 5 || x % 10 === 6);
       if (isRoadH || isRoadV) map[y][x] = 0;
-      else if (isRoadH || isRoadV) map[y][x] = 1;
       else map[y][x] = 2;
     }
   }
@@ -435,6 +434,18 @@ export class BizAmpireEngine {
     this.state.monthTimer++;
     this.state.daysSinceLastDeal++;
 
+    // Decrement cooldowns on all businesses each day
+    for (const district of DISTRICTS) {
+      for (const biz of district.businesses) {
+        if (biz.cooldownDays > 0) {
+          biz.cooldownDays--;
+          if (biz.cooldownDays === 0) {
+            this.ui.showToast(`${biz.owner} at ${biz.name} is ready to talk again.`, 'default');
+          }
+        }
+      }
+    }
+
     // Monthly finances
     if (this.state.monthTimer >= 30) {
       this.state.monthTimer = 0;
@@ -482,7 +493,8 @@ export class BizAmpireEngine {
       { msg: `${employee.name} is asking for a raise. Their skill has grown.`, type: 'warn', reputationHit: 0 },
     ];
     const hasSOPs = this.state.unlockedSkills.includes('lean_operations');
-    const event = events[Math.floor(Math.random() * (hasSOPs ? 1.5 : events.length))];
+    // With SOPs unlocked, only positive/neutral events (indices 1-2); otherwise all 3
+    const event = events[Math.floor(Math.random() * (hasSOPs ? 2 : events.length))];
     this.state.reputation = Math.max(0, Math.min(1000, this.state.reputation + event.reputationHit));
     this.ui.showToast(event.msg, event.type);
     this.ui.updateHUD(this.state);
@@ -594,7 +606,7 @@ export class BizAmpireEngine {
       performance: archetype.reliability / 5,
     };
     this.state.employees.push(employee);
-    this.ui.showToast(`👋 ${employee.name} joined your team as ${employee.name}!`, 'success');
+    this.ui.showToast(`👋 ${employee.name} joined your team as ${archetype.name}!`, 'success');
     this.ui.showToast(`💡 E-Myth lesson: ${archetype.emythLesson}`, 'gold');
     this.ui.updateHUD(this.state);
   }
