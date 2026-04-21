@@ -1,0 +1,714 @@
+// ═══════════════════════════════════════════════════════════
+//  BizAmpire: Street Level — Game Data
+//  Real-world business frameworks embedded as game mechanics
+// ═══════════════════════════════════════════════════════════
+
+export const INDUSTRIES = [
+  { id: 'marketing',    name: 'Marketing',    icon: '📣', color: '#00d4c8', desc: 'Digital, brand, content, ads' },
+  { id: 'it',           name: 'IT / Tech',    icon: '💻', color: '#9b72f8', desc: 'Software, MSP, cybersecurity' },
+  { id: 'finance',      name: 'Finance',      icon: '💰', color: '#f5a623', desc: 'Accounting, tax, advisory' },
+  { id: 'law',          name: 'Legal',        icon: '⚖️', color: '#4ade80', desc: 'Business, real estate, contracts' },
+  { id: 'construction', name: 'Construction', icon: '🏗️', color: '#ff4466', desc: 'General, specialty, remodeling' },
+  { id: 'auto',         name: 'Auto',         icon: '🚗', color: '#ffd166', desc: 'Repair, dealership, detailing' },
+  { id: 'realestate',   name: 'Real Estate',  icon: '🏠', color: '#38bdf8', desc: 'Residential, commercial, PM' },
+  { id: 'health',       name: 'Healthcare',   icon: '🩺', color: '#a3e635', desc: 'Practice, wellness, pharmacy' },
+  { id: 'consulting',   name: 'Consulting',   icon: '🎯', color: '#fb7185', desc: 'Operations, strategy, HR' },
+];
+
+const BUSINESS_TEMPLATES = {
+  tech_row: [
+    { name: 'Apex Digital', type: 'Marketing Agency', icon: '📣', size: 'SMB',
+      owner: 'Jordan Kim', ownerTitle: 'Founder',
+      pain: 'Losing clients to cheaper competitors without clear differentiation',
+      budget: [2000, 8000], currentVendor: 'Freelancer', decisionTimeline: '30 days' },
+    { name: 'CloudNine SaaS', type: 'Software Company', icon: '☁️', size: 'SMB',
+      owner: 'Maya Patel', ownerTitle: 'CEO',
+      pain: 'Churn rate too high, can\'t figure out why customers are leaving',
+      budget: [3000, 12000], currentVendor: 'In-house', decisionTimeline: '60 days' },
+    { name: 'ByteForge Labs', type: 'Dev Shop', icon: '⚙️', size: 'Startup',
+      owner: 'Alex Chen', ownerTitle: 'CTO',
+      pain: 'Spending too much time on ops instead of building product',
+      budget: [1500, 5000], currentVendor: 'None', decisionTimeline: '14 days' },
+    { name: 'DataPulse Analytics', type: 'Analytics Firm', icon: '📊', size: 'Mid-Market',
+      owner: 'Sam Rivera', ownerTitle: 'VP Operations',
+      pain: 'Board wants 30% growth but no clear path to acquisition',
+      budget: [5000, 20000], currentVendor: 'Agency', decisionTimeline: '90 days' },
+  ],
+  downtown: [
+    { name: 'Meridian Capital', type: 'Financial Advisory', icon: '💼', size: 'Mid-Market',
+      owner: 'Robert Walsh', ownerTitle: 'Managing Director',
+      pain: 'Compliance costs eating into margins, need process efficiency',
+      budget: [8000, 30000], currentVendor: 'Big 4', decisionTimeline: '90 days' },
+    { name: 'Harbor Insurance', type: 'Insurance Brokerage', icon: '🛡️', size: 'SMB',
+      owner: 'Linda Tran', ownerTitle: 'Owner',
+      pain: 'Lead generation dried up, relying only on referrals',
+      budget: [2000, 7000], currentVendor: 'None', decisionTimeline: '30 days' },
+    { name: 'Fifth & Main Bank', type: 'Community Bank', icon: '🏦', size: 'Enterprise',
+      owner: 'David Park', ownerTitle: 'CMO',
+      pain: 'Young customers choosing fintech apps over traditional banking',
+      budget: [15000, 50000], currentVendor: 'Agency', decisionTimeline: '120 days' },
+    { name: 'Vantage Wealth', type: 'Wealth Management', icon: '📈', size: 'SMB',
+      owner: 'Grace Liu', ownerTitle: 'Partner',
+      pain: 'Not enough qualified referrals, no structured referral process',
+      budget: [3000, 10000], currentVendor: 'Freelancer', decisionTimeline: '45 days' },
+  ],
+  professional_park: [
+    { name: 'Hartley & Associates', type: 'Law Firm', icon: '⚖️', size: 'SMB',
+      owner: 'Thomas Hartley', ownerTitle: 'Managing Partner',
+      pain: 'Can\'t scale beyond founding partner billing time',
+      budget: [4000, 15000], currentVendor: 'None', decisionTimeline: '60 days' },
+    { name: 'Vertex Accounting', type: 'CPA Firm', icon: '🧮', size: 'SMB',
+      owner: 'Elena Moreno', ownerTitle: 'Principal',
+      pain: 'Tax season overwhelm every year, no systems to delegate',
+      budget: [2500, 9000], currentVendor: 'Freelancer', decisionTimeline: '30 days' },
+    { name: 'Prime HR Solutions', type: 'HR Consulting', icon: '👥', size: 'Startup',
+      owner: 'James Okafor', ownerTitle: 'CEO',
+      pain: 'Losing pitches on price, not being perceived as premium',
+      budget: [1500, 6000], currentVendor: 'None', decisionTimeline: '14 days' },
+    { name: 'Clearview Advisory', type: 'Management Consulting', icon: '🎯', size: 'SMB',
+      owner: 'Priya Sharma', ownerTitle: 'Founder',
+      pain: 'Feast-or-famine revenue cycle, no predictable pipeline',
+      budget: [3000, 12000], currentVendor: 'Agency', decisionTimeline: '45 days' },
+  ],
+  industrial: [
+    { name: 'Ironclad Construction', type: 'General Contractor', icon: '🏗️', size: 'Mid-Market',
+      owner: 'Mike Donovan', ownerTitle: 'Owner',
+      pain: 'Winning bids on price only, lowest margin jobs are worst headaches',
+      budget: [5000, 18000], currentVendor: 'None', decisionTimeline: '30 days' },
+    { name: 'Metro Auto Group', type: 'Car Dealership', icon: '🚘', size: 'Mid-Market',
+      owner: 'Carla Ruiz', ownerTitle: 'General Manager',
+      pain: 'Service department underperforming, customers not returning',
+      budget: [4000, 15000], currentVendor: 'Agency', decisionTimeline: '60 days' },
+    { name: 'FastLane Repair', type: 'Auto Repair Shop', icon: '🔧', size: 'SMB',
+      owner: 'Tony Nguyen', ownerTitle: 'Owner',
+      pain: 'Can\'t compete with chain shops on price, needs differentiation',
+      budget: [800, 3000], currentVendor: 'None', decisionTimeline: '7 days' },
+    { name: 'Steel & Stone Fabrication', type: 'Manufacturing', icon: '🏭', size: 'Mid-Market',
+      owner: 'Sandra Bell', ownerTitle: 'COO',
+      pain: 'Supply chain gaps causing project delays and client attrition',
+      budget: [6000, 25000], currentVendor: 'Consultant', decisionTimeline: '90 days' },
+  ],
+  medical_mile: [
+    { name: 'Lakeside Family Practice', type: 'Medical Practice', icon: '🏥', size: 'SMB',
+      owner: 'Dr. Amir Hassan', ownerTitle: 'Owner/Physician',
+      pain: 'Insurance billing errors costing $40K+ annually',
+      budget: [2000, 8000], currentVendor: 'None', decisionTimeline: '30 days' },
+    { name: 'Vitality Wellness', type: 'Wellness Center', icon: '🧘', size: 'Startup',
+      owner: 'Nina Foster', ownerTitle: 'Founder',
+      pain: 'High client acquisition cost, low retention rate',
+      budget: [1000, 4000], currentVendor: 'None', decisionTimeline: '14 days' },
+    { name: 'RxPlus Pharmacy', type: 'Independent Pharmacy', icon: '💊', size: 'SMB',
+      owner: 'Kevin Zhao', ownerTitle: 'Owner/Pharmacist',
+      pain: 'Competing with big-box pharmacies on price — margin pressure',
+      budget: [1500, 5000], currentVendor: 'Freelancer', decisionTimeline: '30 days' },
+    { name: 'Precision Dental', type: 'Dental Practice', icon: '🦷', size: 'SMB',
+      owner: 'Dr. Laura Singh', ownerTitle: 'Owner/Dentist',
+      pain: 'Chair time not fully booked, lost revenue on cancellations',
+      budget: [2500, 9000], currentVendor: 'Agency', decisionTimeline: '45 days' },
+  ],
+  retail_strip: [
+    { name: 'Urban Grounds Coffee', type: 'Coffee Shop', icon: '☕', size: 'SMB',
+      owner: 'Dara Jackson', ownerTitle: 'Owner',
+      pain: 'New chain opened next door, foot traffic down 30%',
+      budget: [500, 2500], currentVendor: 'None', decisionTimeline: '14 days' },
+    { name: 'Luxe Apparel', type: 'Boutique Retail', icon: '👗', size: 'SMB',
+      owner: 'Isabelle Martin', ownerTitle: 'Owner',
+      pain: 'Instagram following isn\'t converting to in-store visits',
+      budget: [800, 3500], currentVendor: 'Freelancer', decisionTimeline: '21 days' },
+    { name: 'Grid & Socket Electric', type: 'Electrical Contractor', icon: '⚡', size: 'SMB',
+      owner: 'Ray Torres', ownerTitle: 'Owner',
+      pain: 'No online presence, getting outbid by someone who just has Google reviews',
+      budget: [1000, 4000], currentVendor: 'None', decisionTimeline: '14 days' },
+    { name: 'Summit Real Estate', type: 'Real Estate Agency', icon: '🏡', size: 'SMB',
+      owner: 'Michelle Park', ownerTitle: 'Broker/Owner',
+      pain: 'Top agents keep leaving to start their own offices',
+      budget: [2000, 8000], currentVendor: 'None', decisionTimeline: '30 days' },
+  ],
+};
+
+
+// ── Business Templates (must be declared before DISTRICTS) ──
+function generateBusinesses(districtId) {
+  const templates = BUSINESS_TEMPLATES[districtId] || [];
+  return templates.map((t, i) => ({
+    id: `${districtId}_${i}`,
+    ...t,
+    warmth: 0,       // 0=cold, 1=familiar, 2=warm, 3=advocate
+    visits: 0,
+    closed: false,
+    cooldownDays: 0,
+    lostToCompetitor: false,
+  }));
+}
+
+
+// ── Districts ────────────────────────────────────────────────
+export const DISTRICTS = [
+  {
+    id: 'tech_row',
+    name: 'Tech Row',
+    color: '#00d4c8',
+    accentVar: '--teal',
+    x: 0.18, y: 0.22,
+    businesses: generateBusinesses('tech_row'),
+  },
+  {
+    id: 'downtown',
+    name: 'Downtown',
+    color: '#f5a623',
+    accentVar: '--amber',
+    x: 0.48, y: 0.18,
+    businesses: generateBusinesses('downtown'),
+  },
+  {
+    id: 'professional_park',
+    name: 'Professional Park',
+    color: '#9b72f8',
+    accentVar: '--violet',
+    x: 0.72, y: 0.28,
+    businesses: generateBusinesses('professional_park'),
+  },
+  {
+    id: 'industrial',
+    name: 'Industrial Zone',
+    color: '#ff4466',
+    accentVar: '--crimson',
+    x: 0.75, y: 0.62,
+    businesses: generateBusinesses('industrial'),
+  },
+  {
+    id: 'medical_mile',
+    name: 'Medical Mile',
+    color: '#4ade80',
+    accentVar: '--sage',
+    x: 0.25, y: 0.68,
+    businesses: generateBusinesses('medical_mile'),
+  },
+  {
+    id: 'retail_strip',
+    name: 'The Strip',
+    color: '#ffd166',
+    accentVar: '--gold',
+    x: 0.5, y: 0.76,
+    businesses: generateBusinesses('retail_strip'),
+  },
+];
+
+// ── Skills Tree ──────────────────────────────────────────────
+// Framework sources embedded in each skill description
+export const SKILL_TREE = {
+  prospecting: {
+    label: 'Prospecting',
+    skills: [
+      {
+        id: 'cold_approach',
+        name: 'Cold Approach',
+        icon: '🚪',
+        desc: 'Walk into any business and open a conversation.',
+        longDesc: 'The fundamental skill. Lower objection threshold, higher warmth gain per visit. Based on Fanatical Prospecting (Blount).',
+        cost: 0,
+        prereq: [],
+        unlockedByDefault: true,
+        effect: { warmthGainBonus: 0.1, openSuccessRate: 0.05 },
+      },
+      {
+        id: 'pattern_interrupt',
+        name: 'Pattern Interrupt',
+        icon: '⚡',
+        desc: 'Open with something unexpected to earn attention.',
+        longDesc: 'Increases first-contact success rate. From Fanatical Prospecting — the first 10 seconds determine the next 10 minutes.',
+        cost: 150,
+        prereq: ['cold_approach'],
+        effect: { openSuccessRate: 0.15, warmthGainBonus: 0.15 },
+      },
+      {
+        id: 'referral_ask',
+        name: 'Referral Ask',
+        icon: '🤝',
+        desc: 'Systematically ask advocates for introductions.',
+        longDesc: 'Converts Advocate NPCs into lead generators. From The Go-Giver (Burg) — your network is your net worth.',
+        cost: 300,
+        prereq: ['pattern_interrupt'],
+        effect: { referralMultiplier: 2, advocateLeadChance: 0.35 },
+      },
+    ],
+  },
+  discovery: {
+    label: 'Discovery',
+    skills: [
+      {
+        id: 'situation_questions',
+        name: 'Situation Questions',
+        icon: '🔍',
+        desc: 'Ask questions to understand the prospect\'s current state.',
+        longDesc: 'Phase 1 of SPIN Selling (Rackham). Reveals context needed for deeper questions. Builds rapport when used correctly.',
+        cost: 100,
+        prereq: [],
+        effect: { discoveryStateBonus: 0.1, spinPhase: 'situation' },
+      },
+      {
+        id: 'problem_questions',
+        name: 'Problem Questions',
+        icon: '🎯',
+        desc: 'Uncover dissatisfaction and challenges the prospect faces.',
+        longDesc: 'Phase 2 of SPIN Selling. Reveals explicit pain. High-value questions that differentiate consultative sellers from peddlers.',
+        cost: 200,
+        prereq: ['situation_questions'],
+        effect: { discoveryStateBonus: 0.2, objectionReduction: 0.1 },
+      },
+      {
+        id: 'implication_questions',
+        name: 'Implication Questions',
+        icon: '🌊',
+        desc: 'Amplify the cost of inaction — make the pain undeniable.',
+        longDesc: 'Phase 3 of SPIN Selling. The most powerful phase. Makes prospects sell themselves. "What happens to revenue if this isn\'t fixed?"',
+        cost: 350,
+        prereq: ['problem_questions'],
+        effect: { discoveryStateBonus: 0.35, closingBonus: 0.2 },
+      },
+      {
+        id: 'need_payoff',
+        name: 'Need-Payoff Questions',
+        icon: '💡',
+        desc: 'Guide prospects to articulate the value of your solution.',
+        longDesc: 'Phase 4 of SPIN Selling. The prospect argues for buying. "So if you could eliminate that billing error, what would that mean for your Q3?" Unlocks full SPIN combo.',
+        cost: 500,
+        prereq: ['implication_questions'],
+        effect: { discoveryStateBonus: 0.5, closingBonus: 0.35, pricingFlexibility: 0.15 },
+      },
+    ],
+  },
+  pitching: {
+    label: 'Pitching',
+    skills: [
+      {
+        id: 'value_proposition',
+        name: 'Value Proposition',
+        icon: '📢',
+        desc: 'Lead with outcome, not features. What do you actually deliver?',
+        longDesc: 'From Building a StoryBrand (Miller). Position the prospect as hero, yourself as guide. Reduces "what do you do?" confusion.',
+        cost: 150,
+        prereq: [],
+        effect: { pitchStateBonus: 0.15, objectionReduction: 0.05 },
+      },
+      {
+        id: 'value_stack',
+        name: 'Value Stack',
+        icon: '📦',
+        desc: 'Bundle deliverables to increase perceived value vs. price.',
+        longDesc: 'Core mechanic from $100M Offers (Hormozi). Stack value so high the offer feels like a steal. Separates cost from price.',
+        cost: 300,
+        prereq: ['value_proposition'],
+        effect: { pricingFlexibility: 0.25, closingBonus: 0.15 },
+      },
+      {
+        id: 'challenger_insight',
+        name: 'Challenger Insight',
+        icon: '🔬',
+        desc: 'Teach prospects something about their business they don\'t know.',
+        longDesc: 'From The Challenger Sale (Dixon & Adamson). Reframe their problem in a way they haven\'t considered. High-value differentiator vs. relationship selling.',
+        cost: 450,
+        prereq: ['value_stack'],
+        effect: { pitchStateBonus: 0.3, premiumPricingUnlock: true },
+      },
+    ],
+  },
+  negotiation: {
+    label: 'Negotiation',
+    skills: [
+      {
+        id: 'active_listening',
+        name: 'Active Listening',
+        icon: '👂',
+        desc: 'Mirror, label, and summarize to build deep trust.',
+        longDesc: 'From Never Split the Difference (Voss). Tactical empathy. Mirroring = repeat last 3 words. Labeling = "It sounds like you\'re concerned about..."',
+        cost: 200,
+        prereq: [],
+        effect: { warmthGainBonus: 0.2, objectionReduction: 0.15 },
+      },
+      {
+        id: 'calibrated_questions',
+        name: 'Calibrated Questions',
+        icon: '🎭',
+        desc: '"How am I supposed to do that?" — use questions to redirect.',
+        longDesc: 'From Never Split the Difference. How/what questions give control without confrontation. "How does this work if budget is the issue?"',
+        cost: 350,
+        prereq: ['active_listening'],
+        effect: { objectionReduction: 0.25, negotiationBonus: 0.2 },
+      },
+      {
+        id: 'anchoring',
+        name: 'Strategic Anchoring',
+        icon: '⚓',
+        desc: 'Set the reference price high to make your rate feel reasonable.',
+        longDesc: 'From Thinking Fast and Slow (Kahneman) and Never Split the Difference. The first number anchors perception. Mention a competitor\'s high price first.',
+        cost: 400,
+        prereq: ['calibrated_questions'],
+        effect: { pricingFlexibility: 0.3, closingBonus: 0.1 },
+      },
+    ],
+  },
+  management: {
+    label: 'Business Management',
+    skills: [
+      {
+        id: 'systems_thinking',
+        name: 'Systems Thinking',
+        icon: '⚙️',
+        desc: 'Work ON your business, not just IN it.',
+        longDesc: 'Core insight from The E-Myth Revisited (Gerber). Build processes that run without you. Required to hire and delegate effectively.',
+        cost: 500,
+        prereq: [],
+        effect: { employeePerformanceBonus: 0.2, capacityMultiplier: 1.5 },
+      },
+      {
+        id: 'hiring_protocol',
+        name: 'Hiring Protocol',
+        icon: '🧑‍💼',
+        desc: 'Hire for values and attitude, train for skills.',
+        longDesc: 'From Who (Smart & Street). Scorecard hiring. A-players hire A-players; B-players hire C-players. Unlocks better employee NPCs.',
+        cost: 700,
+        prereq: ['systems_thinking'],
+        effect: { hireQualityBonus: 0.3, employeeErrorRate: -0.2 },
+      },
+      {
+        id: 'lean_operations',
+        name: 'Lean Operations',
+        icon: '🔄',
+        desc: 'Eliminate waste, reduce cycle time, validate fast.',
+        longDesc: 'From The Lean Startup (Ries). Build-Measure-Learn. Minimum viable processes. Reduces overhead costs by 20%.',
+        cost: 600,
+        prereq: ['systems_thinking'],
+        effect: { overheadReduction: 0.2, employeeEfficiencyBonus: 0.15 },
+      },
+    ],
+  },
+  strategy: {
+    label: 'Growth Strategy',
+    skills: [
+      {
+        id: 'icp_focus',
+        name: 'ICP Focus',
+        icon: '🎯',
+        desc: 'Define your Ideal Customer Profile and focus exclusively.',
+        longDesc: 'From Traction (Weinberg) and $100M Offers. Saying no to bad-fit clients is a superpower. Reduces wasted pitches, increases conversion by 30%.',
+        cost: 400,
+        prereq: [],
+        effect: { closingBonus: 0.2, reputationGainBonus: 0.15 },
+      },
+      {
+        id: 'blue_ocean',
+        name: 'Blue Ocean Move',
+        icon: '🌊',
+        desc: 'Differentiate so completely that competition becomes irrelevant.',
+        longDesc: 'From Blue Ocean Strategy (Kim & Mauborgne). Reconstruct market boundaries. Unlocks unique positioning in saturated districts — competitors can\'t poach your prospects.',
+        cost: 800,
+        prereq: ['icp_focus'],
+        effect: { competitorProofing: true, premiumPricingUnlock: true, saturationProtection: true },
+      },
+      {
+        id: 'traction_channel',
+        name: 'Traction Channel',
+        icon: '📡',
+        desc: 'Find and double down on your highest-ROI growth channel.',
+        longDesc: 'From Traction (Weinberg & Mares). 19 traction channels. Most companies only need 1 working extremely well. Unlocks passive inbound leads.',
+        cost: 600,
+        prereq: ['icp_focus'],
+        effect: { passiveLeadsPerMonth: 2, reputationGainBonus: 0.2 },
+      },
+    ],
+  },
+};
+
+// ── Encounter Scripts ────────────────────────────────────────
+// Each encounter has phases: opener → discovery → pitch → pricing → close
+// State carries forward via a "rapport" score (-5 to +5)
+
+export const ENCOUNTER_PHASES = {
+  opener: {
+    label: 'Opener',
+    description: 'Make a strong first impression. Get permission to ask questions.',
+  },
+  discovery: {
+    label: 'Discovery',
+    description: 'Use SPIN to uncover pain. Every good question builds rapport.',
+  },
+  pitch: {
+    label: 'Pitch',
+    description: 'Present your solution framed around their specific pain.',
+  },
+  pricing: {
+    label: 'Pricing',
+    description: 'Set your rate. Price is a signal of value — anchor high.',
+  },
+  close: {
+    label: 'Close',
+    description: 'Ask for the commitment. Silence is golden after the close.',
+  },
+};
+
+// Generic opener responses (personalized by player industry in engine)
+export const OPENER_SCRIPTS = {
+  cold: [
+    {
+      text: "Hey, I happened to walk by and noticed your {businessType}. I work with {industryType} businesses in this area — do you have 2 minutes?",
+      rapport: 0,
+      technique: null,
+    },
+    {
+      text: "Hi, I'm [Player]. I've been helping {districtType} businesses solve {painCategory}. Mind if I ask — what's the biggest growth challenge you're dealing with right now?",
+      rapport: 1,
+      technique: 'Pattern Interrupt',
+      skillRequired: 'pattern_interrupt',
+    },
+  ],
+  warm: [
+    {
+      text: "Good to see you again! I've been thinking about what you mentioned last time — the {pain}. I found something that might be directly relevant.",
+      rapport: 2,
+      technique: 'Relationship Capital',
+    },
+  ],
+};
+
+export const DISCOVERY_QUESTIONS = [
+  {
+    phase: 'situation',
+    question: "How are you currently handling {painCategory} in your business?",
+    goodResponse: "It sounds like you're doing it manually — that works at your current scale, but where does it break down?",
+    badResponse: "Oh interesting. And how long has that been the case?",
+    rapportOnGood: 1, rapportOnBad: 0,
+    skillTag: 'situation_questions',
+    framework: 'SPIN Selling — Situation Phase',
+  },
+  {
+    phase: 'problem',
+    question: "What's the biggest headache that creates for you day-to-day?",
+    goodResponse: "That's exactly the pattern I see — the pain is usually buried in {impliedCost}. What does a bad week look like because of this?",
+    badResponse: "That's understandable. Most businesses deal with that.",
+    rapportOnGood: 2, rapportOnBad: 0,
+    skillTag: 'problem_questions',
+    framework: 'SPIN Selling — Problem Phase',
+  },
+  {
+    phase: 'implication',
+    question: "If this doesn't get resolved in the next 6 months, what does that do to your business?",
+    goodResponse: "So we're talking about {impliedRevenueLoss} in lost opportunity — plus the stress of managing it personally. That's a real cost.",
+    badResponse: "I see. Well, we could potentially help with that.",
+    rapportOnGood: 2, rapportOnBad: -1,
+    skillTag: 'implication_questions',
+    framework: 'SPIN Selling — Implication Phase',
+  },
+  {
+    phase: 'need_payoff',
+    question: "If you could solve {pain} completely, what would that open up for you?",
+    goodResponse: "Exactly. And that's the outcome I build toward — not just fixing the symptom but {outcome}. Would that be worth exploring?",
+    badResponse: "That's the goal. Let me tell you what we do...",
+    rapportOnGood: 3, rapportOnBad: 0,
+    skillTag: 'need_payoff',
+    framework: 'SPIN Selling — Need-Payoff Phase',
+  },
+];
+
+export const OBJECTION_LIBRARY = {
+  price: [
+    {
+      objection: "That's more than we budgeted for.",
+      counters: {
+        bad:  { text: "We might be able to do a discount.", rapport: -2, label: 'Capitulate on price' },
+        ok:   { text: "What were you thinking budget-wise?", rapport: 0, label: 'Re-anchor with question' },
+        good: { text: "That's fair — let's talk about what it costs you NOT to solve this. You mentioned {impliedCost} monthly. Over 12 months that's {impliedAnnual}. Our fee is {price}. The math usually works.", rapport: 2, label: 'Reframe ROI', skillRequired: 'value_stack', framework: '$100M Offers — ROI Reframe' },
+        great: { text: "Compared to what? If you're comparing us to a freelancer at $X, the real comparison is outcome per dollar — and that's where I'd like to walk you through what we actually deliver.", rapport: 3, label: 'Anchoring + Value Stack', skillRequired: 'anchoring', framework: 'Never Split the Difference + $100M Offers' },
+      },
+    },
+    {
+      objection: "We're already working with someone.",
+      counters: {
+        bad:  { text: "Oh I understand, we can revisit if things change.", rapport: -1, label: 'Walk away' },
+        ok:   { text: "How's that going?", rapport: 1, label: 'Open-ended probe' },
+        good: { text: "That's great — I'm not here to replace them. I'm curious: what's working, and what's the one area where you wish they did more? Most companies find there's a gap somewhere.", rapport: 2, label: 'Gap finder', framework: 'Challenger Sale — Reframing' },
+      },
+    },
+  ],
+  timing: [
+    {
+      objection: "Now's not a great time — maybe in Q3.",
+      counters: {
+        bad:  { text: "Absolutely, I'll follow up then!", rapport: -1, label: 'Delay with no commitment' },
+        ok:   { text: "What changes in Q3 that makes it a better time?", rapport: 1, label: 'Qualify the delay', framework: 'SPIN — Problem Probe' },
+        good: { text: "I hear you — what I've found is that Q3 comes fast. If we scoped something small to start, you'd have data before the decision matters. Would a pilot make sense?", rapport: 2, label: 'Pilot offer', framework: 'Lean Startup — MVP Approach' },
+      },
+    },
+  ],
+  trust: [
+    {
+      objection: "I've heard that before from agencies. How do I know you're different?",
+      counters: {
+        bad:  { text: "We have great testimonials, I can send them over.", rapport: -1, label: 'Generic social proof' },
+        ok:   { text: "Fair. What went wrong with the last vendor?", rapport: 1, label: 'Uncover real concern', framework: 'Active Listening — Labeling' },
+        good: { text: "You're right to be skeptical — most agencies do overpromise. Here's what I do differently: [specific]. But instead of me telling you, let me show you. A 30-day pilot with clear metrics — if we hit them, we talk about something bigger. If not, you've lost 30 days. Fair?", rapport: 3, label: 'Challenger Insight + Pilot', skillRequired: 'challenger_insight', framework: 'Challenger Sale + Lean Startup' },
+      },
+    },
+  ],
+};
+
+// ── NPC Employees ────────────────────────────────────────────
+export const EMPLOYEE_ARCHETYPES = [
+  {
+    id: 'junior_rep',
+    name: 'Junior Sales Rep',
+    icon: '👩‍💼',
+    cost: 2500,       // monthly salary
+    reliability: 3,   // 1-5
+    skill: 2,
+    maxClients: 3,
+    hireCriteria: 'First hire available after 5 clients',
+    description: 'Eager but green. Will make mistakes. Needs training and SOPs.',
+    emythLesson: 'The Technician mistake — hiring yourself, not a system.',
+  },
+  {
+    id: 'experienced_manager',
+    name: 'Account Manager',
+    icon: '🧑‍💼',
+    cost: 4500,
+    reliability: 4,
+    skill: 4,
+    maxClients: 6,
+    hireCriteria: 'Unlocked after hiring_protocol skill',
+    description: 'Manages client relationships. Frees you for strategy.',
+    emythLesson: 'The Manager role — working ON, not IN the business.',
+  },
+  {
+    id: 'ops_specialist',
+    name: 'Operations Lead',
+    icon: '⚙️',
+    cost: 5500,
+    reliability: 5,
+    skill: 4,
+    maxClients: 0, // handles internal ops
+    hireCriteria: 'Unlocked after lean_operations skill',
+    description: 'Builds and maintains your internal systems. Reduces errors.',
+    emythLesson: 'Systems replace people — The E-Myth\'s core insight.',
+  },
+];
+
+// ── Competitor NPCs ──────────────────────────────────────────
+export const COMPETITORS = [
+  {
+    id: 'undercutter',
+    name: 'QuickClose Solutions',
+    icon: '🔻',
+    style: 'Undercutter',
+    behavior: 'Charges 40% below market, wins on price, delivers poorly',
+    weaknesses: ['value_stack', 'challenger_insight'],
+    aggressionLevel: 2,  // how fast they move on prospects
+  },
+  {
+    id: 'incumbent',
+    name: 'RegionPro Agency',
+    icon: '🏢',
+    style: 'Incumbent',
+    behavior: 'Has long-standing relationships. Hard to displace but complacent.',
+    weaknesses: ['implication_questions', 'pattern_interrupt'],
+    aggressionLevel: 1,
+  },
+  {
+    id: 'prestige',
+    name: 'Pinnacle Consulting',
+    icon: '👑',
+    style: 'Premium',
+    behavior: 'Enterprise-focused. Ignores SMBs — your sweet spot.',
+    weaknesses: [],  // avoids your market
+    aggressionLevel: 0.5,
+  },
+];
+
+// ── Meta-Game Milestones ──────────────────────────────────────
+export const MILESTONES = [
+  { deals: 1,  title: 'First Blood',      reward: 'Unlock Discovery branch', icon: '🩸', unlocks: 'discovery_full' },
+  { deals: 3,  title: 'Pipeline Built',   reward: '+Referral Ask skill available', icon: '🔗', unlocks: 'referral_ask' },
+  { deals: 5,  title: 'First Client Crisis', reward: 'Employee hire unlocked', icon: '🚨', unlocks: 'first_hire', event: 'client_crisis' },
+  { deals: 7,  title: 'Local Presence',   reward: 'Second district unlocked', icon: '🗺️', unlocks: 'district_2' },
+  { deals: 10, title: 'VC Visitor',       reward: 'Meridian Capital approaches you', icon: '💼', unlocks: 'vc_arc', event: 'vc_approach' },
+  { deals: 12, title: 'Market Leader',    reward: 'Competitor makes buyout offer', icon: '🏆', unlocks: 'acquisition_offer', event: 'acquisition' },
+  { deals: 15, title: 'City Conquered',   reward: 'Second city unlocked', icon: '🌆', unlocks: 'city_2' },
+  { deals: 20, title: 'Empire Builder',   reward: 'Investor Board NPC', icon: '👑', unlocks: 'board_arc' },
+];
+
+// ── Field Journal Prompts ─────────────────────────────────────
+export const JOURNAL_PROMPTS = {
+  after_cold_fail: [
+    "You just had a cold approach not go as planned. What's ONE real prospect you've been avoiding calling? What will you do this week?",
+    "That opener didn't land. Write down the last time you walked into a business cold. What would you do differently now?",
+  ],
+  after_discovery: [
+    "You just practiced SPIN discovery. Think of a real client or prospect — what Implication question have you never asked them?",
+    "Discovery is about listening more than talking. What's the last meeting where you talked too much? What would you ask instead?",
+  ],
+  after_objection: [
+    "You handled a price objection. Write down a real objection you're currently stuck on. How would you reframe it using ROI?",
+    "What's the biggest objection your real business faces right now? Draft 3 responses using what you just learned.",
+  ],
+  after_close: [
+    "You just closed a deal. What is ONE real follow-up you've been procrastinating on? Commit to completing it this week.",
+    "Momentum is real. What's one action in your actual business you can do TODAY based on what you just practiced?",
+  ],
+  after_hire: [
+    "You hired your first team member in-game. What's one task in YOUR real business that only you do — that someone else could learn in 30 days?",
+    "The E-Myth moment: you can't scale if everything runs through you. What's one process you could write down today?",
+  ],
+  weekly_checkin: [
+    "It's been 3 days. Did you complete your commitment? Be honest — the streak matters for your Field Journal XP.",
+    "Check-in time. What happened when you tried the technique in real life? What was different from the game?",
+  ],
+};
+
+// ── Starting Game State ──────────────────────────────────────
+export function createInitialState(businessSetup) {
+  return {
+    // Business
+    businessName: businessSetup.name,
+    businessIndustry: businessSetup.industry,
+    businessDescription: businessSetup.description,
+    businessPersonas: businessSetup.personas,  // AI-generated
+
+    // Finances
+    cash: 5000,           // Starting cash
+    monthlyRevenue: 0,
+    monthlyOverhead: 800, // Rent, tools, etc.
+    totalDeals: 0,
+    activeClients: [],
+    employees: [],
+
+    // Reputation / XP
+    reputation: 0,        // 0-1000
+    xp: 0,
+    level: 1,
+    skillPoints: 3,       // Spend on skill tree
+
+    // Unlocked skills
+    unlockedSkills: ['cold_approach'],
+
+    // City state
+    currentDistrict: null,
+    unlockedDistricts: ['tech_row'],  // Start with one
+    districts: JSON.parse(JSON.stringify(DISTRICTS)),
+
+    // Progress
+    milestonesReached: [],
+    competitorActivity: { undercutter: 0.3, incumbent: 0.2, prestige: 0.1 },
+
+    // Survival mode
+    survivalMode: false,
+    daysSinceLastDeal: 0,
+    monthTimer: 0,         // days in month
+
+    // Journal
+    journalEntries: [],
+    journalCommitmentRate: 0,
+
+    // Meta
+    gamePhase: 'city',     // city | encounter | skill_tree | journal | management
+    currentEncounter: null,
+  };
+}

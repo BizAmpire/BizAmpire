@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BizAmpire: Street Level</title>
+  <meta name="description" content="An RPG that teaches real sales, negotiation, and business frameworks through gameplay.">
+
+  <!-- Fonts -->
+  <link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&f[]=general-sans@300,400,500,600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ── Auth Modal ───────────────────────── -->
+<div id="auth-overlay" class="auth-overlay">
+  <div class="auth-modal">
+    <div class="auth-modal-header">
+      <div class="auth-logo">🏙</div>
+      <div class="auth-modal-title" id="auth-title">Sign in to BizAmpire</div>
+      <div class="auth-modal-sub" id="auth-sub">Save your progress across devices and compete on the leaderboard.</div>
+    </div>
+
+    <!-- Tabs: Sign In / Create Account -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="auth-tab-signin" onclick="window.__authSwitchTab('signin')">Sign In</button>
+      <button class="auth-tab" id="auth-tab-register" onclick="window.__authSwitchTab('register')">Create Account</button>
+    </div>
+
+    <!-- Social sign-in -->
+    <button class="auth-btn-social" id="btn-auth-google">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+
+    <div class="auth-divider">or</div>
+
+    <!-- Email/password form -->
+    <div class="auth-input-group">
+      <input class="auth-input" type="email" id="auth-email" placeholder="Email address" autocomplete="email" />
+      <input class="auth-input" type="password" id="auth-password" placeholder="Password" autocomplete="current-password" />
+      <input class="auth-input" type="text" id="auth-displayname" placeholder="Your name (optional)" style="display:none" autocomplete="name" />
+    </div>
+    <div class="auth-error" id="auth-error"></div>
+
+    <button class="btn btn-primary" id="btn-auth-submit" style="width:100%">Sign In</button>
+
+    <div class="auth-divider">or play without an account</div>
+
+    <button class="auth-btn-social" id="btn-auth-guest">
+      🕹 Continue as Guest
+      <span style="font-size:10px;color:var(--text-faint);margin-left:auto">Saves locally</span>
+    </button>
+
+    <div class="auth-footer">
+      Guest saves are stored in your browser. Sign in to sync across devices.
+    </div>
+  </div>
+</div>
+
+<!-- ── Debug Overlay ───────────────────── -->
+<div id="debug-overlay" style="display:none">Loading...</div>
+
+<!-- ── Survival Mode Banner ───────────── -->
+<div id="survival-banner"></div>
+
+<!-- ── Toast Container ────────────────── -->
+<div id="toast-container"></div>
+
+<!-- ══════════════════════════════════════
+     SCREEN: Loading
+═══════════════════════════════════════ -->
+<div id="screen-loading" class="screen" style="flex-direction:column;gap:var(--s6);text-align:center;background:var(--bg)">
+  <!-- SVG Logo -->
+  <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-label="BizAmpire logo">
+    <rect width="64" height="64" rx="16" fill="url(#grad-logo)"/>
+    <path d="M16 20h20c4 0 7 3 7 7s-3 7-7 7H16V20z" fill="rgba(255,255,255,0.9)"/>
+    <path d="M16 34h22c5 0 9 3.5 9 8.5S43 51 38 51H16V34z" fill="white"/>
+    <line x1="42" y1="16" x2="52" y2="26" stroke="rgba(255,255,255,0.7)" stroke-width="2.5" stroke-linecap="round"/>
+    <defs>
+      <linearGradient id="grad-logo" x1="0" y1="0" x2="64" y2="64">
+        <stop offset="0%" stop-color="#00d4c8"/>
+        <stop offset="100%" stop-color="#9b72f8"/>
+      </linearGradient>
+    </defs>
+  </svg>
+  <div class="loading-logo">BizAmpire</div>
+  <div class="loading-bar-wrap">
+    <div class="loading-bar-fill" id="loading-bar-fill" style="width:10%"></div>
+  </div>
+  <div class="loading-text" id="loading-text">Initializing...</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCREEN: Title
+═══════════════════════════════════════ -->
+<div id="screen-title" class="screen hidden" style="flex-direction:column;text-align:center;gap:var(--s8);background:var(--bg);position:relative;overflow:hidden">
+
+  <!-- Background glow orbs -->
+  <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden">
+    <div style="position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(0,212,200,.06) 0%,transparent 70%);top:-200px;left:-100px;border-radius:50%"></div>
+    <div style="position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(155,114,248,.05) 0%,transparent 70%);bottom:-150px;right:-100px;border-radius:50%"></div>
+  </div>
+
+  <!-- Logo mark -->
+  <div style="display:flex;align-items:center;justify-content:center;gap:var(--s4);position:relative">
+    <svg width="56" height="56" viewBox="0 0 64 64" fill="none" aria-label="BizAmpire">
+      <rect width="64" height="64" rx="16" fill="url(#grad-title)"/>
+      <path d="M16 20h20c4 0 7 3 7 7s-3 7-7 7H16V20z" fill="rgba(255,255,255,0.9)"/>
+      <path d="M16 34h22c5 0 9 3.5 9 8.5S43 51 38 51H16V34z" fill="white"/>
+      <line x1="42" y1="16" x2="52" y2="26" stroke="rgba(255,255,255,0.7)" stroke-width="2.5" stroke-linecap="round"/>
+      <defs>
+        <linearGradient id="grad-title" x1="0" y1="0" x2="64" y2="64">
+          <stop offset="0%" stop-color="#00d4c8"/>
+          <stop offset="100%" stop-color="#9b72f8"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div>
+      <div class="title-logo">BizAmpire</div>
+      <div class="title-tagline">Street Level</div>
+    </div>
+  </div>
+
+  <div style="max-width:480px;margin:0 auto;position:relative">
+    <div style="font-size:var(--text-sm);color:var(--text-muted);line-height:1.7;margin-bottom:var(--s6)">
+      An RPG where the encounters are real business conversations, the skill tree is SPIN Selling and $100M Offers,
+      and the final boss is your own cash flow.
+    </div>
+
+    <!-- Auth status bar -->
+    <div id="title-auth-bar" style="display:flex;align-items:center;justify-content:center;gap:var(--s3);font-size:var(--text-xs);color:var(--text-muted);margin-bottom:var(--s2)">
+      <span id="title-user-info">Not signed in</span>
+      <button id="btn-title-auth" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);border-radius:var(--r-full);cursor:pointer;transition:all 150ms" onmouseover="this.style.borderColor='var(--teal)';this.style.color='var(--teal)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">Sign In</button>
+    </div>
+
+    <!-- Saved game card (shown if save exists) -->
+    <div id="save-card-container" style="display:none;margin-bottom:var(--s2)">
+      <div class="save-card" id="btn-continue-game">
+        <div style="font-size:24px">💼</div>
+        <div class="save-card-info">
+          <div class="save-card-name" id="save-card-name">Continue</div>
+          <div class="save-card-meta" id="save-card-meta">Loading save...</div>
+        </div>
+        <div style="color:var(--teal);font-size:18px">→</div>
+      </div>
+    </div>
+
+    <div class="title-menu">
+      <button class="btn btn-primary" id="btn-new-game" style="font-size:var(--text-base)">
+        🚀 Start Your Business
+      </button>
+      <button class="btn btn-secondary" id="btn-about">
+        📚 About the Frameworks
+      </button>
+    </div>
+
+    <div class="title-version" style="margin-top:var(--s8)">BizAmpire · Street Level · v1.0</div>
+
+    <!-- Framework badges -->
+    <div style="display:flex;flex-wrap:wrap;gap:var(--s2);justify-content:center;margin-top:var(--s6)">
+      <span style="padding:3px 10px;border:1px solid var(--border);border-radius:9999px;font-size:10px;color:var(--text-muted)">SPIN Selling</span>
+      <span style="padding:3px 10px;border:1px solid var(--border);border-radius:9999px;font-size:10px;color:var(--text-muted)">$100M Offers</span>
+      <span style="padding:3px 10px;border:1px solid var(--border);border-radius:9999px;font-size:10px;color:var(--text-muted)">E-Myth</span>
+      <span style="padding:3px 10px;border:1px solid var(--border);border-radius:9999px;font-size:10px;color:var(--text-muted)">Never Split the Difference</span>
+      <span style="padding:3px 10px;border:1px solid var(--border);border-radius:9999px;font-size:10px;color:var(--text-muted)">Challenger Sale</span>
+      <span style="padding:3px 10px;border:1px solid var(--border);border-radius:9999px;font-size:10px;color:var(--text-muted)">Blue Ocean</span>
+      <span style="padding:3px 10px;border:1px solid var(--border);border-radius:9999px;font-size:10px;color:var(--text-muted)">Lean Startup</span>
+      <span style="padding:3px 10px;border:1px solid var(--border);border-radius:9999px;font-size:10px;color:var(--text-muted)">Traction</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCREEN: Onboarding
+═══════════════════════════════════════ -->
+<div id="screen-onboard" class="screen hidden">
+  <div class="onboard-inner">
+
+    <div style="text-align:center">
+      <div class="onboard-heading" style="font-family:var(--font-display);font-size:var(--text-2xl)">Build Your Business</div>
+      <div class="onboard-sub">This is your entity in the game. The more specific you are, the more your encounters will reflect your real-world industry and challenges.</div>
+    </div>
+
+    <!-- Step 1: Industry -->
+    <div class="onboard-step">
+      <div class="onboard-step-label">Step 1 — Your Industry</div>
+      <div class="onboard-heading">What type of business do you run?</div>
+      <div class="onboard-sub">This determines the districts you start in, the objections you'll face, and the skills most relevant to you.</div>
+      <div class="industry-grid" id="industry-grid"></div>
+    </div>
+
+    <!-- Step 2: Business details -->
+    <div class="onboard-step">
+      <div class="onboard-step-label">Step 2 — Your Business</div>
+      <div class="onboard-heading">Tell us about your business</div>
+      <div class="onboard-sub">Be specific. The AI uses this to personalize your prospect conversations, objections, and ideal customer profile.</div>
+
+      <div class="field">
+        <label for="biz-name">Business Name</label>
+        <input type="text" id="biz-name" placeholder="e.g. Apex Marketing Solutions" maxlength="40">
+      </div>
+
+      <div class="field">
+        <label for="biz-desc">What do you do — and who do you help?</label>
+        <textarea id="biz-desc" rows="4" placeholder="e.g. We help local service businesses get more clients through Google Ads and SEO. Our typical client is a home services company doing $500K–$5M who's relying only on referrals and wants to scale..."></textarea>
+      </div>
+
+      <button class="btn btn-secondary" id="btn-generate-dna" style="align-self:flex-start">
+        ⚡ Generate Business DNA Card
+      </button>
+    </div>
+
+    <!-- DNA Card output -->
+    <div class="dna-card" id="dna-card" style="display:none"></div>
+
+    <!-- Start button -->
+    <button class="btn btn-primary" id="btn-start-game" style="display:none;font-size:var(--text-base)">
+      🗺️ Enter the City →
+    </button>
+
+    <div style="font-size:var(--text-xs);color:var(--text-faint);text-align:center;padding-bottom:var(--s8)">
+      Your business data stays in-session and is never stored.
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     GAME: Canvas (City Map)
+═══════════════════════════════════════ -->
+<canvas id="game-canvas" style="display:none"></canvas>
+
+<!-- ══════════════════════════════════════
+     HUD
+═══════════════════════════════════════ -->
+<div id="hud" style="display:none">
+  <div class="hud-top">
+    <!-- Business Name -->
+    <div style="font-family:var(--font-display);font-size:var(--text-sm);font-weight:700;color:var(--teal)" id="hud-biz-name">BizAmpire</div>
+
+    <!-- Stats row -->
+    <div style="display:flex;align-items:center;gap:var(--s6)">
+      <!-- Cash -->
+      <div class="hud-stat">
+        <span class="hud-stat-label">Cash</span>
+        <span class="hud-stat-value" id="hud-cash">$5,000</span>
+      </div>
+      <!-- Revenue -->
+      <div class="hud-stat" style="gap:var(--s1)">
+        <span class="hud-stat-label">Rep</span>
+        <div class="meter">
+          <div class="meter-fill" id="hud-rep-bar" style="background:var(--amber);width:0%"></div>
+        </div>
+        <span class="hud-stat-value" id="hud-rep">0</span>
+      </div>
+      <!-- Deals -->
+      <div class="hud-stat">
+        <span class="hud-stat-label">Deals</span>
+        <span class="hud-stat-value gold" id="hud-deals">0</span>
+      </div>
+      <!-- Level & XP -->
+      <div class="hud-stat" style="gap:var(--s1)">
+        <span class="hud-stat-label">Lv</span>
+        <span class="hud-stat-value" id="hud-level">1</span>
+        <div class="meter">
+          <div class="meter-fill" id="hud-xp-bar" style="background:var(--violet);width:0%"></div>
+        </div>
+      </div>
+      <!-- Skill Points -->
+      <div class="hud-stat">
+        <span class="hud-stat-label">SP</span>
+        <span class="hud-stat-value gold" id="hud-sp">3</span>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div style="display:flex;gap:var(--s2);align-items:center">
+      <button class="btn btn-secondary" onclick="window.__bizampireUI?.showSkillTree()" style="padding:var(--s2) var(--s3);font-size:var(--text-xs)" title="Skill Tree [K]">⚡ Skills</button>
+      <button class="btn btn-secondary" onclick="window.__bizampireUI?.showManagement()" style="padding:var(--s2) var(--s3);font-size:var(--text-xs)" title="Management [M]">🏢 Manage</button>
+      <button class="btn btn-secondary" onclick="window.__bizampireUI?.showJournal()" style="padding:var(--s2) var(--s3);font-size:var(--text-xs)" title="Field Journal [J]">📓 Journal</button>
+      <div class="save-indicator" id="save-indicator" title="Save status">
+        <div class="save-dot"></div>
+        <span id="save-indicator-text">Saved</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skill bar -->
+  <div id="skill-bar"></div>
+
+  <!-- Minimap -->
+  <div id="minimap">
+    <canvas id="minimap-canvas" width="140" height="140"></canvas>
+  </div>
+
+  <!-- Controls hint -->
+  <div style="position:absolute;bottom:calc(var(--s4) + 160px);left:50%;transform:translateX(-50%);font-size:10px;color:var(--text-faint);white-space:nowrap;text-align:center;pointer-events:none">
+    WASD / Arrows to move · [E] Approach business · [K] Skills · [J] Journal · [M] Management
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCREEN: Encounter
+═══════════════════════════════════════ -->
+<div id="screen-encounter" class="screen hidden">
+  <div class="encounter-arena" id="encounter-arena">
+    <!-- Dynamically populated -->
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCREEN: Skill Tree
+═══════════════════════════════════════ -->
+<div id="screen-skills" class="screen hidden" style="align-items:flex-end;justify-content:center;background:rgba(0,0,0,.85)">
+  <div class="skill-tree-panel" id="skill-tree-panel">
+    <!-- Dynamically populated -->
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCREEN: Field Journal
+═══════════════════════════════════════ -->
+<div id="screen-journal" class="screen hidden" style="align-items:flex-end;justify-content:center;background:rgba(0,0,0,.85)">
+  <div class="journal-panel" id="journal-panel">
+    <!-- Dynamically populated -->
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCREEN: Management
+═══════════════════════════════════════ -->
+<div id="screen-management" class="screen hidden" style="align-items:flex-end;justify-content:center;background:rgba(0,0,0,.85)">
+  <div class="skill-tree-panel" id="management-panel" style="max-width:900px">
+    <!-- Dynamically populated -->
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCREEN: VC Event (placeholder)
+═══════════════════════════════════════ -->
+<div id="screen-vc" class="screen hidden" style="background:rgba(0,0,0,.9)">
+  <!-- Dynamically populated on milestone 10 -->
+</div>
+
+<script type="module">
+import { INDUSTRIES, SKILL_TREE, DISTRICTS, MILESTONES, JOURNAL_PROMPTS, createInitialState } from './js/data.js';
+import { BizAmpireEngine, EncounterEngine, TILE, MAP_W, MAP_H } from './js/engine.js';
+import { UIManager } from './js/ui.js';
+import { Auth, AuthUI, SaveSystem, initAutoSave, triggerSave } from './js/auth.js';
+
+// Expose data & auth for UI module
+window.__bizampireData = { createInitialState, INDUSTRIES };
+window.__bizampireAuth = { Auth, AuthUI, SaveSystem, updateTitle: () => { updateTitleAuthBar(); refreshSaveCard(); } };
+
+// Initialise auth session from storage
+Auth.init();
+
+// ── Init ─────────────────────────────────────────────────────
+const canvas = document.getElementById('game-canvas');
+const ui = new UIManager();
+window.__bizampireUI = ui;
+
+// Resize canvas to fill window — iframe-safe
+function _getViewSize() {
+  // In an iframe window.innerWidth can be 0; fall back to documentElement / body
+  const w = window.innerWidth  || document.documentElement.clientWidth  || document.body.clientWidth  || 800;
+  const h = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight || 600;
+  return { w: Math.max(w, 320), h: Math.max(h, 240) };
+}
+
+function resizeCanvas() {
+  const { w, h } = _getViewSize();
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width  = w;
+    canvas.height = h;
+  }
+  // Recentre camera whenever canvas size changes
+  const eng = window.__bizampireEngine;
+  if (eng) {
+    eng.cam.x = Math.max(0, Math.min(MAP_W * TILE - canvas.width,  eng.player.x - canvas.width  / 2));
+    eng.cam.y = Math.max(0, Math.min(MAP_H * TILE - canvas.height, eng.player.y - canvas.height / 2));
+    eng.render();
+  }
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ResizeObserver catches iframe container resizes that don't fire window resize
+if (typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(() => resizeCanvas()).observe(document.body);
+}
+
+// Ensure canvas is right size once DOM fully settles (handles iframe timing)
+setTimeout(resizeCanvas, 100);
+setTimeout(resizeCanvas, 500);
+
+// ── Title: Auth bar + Save card ───────────────────────────────
+function updateTitleAuthBar() {
+  const userInfo = document.getElementById('title-user-info');
+  const authBtn  = document.getElementById('btn-title-auth');
+  if (Auth.user) {
+    if (userInfo) userInfo.textContent = Auth.isGuest ? '🕹 Playing as Guest' : `✅ ${Auth.displayName}`;
+    if (authBtn) {
+      authBtn.textContent = 'Sign Out';
+      authBtn.onclick = () => { Auth.signOut(); updateTitleAuthBar(); refreshSaveCard(); };
+    }
+  } else {
+    if (userInfo) userInfo.textContent = 'Not signed in';
+    if (authBtn) {
+      authBtn.textContent = 'Sign In';
+      authBtn.onclick = () => AuthUI.open(onAuthComplete);
+    }
+  }
+}
+
+function refreshSaveCard() {
+  const container = document.getElementById('save-card-container');
+  const nameEl    = document.getElementById('save-card-name');
+  const metaEl    = document.getElementById('save-card-meta');
+  // Check current user save first, then guest save
+  let save = SaveSystem.load();
+  if (!save && !Auth.user) save = SaveSystem.hasGuestSave();
+  if (save) {
+    if (container) container.style.display = 'block';
+    if (nameEl) nameEl.textContent = save.businessName;
+    if (metaEl) metaEl.textContent = SaveSystem.getSaveSummary(save);
+    const continueBtn = document.getElementById('btn-continue-game');
+    if (continueBtn) {
+      continueBtn.onclick = () => {
+        if (!Auth.user) {
+          // Require auth before continuing
+          AuthUI.open((user, savedData) => {
+            onAuthComplete(user, savedData || save);
+          });
+        } else {
+          launchFromSave(save);
+        }
+      };
+    }
+  } else {
+    if (container) container.style.display = 'none';
+  }
+}
+
+function onAuthComplete(user, save) {
+  updateTitleAuthBar();
+  refreshSaveCard();
+  if (save) {
+    // Save detected — show title with Continue card prominent
+    // User can click Continue or New Game
+    return;
+  }
+  // No save → go straight to onboarding
+  ui.showOnboarding();
+}
+
+function launchFromSave(saveData) {
+  try {
+    const setup = {
+      name: saveData.businessName,
+      industry: saveData.businessIndustry || 'tech_software',
+      description: saveData.businessDescription || '',
+      personas: saveData.businessPersonas || [],
+    };
+    const state = createInitialState(setup);
+    const fields = [
+      'cash','totalDeals','reputation','level','xp','sp',
+      'monthlyRevenue','monthlyOverhead','activeClients','employees',
+      'unlockedSkills','unlockedDistricts','legacyArc',
+      'journalEntries','relationshipMap','competitorDeals',
+      'totalXpEarned','survivalMode','playerName',
+    ];
+    for (const f of fields) {
+      if (saveData[f] !== undefined) state[f] = saveData[f];
+    }
+    window.__bizampireLaunch(state, true);
+  } catch(e) {
+    console.error('Failed to restore save:', e);
+    ui.showToast('Save file corrupted — starting fresh.', 'warn');
+    ui.showOnboarding();
+  }
+}
+
+// ── Game launch handler ───────────────────────────────────────
+window.__bizampireLaunch = function(state, isResumed = false) {
+  canvas.style.display = 'block';
+
+  const engine = new BizAmpireEngine(canvas, state, ui);
+  window.__bizampireEngine = engine;
+
+  ui.init(state, engine);
+
+  const hudBiz = document.getElementById('hud-biz-name');
+  if (hudBiz) hudBiz.textContent = state.businessName;
+
+  ui.updateHUD(state);
+
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.add('hidden');
+    s.style.display = 'none';
+  });
+  document.getElementById('hud').style.display = 'block';
+
+  // Start auto-save
+  initAutoSave(() => window.__bizampireEngine?.state);
+
+  // Hook save on deal events (if method exists)
+  if (engine._onDealClosed) {
+    const orig = engine._onDealClosed.bind(engine);
+    engine._onDealClosed = function(biz, outcome) {
+      orig(biz, outcome);
+      triggerSave(this.state);
+    };
+  }
+
+  // Ensure canvas is properly sized before starting the render loop
+  resizeCanvas();
+  engine.start();
+
+  // Save shortly after launch
+  setTimeout(() => triggerSave(state), 2500);
+
+  if (isResumed) {
+    setTimeout(() => ui.showToast(`💾 Welcome back to ${state.businessName}! Progress restored.`, 'success'), 500);
+  } else {
+    setTimeout(() => ui.showToast(`Welcome to ${state.businessName}! Use WASD to explore the city. Press [E] to approach a business.`, 'success'), 500);
+    setTimeout(() => ui.showToast(`💡 Tip: Do Market Research before cold approaching — it adds rapport!`, 'gold'), 3500);
+    setTimeout(() => ui.showToast(`Watch out for 🔻 competitors stealing your prospects!`, 'warn'), 7000);
+  }
+};
+
+// ── Text state for testing ────────────────────────────────────
+window.render_game_to_text = function() {
+  const eng = window.__bizampireEngine;
+  if (!eng) return JSON.stringify({ mode: 'loading' });
+  return JSON.stringify({
+    mode: eng.state.gamePhase,
+    player: { x: Math.round(eng.player.x), y: Math.round(eng.player.y), facing: eng.player.facing },
+    state: {
+      cash: eng.state.cash,
+      deals: eng.state.totalDeals,
+      reputation: Math.round(eng.state.reputation),
+      level: eng.state.level,
+      xp: eng.state.xp,
+      survivalMode: eng.state.survivalMode,
+      skills: eng.state.unlockedSkills,
+      clients: eng.state.activeClients.length,
+      employees: eng.state.employees.length,
+    },
+    nearby: eng.nearbyBuilding?.business?.name || null,
+    cam: { x: Math.round(eng.cam.x), y: Math.round(eng.cam.y) },
+  });
+};
+
+window.advanceTime = function(ms) {
+  const eng = window.__bizampireEngine;
+  if (!eng) return;
+  const steps = Math.max(1, Math.round(ms / (1000/60)));
+  for (let i = 0; i < steps; i++) eng.update(1/60);
+  eng.render();
+};
+
+// ── Boot sequence ──────────────────────────────────────────────
+async function boot() {
+  ui.showLoading('Preparing city layout...', 10);
+  await sleep(300);
+  ui.showLoading('Loading business districts...', 40);
+  await sleep(300);
+  ui.showLoading('Briefing your competitors...', 70);
+  await sleep(300);
+  ui.showLoading('Ready!', 100);
+  await sleep(300);
+
+  // Show title — auth & save card wired up
+  ui.showTitle();
+  updateTitleAuthBar();
+  refreshSaveCard();
+
+  // Auto-open auth modal if not signed in (but don't block — guest option available)
+  // We do NOT force the modal; user can click Sign In manually or Start Your Business
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+boot();
+</script>
+
+<script data-pplx-inline-edit>
+(function(){
+  if(window===window.top)return;
+  function inlineAll(orig,clone){
+    if(orig.nodeType!==1)return;
+    try{
+      var cs=getComputedStyle(orig);
+      var t='';
+      for(var i=0;i<cs.length;i++){t+=cs[i]+':'+cs.getPropertyValue(cs[i])+';';}
+      clone.style.cssText=t;
+    }catch(e){}
+    var oc=orig.children,cc=clone.children;
+    for(var j=0;j<oc.length&&j<cc.length;j++){inlineAll(oc[j],cc[j]);}
+  }
+  function stripExternal(clone){
+    var imgs=clone.querySelectorAll('img');
+    for(var i=0;i<imgs.length;i++){
+      var s=imgs[i].getAttribute('src');
+      if(s&&!s.startsWith('data:'))imgs[i].removeAttribute('src');
+    }
+    var all=clone.querySelectorAll('*');
+    for(var i=0;i<all.length;i++){
+      var st=all[i].style.cssText;
+      if(st&&st.indexOf('url(')>=0){
+        all[i].style.cssText=st.replace(/url\(["']?(?!data:)[^)"']*["']?\)/gi,'none');
+      }
+    }
+  }
+  var scrollRaf=0;
+  function emitScroll(){
+    scrollRaf=0;
+    var x=window.scrollX||window.pageXOffset||0;
+    var y=window.scrollY||window.pageYOffset||0;
+    window.parent.postMessage({type:'INLINE_EDIT_SCROLL',scrollX:x,scrollY:y},'*');
+  }
+  window.addEventListener('scroll',function(){
+    if(scrollRaf)return;
+    scrollRaf=requestAnimationFrame(emitScroll);
+  },{passive:true,capture:true});
+  emitScroll();
+  window.addEventListener('message',function(e){
+    if(!e.data||e.data.type!=='INLINE_EDIT_CAPTURE_REQUEST')return;
+    var scrollX=window.scrollX||window.pageXOffset||0;
+    var scrollY=window.scrollY||window.pageYOffset||0;
+    var w=window.innerWidth,h=window.innerHeight;
+    try{
+      var clone=document.documentElement.cloneNode(true);
+      var rm=clone.querySelectorAll('script,link[rel="stylesheet"],style');
+      for(var i=0;i<rm.length;i++){rm[i].remove();}
+      inlineAll(document.documentElement,clone);
+      stripExternal(clone);
+      var html=new XMLSerializer().serializeToString(clone);
+      var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'">'
+        +'<foreignObject width="100%" height="100%">'
+        +'<div xmlns="http://www.w3.org/1999/xhtml" style="width:'+w+'px;height:'+h+'px;overflow:hidden">'
+        +'<div style="transform:translate(-'+scrollX+'px,-'+scrollY+'px);transform-origin:top left">'
+        +html+'</div></div></foreignObject></svg>';
+      var svgUrl='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+      var img=new Image();
+      img.onload=function(){
+        var c=document.createElement('canvas');c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0);
+        window.parent.postMessage({type:'INLINE_EDIT_SCREENSHOT_RESULT',dataUrl:c.toDataURL('image/png'),scrollX:scrollX,scrollY:scrollY},'*');
+      };
+      img.onerror=function(){
+        window.parent.postMessage({type:'INLINE_EDIT_SCREENSHOT_RESULT',dataUrl:null,scrollX:scrollX,scrollY:scrollY},'*');
+      };
+      img.src=svgUrl;
+    }catch(err){
+      window.parent.postMessage({type:'INLINE_EDIT_SCREENSHOT_RESULT',dataUrl:null,scrollX:scrollX,scrollY:scrollY},'*');
+    }
+  });
+})();
+</script></body>
+</html>

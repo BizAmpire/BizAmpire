@@ -1,0 +1,1231 @@
+// ═══════════════════════════════════════════════════════════
+//  BizAmpire: Street Level — UI Manager
+//  All screen transitions, HUD updates, overlays
+// ═══════════════════════════════════════════════════════════
+
+import {
+  INDUSTRIES, SKILL_TREE, DISCOVERY_QUESTIONS, OBJECTION_LIBRARY,
+  EMPLOYEE_ARCHETYPES, JOURNAL_PROMPTS, ENCOUNTER_PHASES
+} from './data.js';
+import { EncounterEngine } from './engine.js';
+
+export class UIManager {
+  constructor() {
+    this.state = null;
+    this.gameEngine = null;
+    this.encounterEngine = null;
+
+    this._cacheElements();
+    this._debugData = {};
+  }
+
+  init(state, gameEngine) {
+    this.state = state;
+    this.gameEngine = gameEngine;
+    this.encounterEngine = new EncounterEngine(state, gameEngine, this);
+    this.updateHUD(state);
+  }
+
+  _cacheElements() {
+    this.el = {
+      // Screens
+      loading:    document.getElementById('screen-loading'),
+      title:      document.getElementById('screen-title'),
+      onboard:    document.getElementById('screen-onboard'),
+      map:        document.getElementById('screen-map'),
+      encounter:  document.getElementById('screen-encounter'),
+      skills:     document.getElementById('screen-skills'),
+      journal:    document.getElementById('screen-journal'),
+      management: document.getElementById('screen-management'),
+      vcEvent:    document.getElementById('screen-vc'),
+      // HUD
+      hud:         document.getElementById('hud'),
+      hudCash:     document.getElementById('hud-cash'),
+      hudRep:      document.getElementById('hud-rep'),
+      hudRepBar:   document.getElementById('hud-rep-bar'),
+      hudDeals:    document.getElementById('hud-deals'),
+      hudLevel:    document.getElementById('hud-level'),
+      hudXP:       document.getElementById('hud-xp'),
+      hudXPBar:    document.getElementById('hud-xp-bar'),
+      hudSP:       document.getElementById('hud-sp'),
+      // Other
+      toastContainer: document.getElementById('toast-container'),
+      survivalBanner: document.getElementById('survival-banner'),
+      debug:          document.getElementById('debug-overlay'),
+      skillBar:       document.getElementById('skill-bar'),
+    };
+  }
+
+  // ── Screen control ─────────────────────────────────────────
+  showScreen(name) {
+    const screens = ['loading','title','onboard','map','encounter','skills','journal','management','vcEvent'];
+    screens.forEach(s => {
+      const el = this.el[s];
+      if (!el) return;
+      if (s === name) {
+        el.classList.remove('hidden');
+        el.style.display = '';
+      } else {
+        el.classList.add('hidden');
+        el.style.display = 'none';
+      }
+    });
+    // HUD only on map/encounter
+    if (this.el.hud) {
+      this.el.hud.style.display = (name === 'map') ? 'block' : 'none';
+    }
+  }
+
+  // ── Loading ────────────────────────────────────────────────
+  showLoading(text = 'Initializing city...', pct = 0) {
+    this.showScreen('loading');
+    const bar = document.getElementById('loading-bar-fill');
+    const label = document.getElementById('loading-text');
+    if (bar) bar.style.width = `${pct}%`;
+    if (label) label.textContent = text;
+  }
+
+  // ── Title Screen ───────────────────────────────────────────
+  showTitle() {
+    this.showScreen('title');
+    // Re-wire button fresh each time title is shown
+    const newGameBtn = document.getElementById('btn-new-game');
+    if (newGameBtn) {
+      const newBtn = newGameBtn.cloneNode(true);
+      newGameBtn.parentNode.replaceChild(newBtn, newGameBtn);
+      newBtn.addEventListener('click', () => {
+        const auth = window.__bizampireAuth;
+        if (auth && !auth.Auth.user) {
+          // Not signed in — open auth modal; on complete go to onboarding
+          auth.AuthUI.open((user, save) => {
+            window.__bizampireAuth?.updateTitle?.();
+            if (!save) this.showOnboarding();
+          });
+        } else {
+          this.showOnboarding();
+        }
+      });
+    }
+    document.getElementById('btn-about')?.addEventListener('click', () => this.showToast('BizAmpire teaches real sales & business frameworks through an RPG. Every mechanic = a real lesson.', 'gold'), { once: true });
+  }
+
+  // ── Onboarding ─────────────────────────────────────────────
+  showOnboarding() {
+    this.showScreen('onboard');
+    this._renderIndustryGrid();
+    this._setupOnboardingForm();
+  }
+
+  _renderIndustryGrid() {
+    const grid = document.getElementById('industry-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    INDUSTRIES.forEach(ind => {
+      const card = document.createElement('div');
+      card.className = 'industry-card';
+      card.dataset.id = ind.id;
+      card.innerHTML = `
+        <div class="industry-icon">${ind.icon}</div>
+        <div class="industry-name">${ind.name}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${ind.desc}</div>
+      `;
+      card.addEventListener('click', () => {
+        grid.querySelectorAll('.industry-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        this._selectedIndustry = ind;
+      });
+      grid.appendChild(card);
+    });
+  }
+
+  _setupOnboardingForm() {
+    const form = document.getElementById('onboard-form');
+    const bizNameInput = document.getElementById('biz-name');
+    const bizDescInput = document.getElementById('biz-desc');
+    const generateBtn = document.getElementById('btn-generate-dna');
+    const startBtn = document.getElementById('btn-start-game');
+    const dnaCard = document.getElementById('dna-card');
+
+    if (generateBtn) {
+      generateBtn.addEventListener('click', () => {
+        const name = bizNameInput?.value?.trim();
+        const desc = bizDescInput?.value?.trim();
+        const industry = this._selectedIndustry;
+
+        if (!name || !desc || !industry) {
+          this.showToast('Please select an industry and describe your business first.', 'warn');
+          return;
+        }
+
+        const dna = this._generateBusinessDNA(name, desc, industry);
+        this._currentDNA = dna;
+        this._renderDNACard(dna, dnaCard);
+        dnaCard?.style.setProperty('display', 'flex');
+        startBtn && (startBtn.style.display = 'flex');
+      });
+    }
+
+    if (startBtn) {
+      startBtn.addEventListener('click', () => {
+        if (!this._currentDNA) {
+          this.showToast('Generate your Business DNA card first!', 'warn');
+          return;
+        }
+        this._launchGame(this._currentDNA);
+      });
+    }
+  }
+
+  _generateBusinessDNA(name, desc, industry) {
+    // Deterministic persona generation from the business description
+    const lower = desc.toLowerCase();
+
+    // Target market inference
+    let targetMarket = 'SMB owners';
+    if (lower.includes('enterprise') || lower.includes('corp') || lower.includes('large')) targetMarket = 'Enterprise companies';
+    else if (lower.includes('startup') || lower.includes('early') || lower.includes('founder')) targetMarket = 'Startups & founders';
+    else if (lower.includes('local') || lower.includes('small') || lower.includes('neighborhood')) targetMarket = 'Local SMBs';
+
+    // Value prop inference
+    const valueProps = {
+      marketing: ['increase visibility', 'generate qualified leads', 'build brand authority'],
+      it: ['reduce downtime', 'improve security posture', 'streamline tech operations'],
+      finance: ['optimize tax position', 'improve cash flow', 'reduce financial risk'],
+      law: ['protect business interests', 'ensure regulatory compliance', 'resolve disputes fast'],
+      construction: ['deliver projects on time/budget', 'quality craftsmanship', 'reliable subcontracting'],
+      auto: ['keep vehicles running', 'transparent pricing', 'fast turnaround'],
+      realestate: ['maximize property ROI', 'smooth transactions', 'market expertise'],
+      health: ['improve patient outcomes', 'optimize operations', 'increase patient retention'],
+      consulting: ['solve operational bottlenecks', 'accelerate growth', 'strategic clarity'],
+    };
+
+    const vps = valueProps[industry.id] || ['deliver measurable results', 'solve problems fast', 'build long-term value'];
+
+    // Common objections this business will face
+    const objectionsByIndustry = {
+      marketing: ['We tried an agency before and it didn\'t work', 'How do we measure ROI?', 'We can do this in-house'],
+      it: ['We already have an IT person', 'We\'ve never been hacked before', 'That\'s too expensive for our size'],
+      finance: ['We use QuickBooks ourselves', 'Our nephew is an accountant', 'We\'ll do taxes ourselves this year'],
+      law: ['We\'ll deal with it if it becomes a problem', 'We can use online legal templates', 'Too expensive'],
+      construction: ['We got a cheaper quote', 'Our brother-in-law does construction', 'We\'ll DIY it'],
+      consulting: ['We already know what our problems are', 'Why would an outsider understand our business?', 'Can\'t afford it right now'],
+    };
+
+    const objections = objectionsByIndustry[industry.id] || [
+      'Not the right time', 'Already working with someone', 'Too expensive'
+    ];
+
+    // Ideal prospect profile
+    const icpByIndustry = {
+      marketing: 'Business owners who know they need more clients but don\'t know how to get them',
+      it: 'Companies with 10-100 employees that have grown past "one tech guy" but haven\'t formalized IT',
+      finance: 'Business owners spending 10+ hrs/month on finances instead of running their business',
+      law: 'Growing businesses about to sign a major contract or face their first significant legal issue',
+      construction: 'Property owners with projects $25K+ who want a reliable contractor, not the cheapest',
+      consulting: 'Owner-operators who feel stuck and know something needs to change but can\'t see it from the inside',
+    };
+
+    const icp = icpByIndustry[industry.id] || 'Business owners who need exactly what you provide';
+
+    return {
+      name,
+      description: desc,
+      industry,
+      targetMarket,
+      valuePropositions: vps,
+      topObjections: objections.slice(0, 2),
+      idealCustomerProfile: icp,
+      personas: [
+        {
+          name: 'The Skeptic',
+          profile: `${targetMarket} who\'ve been burned before. They need proof, not promises.`,
+          openingLine: "We tried someone like you before and it didn't work out.",
+          approach: 'Lead with a specific case study, not a generic pitch.',
+        },
+        {
+          name: 'The Explorer',
+          profile: `${targetMarket} actively looking but overwhelmed by options.`,
+          openingLine: "We\'ve been meaning to look into this. What do you do exactly?",
+          approach: 'Simplify. Use the StoryBrand framework — make them the hero.',
+        },
+        {
+          name: 'The Status Quo',
+          profile: `${targetMarket} comfortable with how things are, unaware of opportunity cost.`,
+          openingLine: "Things are going fine right now honestly.",
+          approach: 'Use Implication Questions to make the cost of inaction tangible.',
+        },
+      ],
+    };
+  }
+
+  _renderDNACard(dna, container) {
+    if (!container) return;
+    container.innerHTML = `
+      <div class="dna-header">
+        <span class="dna-badge">${dna.industry.icon} ${dna.industry.name}</span>
+        <div class="dna-name">${dna.name}</div>
+      </div>
+      <div class="dna-body">${dna.description}</div>
+      <div>
+        <div style="font-size:var(--text-xs);color:var(--text-muted);margin-bottom:var(--s2);text-transform:uppercase;letter-spacing:.08em;">Your Value Propositions</div>
+        <div class="dna-tags">
+          ${dna.valuePropositions.map(vp => `<span class="dna-tag">✓ ${vp}</span>`).join('')}
+        </div>
+      </div>
+      <div>
+        <div style="font-size:var(--text-xs);color:var(--text-muted);margin-bottom:var(--s2);text-transform:uppercase;letter-spacing:.08em;">Ideal Customer</div>
+        <div style="font-size:var(--text-sm);color:var(--text);line-height:1.55;">${dna.idealCustomerProfile}</div>
+      </div>
+      <div>
+        <div style="font-size:var(--text-xs);color:var(--text-muted);margin-bottom:var(--s2);text-transform:uppercase;letter-spacing:.08em;">Expect These Objections</div>
+        ${dna.topObjections.map(o => `<div style="font-size:var(--text-xs);color:var(--crimson);padding:var(--s1) 0">⚡ "${o}"</div>`).join('')}
+      </div>
+    `;
+  }
+
+  _launchGame(dna) {
+    const { createInitialState } = window.__bizampireData;
+    const state = createInitialState({
+      name: dna.name,
+      industry: dna.industry,
+      description: dna.description,
+      personas: dna.personas,
+    });
+
+    this.showLoading('Building your city...', 20);
+
+    setTimeout(() => {
+      this.showLoading('Populating districts...', 60);
+      setTimeout(() => {
+        this.showLoading('Briefing your competitors...', 85);
+        setTimeout(() => {
+          window.__bizampireLaunch(state);
+        }, 400);
+      }, 500);
+    }, 300);
+  }
+
+  // ── HUD ────────────────────────────────────────────────────
+  updateHUD(state) {
+    if (!state) return;
+    const fmt = (n) => n >= 1000 ? `$${(n/1000).toFixed(1)}k` : `$${Math.round(n)}`;
+    if (this.el.hudCash) {
+      this.el.hudCash.textContent = fmt(state.cash);
+      this.el.hudCash.className = 'hud-stat-value' + (state.cash < state.monthlyOverhead * 2 ? ' negative' : '');
+    }
+    if (this.el.hudRep) this.el.hudRep.textContent = Math.round(state.reputation);
+    if (this.el.hudRepBar) this.el.hudRepBar.style.width = `${Math.min(100, state.reputation / 10)}%`;
+    if (this.el.hudDeals) this.el.hudDeals.textContent = state.totalDeals;
+    if (this.el.hudLevel) this.el.hudLevel.textContent = state.level;
+    if (this.el.hudSP) this.el.hudSP.textContent = state.skillPoints;
+
+    const xpNeeded = state.level * 250;
+    const xpPct = Math.min(100, (state.xp % xpNeeded) / xpNeeded * 100);
+    if (this.el.hudXP) this.el.hudXP.textContent = `${state.xp % xpNeeded}/${xpNeeded}`;
+    if (this.el.hudXPBar) this.el.hudXPBar.style.width = `${xpPct}%`;
+
+    this._updateSkillBar(state);
+  }
+
+  _updateSkillBar(state) {
+    const bar = this.el.skillBar;
+    if (!bar) return;
+    const quickSkills = ['cold_approach', 'situation_questions', 'value_proposition', 'active_listening', 'implication_questions'];
+    bar.innerHTML = '';
+    quickSkills.forEach((skillId, i) => {
+      const unlocked = state.unlockedSkills.includes(skillId);
+      const slot = document.createElement('div');
+      slot.className = `skill-slot ${unlocked ? 'active' : 'locked'}`;
+      const icons = { cold_approach:'🚪', situation_questions:'🔍', value_proposition:'📢', active_listening:'👂', implication_questions:'🌊' };
+      slot.innerHTML = `${icons[skillId] || '?'}<span class="hotkey">${i+1}</span>`;
+      slot.title = skillId.replace(/_/g, ' ');
+      bar.appendChild(slot);
+    });
+  }
+
+  showSurvivalBanner(active) {
+    if (this.el.survivalBanner) {
+      if (active) {
+        this.el.survivalBanner.textContent = '⚡ SURVIVAL MODE — Cash flow critical. Close a deal this week or your overhead will wipe you out.';
+        this.el.survivalBanner.classList.add('active');
+      } else {
+        this.el.survivalBanner.classList.remove('active');
+      }
+    }
+  }
+
+  // ── Encounter Screens ──────────────────────────────────────
+  showEncounter(business, state) {
+    this._activeEncounterBiz = business;
+    const enc = state.currentEncounter;
+    this.showScreen('encounter');
+    const arena = document.getElementById('encounter-arena');
+    if (!arena) return;
+
+    arena.innerHTML = this._renderEncounterHeader(business, enc) + `
+      <div id="encounter-body"></div>
+    `;
+
+    this.showReconPanel(business);
+  }
+
+  _renderEncounterHeader(biz, enc) {
+    const warmthLabel = ['Cold', 'Familiar', 'Warm', 'Advocate'][biz.warmth] || 'Cold';
+    const phases = Object.keys(ENCOUNTER_PHASES);
+    const currentPhaseIdx = phases.indexOf(enc.phase) || 0;
+
+    return `
+      <div class="encounter-header">
+        <div class="prospect-info">
+          <div class="prospect-avatar ${biz.warmth >= 2 ? 'warm' : biz.warmth >= 3 ? 'advocate' : ''}">${biz.icon}</div>
+          <div>
+            <div class="prospect-name">${biz.owner}</div>
+            <div class="prospect-title">${biz.ownerTitle} · ${biz.name}</div>
+          </div>
+        </div>
+        <div class="phase-track">
+          ${phases.map((p, i) => `
+            <div class="phase-dot ${i < currentPhaseIdx ? 'done' : i === currentPhaseIdx ? 'active' : ''}"></div>
+            <span class="phase-label ${i === currentPhaseIdx ? 'active' : ''}" style="font-size:10px">${ENCOUNTER_PHASES[p].label}</span>
+          `).join('')}
+        </div>
+        <div class="warmth-display">
+          <span class="warmth-label">Warmth</span>
+          <div class="warmth-pips">
+            ${[0,1,2,3].map(i => `<div class="warmth-pip ${i < biz.warmth ? (biz.warmth >= 3 ? 'warm' : 'filled') : ''}"></div>`).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  showReconPanel(business) {
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+
+    body.innerHTML = `
+      <div class="recon-panel">
+        <div class="recon-title">📋 Market Research — Optional</div>
+        <div style="font-size:var(--text-sm);color:var(--text-muted);line-height:1.6;margin-bottom:var(--s3);">
+          Spend 2 minutes reviewing what you know about ${business.name} before approaching. Recon adds +1 Rapport to your opener.
+        </div>
+        <div class="recon-intel">
+          <div class="intel-item">
+            <div class="intel-key">Business Type</div>
+            <div class="intel-value">${business.type}</div>
+          </div>
+          <div class="intel-item">
+            <div class="intel-key">Company Size</div>
+            <div class="intel-value">${business.size}</div>
+          </div>
+          <div class="intel-item">
+            <div class="intel-key">Decision Maker</div>
+            <div class="intel-value">${business.owner}, ${business.ownerTitle}</div>
+          </div>
+          <div class="intel-item">
+            <div class="intel-key">Current Vendor</div>
+            <div class="intel-value">${business.currentVendor}</div>
+          </div>
+          <div class="intel-item">
+            <div class="intel-key">Budget Range</div>
+            <div class="intel-value">$${business.budget[0].toLocaleString()}–$${business.budget[1].toLocaleString()}</div>
+          </div>
+          <div class="intel-item">
+            <div class="intel-key">Decision Timeline</div>
+            <div class="intel-value">${business.decisionTimeline}</div>
+          </div>
+        </div>
+        <div style="padding:var(--s3) var(--s4);background:rgba(155,114,248,0.06);border:1px solid rgba(155,114,248,0.2);border-radius:var(--r-md);font-size:var(--text-sm);font-style:italic;color:var(--text-muted);margin-top:var(--s2);">
+          "The best salespeople know more about the customer's business than the customer." — Challenger Sale
+        </div>
+        <div style="display:flex;gap:var(--s3);margin-top:var(--s4);">
+          <button class="btn btn-primary" id="btn-complete-recon">✓ Brief Complete — Start Approach (+1 Rapport)</button>
+          <button class="btn btn-secondary" id="btn-skip-recon">Skip Recon — Go in Cold</button>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('btn-complete-recon')?.addEventListener('click', () => {
+      this.encounterEngine.completeRecon();
+    });
+    document.getElementById('btn-skip-recon')?.addEventListener('click', () => {
+      this.encounterEngine.skipRecon();
+    });
+  }
+
+  showOpenerPhase(enc, state) {
+    this._refreshEncounterHeader(enc);
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+
+    const biz = enc.business;
+    const isWarm = biz.warmth >= 2;
+    const rapportDisplay = enc.rapport > 0 ? `<span style="color:var(--sage)">+${enc.rapport.toFixed(1)} Rapport</span>` : '';
+
+    body.innerHTML = `
+      <div class="dialogue-box">
+        <div class="dialogue-speaker">${biz.owner} — ${biz.ownerTitle}</div>
+        <div class="dialogue-text" id="dialogue-text">
+          ${isWarm
+            ? `"Hey! Good to see you again. What brings you by?"` 
+            : `"${biz.owner} looks up from their desk. 'Can I help you?'"`}
+        </div>
+        ${enc.rapport > 0 ? `<div class="dialogue-sub">${rapportDisplay} from market research</div>` : ''}
+      </div>
+      <div class="choices" id="choices-container">
+        <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0;text-transform:uppercase;letter-spacing:.08em;">Choose your opener</div>
+        ${this._renderOpenerChoices(biz, state)}
+      </div>
+      <button class="btn btn-secondary" style="margin-top:var(--s3);align-self:flex-end" id="btn-exit-encounter">✕ Leave</button>
+    `;
+
+    body.querySelectorAll('.choice-btn[data-opener]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const choice = JSON.parse(btn.dataset.choice || '{}');
+        this.encounterEngine.handleOpener(choice);
+      });
+    });
+
+    document.getElementById('btn-exit-encounter')?.addEventListener('click', () => {
+      this.closeEncounter();
+    });
+  }
+
+  _renderOpenerChoices(biz, state) {
+    const warmthLabel = ['cold','familiar','warm','advocate'][biz.warmth] || 'cold';
+    const hasPatternInterrupt = state.unlockedSkills.includes('pattern_interrupt');
+
+    const choices = [
+      {
+        text: `"Hi, I'm ${state.businessName}. I help businesses like yours — do you have 2 minutes?"`,
+        rapport: 0,
+        label: 'Generic opener',
+        badge: null,
+        technique: null,
+      },
+      {
+        text: `"I noticed you have a ${biz.type}. I work specifically with ${biz.type}s in this area on ${biz.pain?.split(' ').slice(0,5).join(' ')}... — mind if I ask one question?"`,
+        rapport: 1,
+        label: 'Industry-specific opener',
+        badge: 'Targeted',
+        technique: 'Pattern Interrupt',
+        requiresSkill: 'pattern_interrupt',
+      },
+      {
+        text: `"What's the biggest growth challenge you're dealing with right now?"`,
+        rapport: biz.warmth >= 1 ? 2 : 0,
+        label: warmthLabel === 'cold' ? 'Direct (risky cold)' : 'Direct (warm relationship)',
+        badge: warmthLabel !== 'cold' ? 'Relationship Capital' : null,
+        technique: 'Direct Discovery',
+      },
+    ];
+
+    return choices.map((c, i) => {
+      const locked = c.requiresSkill && !state.unlockedSkills.includes(c.requiresSkill);
+      return `
+        <button class="choice-btn ${c.badge ? 'technique' : ''} ${locked ? 'locked' : ''}" 
+                data-opener="${i}" 
+                data-choice='${JSON.stringify({rapport: c.rapport, technique: c.technique})}'
+                ${locked ? 'disabled' : ''}>
+          <span class="choice-key">${i+1}</span>
+          <span class="choice-text">${c.text}</span>
+          <div>
+            ${c.badge ? `<span class="choice-badge">${c.badge}</span>` : ''}
+            ${locked ? `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">🔒 Needs ${c.requiresSkill.replace(/_/g,' ')}</span>` : ''}
+          </div>
+        </button>
+      `;
+    }).join('');
+  }
+
+  showDiscoveryPhase(enc, state) {
+    this._refreshEncounterHeader(enc);
+    this.showNextDiscoveryQuestion(enc, state, 0);
+  }
+
+  showNextDiscoveryQuestion(enc, state, questionIdx) {
+    this._refreshEncounterHeader(enc);
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+
+    const q = DISCOVERY_QUESTIONS[questionIdx];
+    if (!q) return;
+
+    const biz = enc.business;
+    const hasSkill = state.unlockedSkills.includes(q.skillTag);
+    const _painLower = (biz.pain || 'this challenge').charAt(0).toLowerCase() + (biz.pain || 'this challenge').slice(1);
+    // Derive an outcome by flipping the pain into a positive — use biz.outcome if defined, else build from pain
+    const _outcome = biz.outcome || (() => {
+      const p = biz.pain || '';
+      if (p.includes('churn') || p.includes('leaving') || p.includes('retention')) return 'a measurable drop in churn and clients who stay and refer others';
+      if (p.includes('pipeline') || p.includes('lead') || p.includes('referral')) return 'a predictable, repeatable pipeline that fills itself';
+      if (p.includes('margin') || p.includes('price') || p.includes('cheaper') || p.includes('cost')) return 'higher-margin work and clients who compete on value, not price';
+      if (p.includes('scale') || p.includes('time') || p.includes('ops') || p.includes('billing')) return 'systems that let you scale without adding headcount';
+      if (p.includes('growth') || p.includes('traffic') || p.includes('converting') || p.includes('footfall')) return 'consistent, compounding growth with a clear attribution trail';
+      if (p.includes('compliance') || p.includes('process') || p.includes('error')) return 'clean processes that cut overhead and eliminate costly mistakes';
+      return 'a business that runs profitably without depending on you for every decision';
+    })();
+    const personalizedQ = q.question
+      .replace('{painCategory}', _painLower)
+      .replace('{pain}', _painLower)
+      .replace('{outcome}', _outcome)
+      .replace('{impliedCost}', `$${Math.round(biz.budget[0] * 0.5).toLocaleString()}/month`)
+      .replace('{impliedRevenueLoss}', `$${biz.budget[0].toLocaleString()}+`);
+
+    body.innerHTML = `
+      <div class="dialogue-box">
+        <div class="dialogue-speaker">Discovery Phase — ${q.phase.charAt(0).toUpperCase() + q.phase.slice(1)} Question</div>
+        <div class="dialogue-text">${personalizedQ}</div>
+        <div class="dialogue-sub">
+          Framework: <strong style="color:var(--violet)">${q.framework}</strong>
+          ${!hasSkill ? ` · <span style="color:var(--amber)">⚡ Unlock "${q.skillTag.replace(/_/g,' ')}" for full power</span>` : ''}
+        </div>
+      </div>
+      <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0;text-transform:uppercase;letter-spacing:.08em">
+        ${biz.owner} responds. How do you follow up?
+      </div>
+      <div class="choices">
+        <button class="choice-btn technique" data-response="good" data-qid="${q.skillTag}">
+          <span class="choice-key">1</span>
+          <span class="choice-text">${q.goodResponse.replace('{impliedCost}', `$${Math.round(biz.budget[0] * 0.5).toLocaleString()}/month`).replace('{impliedRevenueLoss}', `$${biz.budget[0].toLocaleString()}+`).replace('{pain}', _painLower).replace('{outcome}', biz.outcome || 'sustainable, scalable growth without the operational drag')}</span>
+          <span class="choice-badge">${hasSkill ? `+${q.rapportOnGood} Rapport` : 'Partial effect'}</span>
+        </button>
+        <button class="choice-btn" data-response="bad" data-qid="${q.skillTag}">
+          <span class="choice-key">2</span>
+          <span class="choice-text">${q.badResponse}</span>
+          <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Missed opportunity</span>
+        </button>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:var(--s3)">
+        <div style="font-size:var(--text-xs);color:var(--text-muted)">Rapport: <strong style="color:${enc.rapport >= 3 ? 'var(--sage)' : enc.rapport >= 1 ? 'var(--amber)' : 'var(--text)'}">${enc.rapport.toFixed(1)}</strong></div>
+        <button class="btn btn-secondary btn-sm" id="btn-exit-encounter" style="padding:var(--s2) var(--s4);font-size:var(--text-xs)">Leave</button>
+      </div>
+    `;
+
+    body.querySelectorAll('.choice-btn[data-response]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.encounterEngine.handleDiscovery(btn.dataset.qid, btn.dataset.response);
+      });
+    });
+
+    document.getElementById('btn-exit-encounter')?.addEventListener('click', () => {
+      this.closeEncounter();
+    });
+  }
+
+  showPitchPhase(enc, state) {
+    this._refreshEncounterHeader(enc);
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+
+    const biz = enc.business;
+    const hasValueStack = state.unlockedSkills.includes('value_stack');
+    const hasChallenger = state.unlockedSkills.includes('challenger_insight');
+    const businessName = state.businessName;
+
+    body.innerHTML = `
+      <div class="dialogue-box">
+        <div class="dialogue-speaker">${biz.owner}</div>
+        <div class="dialogue-text">"OK, you clearly understand our situation. So what exactly do you do — and why should I work with you?"</div>
+        <div class="dialogue-sub">Rapport heading in: <strong style="color:${enc.rapport >= 4 ? 'var(--sage)' : 'var(--amber)'}">${enc.rapport.toFixed(1)}</strong> — ${enc.rapport >= 4 ? 'They\'re open. Lead with value.' : enc.rapport >= 2 ? 'Cautiously interested.' : 'Needs convincing.'}</div>
+      </div>
+      <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0;text-transform:uppercase;letter-spacing:.08em">Your pitch</div>
+      <div class="choices">
+        <button class="choice-btn" data-pitch="bad">
+          <span class="choice-key">1</span>
+          <span class="choice-text">"We're ${businessName} and we provide ${state.businessDescription || 'solutions for businesses like yours'}. We've been in business for 3 years and our clients see real results."</span>
+          <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Feature-led pitch</span>
+        </button>
+        <button class="choice-btn technique" data-pitch="good">
+          <span class="choice-key">2</span>
+          <span class="choice-text">"Based on what you told me — ${biz.pain || 'your growth challenge'} — I help businesses like yours solve exactly that. Not with promises, but with a specific outcome: ${state.businessDescription || 'measurable results that compound over time'}. That's what we should talk about."</span>
+          <span class="choice-badge">StoryBrand — outcome-led</span>
+        </button>
+        ${hasChallenger ? `
+        <button class="choice-btn technique" data-pitch="technique">
+          <span class="choice-key">3</span>
+          <span class="choice-text">"Most ${biz.type}s I work with think the problem is ${biz.pain?.split(' ').slice(0,5).join(' ')}... but what's really happening underneath is a systems gap. Here's what top performers in your space do differently to pull ahead."</span>
+          <span class="choice-badge" style="color:var(--violet)">🔬 Challenger Insight</span>
+        </button>
+        ` : ''}
+      </div>
+    `;
+
+    body.querySelectorAll('.choice-btn[data-pitch]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.encounterEngine.handlePitch(btn.dataset.pitch);
+      });
+    });
+  }
+
+  showPricingPhase(enc, state) {
+    this._refreshEncounterHeader(enc);
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+
+    const biz = enc.business;
+    const [min, max] = biz.budget;
+    const midpoint = Math.round((min + max) / 2);
+    const hasValueStack = state.unlockedSkills.includes('value_stack');
+    const maxPossible = Math.round(max * (hasValueStack ? 1.5 : 1.2));
+
+    body.innerHTML = `
+      <div class="dialogue-box">
+        <div class="dialogue-speaker">${biz.owner}</div>
+        <div class="dialogue-text">"That sounds interesting. So... what are we looking at in terms of investment?"</div>
+        <div class="dialogue-sub">${hasValueStack ? '💡 Value Stack unlocked — you can price 30% above market.' : 'Tip: Price signals value. Too cheap = quality concern.'}</div>
+      </div>
+      <div class="pricing-panel">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="pricing-label">💰 SET YOUR MONTHLY RATE</div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted)">${biz.decisionTimeline} timeline</div>
+        </div>
+        <div class="pricing-value" id="pricing-display">$${midpoint.toLocaleString()}/mo</div>
+        <input type="range" class="pricing-range" id="pricing-slider"
+          min="${Math.round(min * 0.5)}" max="${maxPossible}" step="50"
+          value="${midpoint}">
+        <div style="display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--text-muted)">
+          <span>$${Math.round(min*0.5).toLocaleString()} (too cheap)</span>
+          <span>$${max.toLocaleString()} (market max)</span>
+          <span>$${maxPossible.toLocaleString()} (premium)</span>
+        </div>
+        <div class="pricing-feedback" id="pricing-feedback">Move the slider to set your rate...</div>
+      </div>
+      <button class="btn btn-primary" id="btn-confirm-price" style="margin-top:var(--s3)">Lock In This Rate →</button>
+    `;
+
+    const slider = document.getElementById('pricing-slider');
+    const display = document.getElementById('pricing-display');
+    slider?.addEventListener('input', () => {
+      const val = parseInt(slider.value);
+      display.textContent = `$${val.toLocaleString()}/mo`;
+    });
+
+    document.getElementById('btn-confirm-price')?.addEventListener('click', () => {
+      const price = parseInt(slider?.value || midpoint);
+      this.encounterEngine.handlePricing(price);
+    });
+  }
+
+  updatePricingFeedback(text, state) {
+    const el = document.getElementById('pricing-feedback');
+    if (el) {
+      el.textContent = text;
+      el.className = `pricing-feedback ${state}`;
+    }
+  }
+
+  showObjectionPhase(enc, state) {
+    this._refreshEncounterHeader(enc);
+    if (enc.stateFlags.objections.length === 0) {
+      this.encounterEngine._moveToClose();
+      return;
+    }
+    this.showNextObjection(enc, state, enc.stateFlags.objections[0]);
+  }
+
+  showNextObjection(enc, state, objectionType) {
+    this._refreshEncounterHeader(enc);
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+
+    const biz = enc.business;
+    const objSet = OBJECTION_LIBRARY[objectionType] || OBJECTION_LIBRARY['timing'];
+    const obj = objSet[0];
+
+    body.innerHTML = `
+      <div class="dialogue-box">
+        <div class="dialogue-speaker">${biz.owner}</div>
+        <div class="dialogue-text">"${obj.objection}"</div>
+        <div class="dialogue-sub">Objection type: <strong style="color:var(--crimson)">${objectionType.charAt(0).toUpperCase() + objectionType.slice(1)}</strong> · Current Rapport: ${enc.rapport.toFixed(1)}</div>
+      </div>
+      <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0;text-transform:uppercase;letter-spacing:.08em">How do you respond?</div>
+      <div class="choices">
+        ${Object.entries(obj.counters).map(([key, c], i) => {
+          const locked = c.skillRequired && !state.unlockedSkills.includes(c.skillRequired);
+          return `
+            <button class="choice-btn ${c.rapport > 1 ? 'technique' : ''} ${locked ? 'locked' : ''}"
+                    data-objection="${objectionType}" data-response="${key}"
+                    ${locked ? 'disabled' : ''}>
+              <span class="choice-key">${i+1}</span>
+              <div style="flex:1">
+                <div class="choice-text">${c.text.replace('{impliedCost}', `$${Math.round(biz.budget[0]*0.5).toLocaleString()}/month`).replace('{impliedAnnual}', `$${(biz.budget[0]*0.5*12).toLocaleString()}`).replace('{price}', enc.stateFlags?.price ? `$${enc.stateFlags.price.toLocaleString()}/mo` : 'our fee')}</div>
+                ${c.framework ? `<div style="font-size:var(--text-xs);color:var(--violet);margin-top:var(--s1)">${c.framework}</div>` : ''}
+              </div>
+              <div>
+                <span class="choice-badge ${c.rapport <= 0 ? 'style="color:var(--crimson);background:rgba(255,68,102,.1)"' : ''}">${c.label}</span>
+                ${locked ? `<div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">🔒 Requires ${c.skillRequired?.replace(/_/g,' ')}</div>` : ''}
+              </div>
+            </button>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    body.querySelectorAll('.choice-btn[data-objection]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.encounterEngine.handleObjection(btn.dataset.objection, btn.dataset.response);
+      });
+    });
+  }
+
+  showClosePhase(enc, state) {
+    this._refreshEncounterHeader(enc);
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+
+    const biz = enc.business;
+    const rapport = enc.rapport;
+    const price = enc.stateFlags.price || 0;
+    const closeConfidence = Math.min(95, Math.round((0.35 + rapport * 0.08 + biz.warmth * 0.1) * 100));
+
+    body.innerHTML = `
+      <div class="dialogue-box">
+        <div class="dialogue-speaker">${biz.owner}</div>
+        <div class="dialogue-text">"OK... that all makes sense. Let me think about this..."</div>
+        <div class="dialogue-sub">
+          Close confidence: <strong style="color:${closeConfidence > 60 ? 'var(--sage)' : closeConfidence > 40 ? 'var(--amber)' : 'var(--crimson)'}">${closeConfidence}%</strong>
+          · Rapport: <strong>${rapport.toFixed(1)}</strong>
+          · Warmth: <strong>${['Cold','Familiar','Warm','Advocate'][biz.warmth]}</strong>
+        </div>
+      </div>
+      <div style="padding:var(--s4);background:rgba(0,212,200,.05);border:1px solid rgba(0,212,200,.2);border-radius:var(--r-lg);font-family:var(--font-flavor);font-style:italic;font-size:var(--text-sm);color:var(--text-muted);line-height:1.6">
+        "The most important rule in closing: ask for the business, then shut up. Whoever speaks first loses." — Never Split the Difference
+      </div>
+      <div class="choices">
+        <button class="choice-btn technique" data-close="close_direct">
+          <span class="choice-key">1</span>
+          <span class="choice-text">"Based on everything we discussed, I'd love to move forward. Can we get started this month for $${price.toLocaleString()}/mo?"</span>
+          <span class="choice-badge">Direct Close — then silence</span>
+        </button>
+        <button class="choice-btn technique" data-close="pilot_offer">
+          <span class="choice-key">2</span>
+          <span class="choice-text">"What if we do a 30-day pilot — reduced scope, specific metrics. If we hit them, we scale. No risk on your end."</span>
+          <span class="choice-badge">Lean Startup — MVP Pilot</span>
+        </button>
+        <button class="choice-btn" data-close="schedule_followup">
+          <span class="choice-key">3</span>
+          <span class="choice-text">"I don't want to rush you. Can we schedule a follow-up this week to get your questions answered?"</span>
+          <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Soft close — lower odds</span>
+        </button>
+      </div>
+    `;
+
+    body.querySelectorAll('.choice-btn[data-close]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.encounterEngine.resolveEncounter(btn.dataset.close);
+      });
+    });
+  }
+
+  showOutcome(type, biz, price, rapport) {
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+
+    const outcomes = {
+      closed: {
+        icon: '🤝', title: 'Deal Closed!', className: 'win',
+        body: `${biz.owner} extends their hand. "${biz.name} is in — let's make this work." You've closed your first deal in this district.`,
+        rewards: [
+          { label: `+$${price.toLocaleString()}/mo`, cls: 'gold-chip', icon: '💰' },
+          { label: `+${100 + rapport * 20} XP`, cls: 'xp-chip', icon: '⚡' },
+          { label: `+25 Reputation`, cls: '', icon: '⭐' },
+        ],
+      },
+      followup: {
+        icon: '📅', title: 'Follow-Up Scheduled', className: 'followup',
+        body: `${biz.owner} is interested but needs time. "Send me something in writing and let's reconnect Thursday." You're in the pipeline.`,
+        rewards: [
+          { label: '+10 XP', cls: 'xp-chip', icon: '⚡' },
+          { label: '+1 Warmth', cls: '', icon: '🔥' },
+        ],
+      },
+      lost: {
+        icon: '❌', title: 'Not This Time', className: 'lose',
+        body: `${biz.owner} politely declines. "Not right now — we're going to sit tight on this." They'll be cooled off for a few days. Study what happened.`,
+        rewards: [
+          { label: '+5 XP (lessons)', cls: 'xp-chip', icon: '⚡' },
+        ],
+      },
+      ghosted: {
+        icon: '👻', title: 'Ghosted', className: 'lose',
+        body: `${biz.owner} says they'll "think about it" and goes back to their desk. You know you won't hear from them. A missed opportunity — but a lesson.`,
+        rewards: [{ label: 'Lesson learned', cls: '', icon: '📚' }],
+      },
+    };
+
+    const outcome = outcomes[type] || outcomes.ghosted;
+    body.innerHTML = `
+      <div class="outcome-overlay">
+        <div class="outcome-icon">${outcome.icon}</div>
+        <div class="outcome-title ${outcome.className}">${outcome.title}</div>
+        <div class="outcome-body">${outcome.body}</div>
+        <div class="outcome-rewards">
+          ${outcome.rewards.map(r => `<div class="reward-chip ${r.cls}">${r.icon} ${r.label}</div>`).join('')}
+        </div>
+        <button class="btn btn-primary" id="btn-return-city" style="margin-top:var(--s4)">Return to City →</button>
+      </div>
+    `;
+
+    document.getElementById('btn-return-city')?.addEventListener('click', () => {
+      this.closeEncounter();
+    });
+  }
+
+  closeEncounter() {
+    this.state.currentEncounter = null;
+    this.showScreen('map');
+    if (this.el.hud) this.el.hud.style.display = 'block';
+  }
+
+  _refreshEncounterHeader(enc) {
+    const header = document.querySelector('.encounter-header');
+    if (header && enc) {
+      const newHeader = document.createElement('div');
+      newHeader.innerHTML = this._renderEncounterHeader(enc.business, enc);
+      header.replaceWith(newHeader.firstElementChild);
+    }
+  }
+
+  // ── Skill Tree ─────────────────────────────────────────────
+  showSkillTree() {
+    const panel = document.getElementById('skill-tree-panel');
+    if (!panel || !this.state) return;
+    this.renderSkillTree(this.state);
+
+    const screen = document.getElementById('screen-skills');
+    if (screen) {
+      screen.classList.remove('hidden');
+      screen.style.display = 'flex';
+    }
+
+    document.getElementById('btn-close-skills')?.addEventListener('click', () => {
+      screen?.classList.add('hidden');
+      screen && (screen.style.display = 'none');
+    }, { once: true });
+  }
+
+  renderSkillTree(state) {
+    const panel = document.getElementById('skill-tree-panel');
+    if (!panel) return;
+
+    const spDisplay = `<div style="font-size:var(--text-xs);color:var(--text-muted)">Skill Points: <strong style="color:var(--gold)">${state.skillPoints}</strong> available</div>`;
+
+    const branchHTML = Object.entries(SKILL_TREE).map(([key, branch]) => `
+      <div class="skill-branch">
+        <div class="branch-label">${branch.label}</div>
+        <div class="skill-nodes">
+          ${branch.skills.map(skill => {
+            const unlocked = state.unlockedSkills.includes(skill.id);
+            const prereqMet = skill.prereq.every(p => state.unlockedSkills.includes(p));
+            const canUnlock = !unlocked && prereqMet && state.skillPoints >= Math.ceil(skill.cost / 100);
+            const status = unlocked ? '✓' : !prereqMet ? '🔒' : canUnlock ? '' : '•';
+            const costLabel = skill.cost === 0 ? 'Free' : `${Math.ceil(skill.cost / 100)} SP`;
+            return `
+              <div class="skill-node ${unlocked ? 'unlocked' : prereqMet ? 'available' : 'locked'}"
+                   data-skill="${skill.id}"
+                   title="${skill.longDesc}">
+                <div class="skill-node-icon">${skill.icon}</div>
+                <div class="skill-node-info">
+                  <div class="skill-node-name">${skill.name}</div>
+                  <div class="skill-node-desc">${skill.desc}</div>
+                  ${!unlocked ? `<div class="skill-node-cost">${costLabel}</div>` : ''}
+                </div>
+                <div class="skill-node-status">${status}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `).join('');
+
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="skill-tree-title">Skill Tree <span>// ${state.level > 1 ? `Lv. ${state.level}` : 'Foundations'}</span></div>
+        <div style="display:flex;align-items:center;gap:var(--s4)">
+          ${spDisplay}
+          <button class="btn btn-secondary" id="btn-close-skills" style="padding:var(--s2) var(--s4);font-size:var(--text-xs)">✕ Close</button>
+        </div>
+      </div>
+      <div style="font-size:var(--text-sm);color:var(--text-muted);font-family:var(--font-flavor);font-style:italic">
+        "The most valuable skill you can develop is knowing how to learn new skills." — Tony Robbins
+      </div>
+      ${branchHTML}
+    `;
+
+    panel.querySelectorAll('.skill-node.available[data-skill]').forEach(node => {
+      node.addEventListener('click', () => {
+        this.gameEngine.unlockSkill(node.dataset.skill);
+      });
+    });
+  }
+
+  // ── Field Journal ──────────────────────────────────────────
+  showJournal() {
+    const screen = document.getElementById('screen-journal');
+    if (!screen || !this.state) return;
+    this._renderJournal();
+    screen.classList.remove('hidden');
+    screen.style.display = 'flex';
+
+    document.getElementById('btn-close-journal')?.addEventListener('click', () => {
+      screen.classList.add('hidden');
+      screen.style.display = 'none';
+    }, { once: true });
+  }
+
+  showJournalPrompt(prompts, context) {
+    const screen = document.getElementById('screen-journal');
+    if (!screen || !this.state) return;
+
+    const prompt = prompts[Math.floor(Math.random() * prompts.length)];
+    this._renderJournal(prompt, context);
+    screen.classList.remove('hidden');
+    screen.style.display = 'flex';
+  }
+
+  _renderJournal(activePrompt = null, context = null) {
+    const panel = document.getElementById('journal-panel');
+    if (!panel || !this.state) return;
+
+    const entries = this.state.journalEntries;
+    const completionRate = entries.length > 0
+      ? Math.round(entries.filter(e => e.done).length / entries.length * 100)
+      : 0;
+
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="journal-title">Field Journal <span>📓</span></div>
+        <div style="display:flex;align-items:center;gap:var(--s4)">
+          <div style="font-size:var(--text-xs);color:var(--text-muted)">
+            Completion rate: <strong style="color:${completionRate > 70 ? 'var(--sage)' : 'var(--amber)'}">${completionRate}%</strong>
+          </div>
+          <button class="btn btn-secondary" id="btn-close-journal" style="padding:var(--s2) var(--s4);font-size:var(--text-xs)">✕</button>
+        </div>
+      </div>
+      <div style="font-size:var(--text-sm);color:var(--text-muted);line-height:1.6">
+        The best learning games create <em>transfer</em> — skills practiced in the game change behavior in the real world. Each commitment you write here is a bridge.
+      </div>
+
+      ${activePrompt ? `
+        <div class="journal-prompt">
+          <div class="journal-prompt-q">"${activePrompt}"</div>
+          ${context ? `<div class="journal-prompt-context">Context: ${context.businessName} · Outcome: ${context.outcome}</div>` : ''}
+          <div style="display:flex;gap:var(--s2);margin-top:var(--s3)">
+            <input type="text" id="journal-input" placeholder="I will..." class="field input" 
+              style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:var(--s2) var(--s4);font-size:var(--text-sm);color:var(--text)">
+            <button class="btn btn-primary" id="btn-save-journal" style="white-space:nowrap">Save Commitment</button>
+          </div>
+          <button class="btn btn-secondary" id="btn-skip-journal" style="margin-top:var(--s2);font-size:var(--text-xs)">Skip for now</button>
+        </div>
+      ` : ''}
+
+      ${entries.length > 0 ? `
+        <div>
+          <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--s3)">Commitments</div>
+          <div class="journal-entries">
+            ${entries.map(e => `
+              <div class="journal-entry ${e.done ? 'done' : 'pending'}">
+                <div class="journal-check ${e.done ? 'done' : ''}" data-id="${e.id}">${e.done ? '✓' : ''}</div>
+                <div class="journal-entry-text">${e.text}</div>
+                <div class="journal-entry-date">${e.createdAt}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : `<div style="font-size:var(--text-sm);color:var(--text-muted);text-align:center;padding:var(--s8)">No commitments yet. Close your first deal to get a journal prompt.</div>`}
+    `;
+
+    document.getElementById('btn-save-journal')?.addEventListener('click', () => {
+      const text = document.getElementById('journal-input')?.value?.trim();
+      if (text) {
+        this.gameEngine.addJournalEntry(text, context);
+        this.showToast('📓 Commitment saved! Check back in 3 days.', 'gold');
+        this._renderJournal();
+      }
+    });
+
+    document.getElementById('btn-skip-journal')?.addEventListener('click', () => {
+      const screen = document.getElementById('screen-journal');
+      screen?.classList.add('hidden');
+      screen && (screen.style.display = 'none');
+    });
+
+    panel.querySelectorAll('.journal-check:not(.done)').forEach(el => {
+      el.addEventListener('click', () => {
+        this.gameEngine.completeJournalEntry(parseInt(el.dataset.id));
+        this._renderJournal();
+      });
+    });
+  }
+
+  // ── Management Screen ──────────────────────────────────────
+  showManagement() {
+    const screen = document.getElementById('screen-management');
+    if (!screen || !this.state) return;
+    this._renderManagement();
+    screen.classList.remove('hidden');
+    screen.style.display = 'flex';
+  }
+
+  _renderManagement() {
+    const panel = document.getElementById('management-panel');
+    if (!panel || !this.state) return;
+    const state = this.state;
+    const canHire = state.totalDeals >= 5;
+
+    const clientsHTML = state.activeClients.length > 0
+      ? state.activeClients.map(c => `
+          <div class="employee-card">
+            <div class="employee-avatar">${c.icon}</div>
+            <div class="employee-info">
+              <div class="employee-name">${c.name}</div>
+              <div class="employee-role">${c.type}</div>
+              <div class="employee-stats">
+                <div class="emp-stat">Revenue: <span>$${c.monthlyValue?.toLocaleString()}/mo</span></div>
+                <div class="emp-stat">Rapport: <span>${c.closingRapport?.toFixed(1)}</span></div>
+              </div>
+            </div>
+          </div>
+        `).join('')
+      : '<div style="font-size:var(--text-sm);color:var(--text-muted)">No active clients yet. Close deals in the city.</div>';
+
+    const employeesHTML = state.employees.length > 0
+      ? state.employees.map(e => `
+          <div class="employee-card">
+            <div class="employee-avatar">${e.icon}</div>
+            <div class="employee-info">
+              <div class="employee-name">${e.name}</div>
+              <div class="employee-role">${e.name}</div>
+              <div class="employee-stats">
+                <div class="emp-stat">Cost: <span>$${e.cost?.toLocaleString()}/mo</span></div>
+                <div class="emp-stat">Reliability: <span>${e.reliability}/5</span></div>
+                <div class="emp-stat">Skill: <span>${e.skill}/5</span></div>
+              </div>
+            </div>
+          </div>
+        `).join('')
+      : '<div style="font-size:var(--text-sm);color:var(--text-muted)">No employees yet. Close 5 deals to unlock hiring.</div>';
+
+    const hirableHTML = canHire ? EMPLOYEE_ARCHETYPES.map(arch => {
+      const alreadyHired = state.employees.some(e => e.id === arch.id);
+      const skillRequired = arch.id === 'experienced_manager' && !state.unlockedSkills.includes('hiring_protocol');
+      const opsRequired = arch.id === 'ops_specialist' && !state.unlockedSkills.includes('lean_operations');
+      const locked = alreadyHired || skillRequired || opsRequired;
+
+      return `
+        <div class="employee-card">
+          <div class="employee-avatar">${arch.icon}</div>
+          <div class="employee-info">
+            <div class="employee-name">${arch.name}</div>
+            <div class="employee-role">${arch.description}</div>
+            <div class="employee-stats">
+              <div class="emp-stat">Salary: <span>$${arch.cost.toLocaleString()}/mo</span></div>
+              <div class="emp-stat">Reliability: <span>${arch.reliability}/5</span></div>
+            </div>
+            <div style="font-size:var(--text-xs);color:var(--violet);margin-top:var(--s2);font-style:italic">${arch.emythLesson}</div>
+          </div>
+          <button class="btn ${locked ? 'btn-secondary' : 'btn-primary'}" 
+                  data-hire="${arch.id}"
+                  ${locked ? 'disabled' : ''}
+                  style="font-size:var(--text-xs);padding:var(--s2) var(--s3);white-space:nowrap">
+            ${alreadyHired ? 'Hired' : locked ? 'Locked' : 'Hire →'}
+          </button>
+        </div>
+      `;
+    }).join('') : `
+      <div style="font-size:var(--text-sm);color:var(--text-muted);font-style:italic;padding:var(--s4)">
+        "Until you can hire, you are the product." — E-Myth Revisited<br><br>
+        Close ${5 - state.totalDeals} more deal${5 - state.totalDeals !== 1 ? 's' : ''} to unlock hiring.
+      </div>
+    `;
+
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="font-family:var(--font-display);font-size:var(--text-xl);font-weight:700">Management Hub</div>
+        <button class="btn btn-secondary" id="btn-close-mgmt" style="padding:var(--s2) var(--s4);font-size:var(--text-xs)">✕ Close</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s4)">
+        <div class="panel panel-sm" style="text-align:center">
+          <div style="font-size:var(--text-2xl);font-family:var(--font-display);font-weight:700;color:var(--sage)">$${state.monthlyRevenue.toLocaleString()}</div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted)">Monthly Revenue</div>
+        </div>
+        <div class="panel panel-sm" style="text-align:center">
+          <div style="font-size:var(--text-2xl);font-family:var(--font-display);font-weight:700;color:var(--crimson)">$${state.monthlyOverhead.toLocaleString()}</div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted)">Monthly Overhead</div>
+        </div>
+        <div class="panel panel-sm" style="text-align:center">
+          <div style="font-size:var(--text-2xl);font-family:var(--font-display);font-weight:700;color:${state.monthlyRevenue - state.monthlyOverhead > 0 ? 'var(--sage)' : 'var(--crimson)'}">$${(state.monthlyRevenue - state.monthlyOverhead).toLocaleString()}</div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted)">Net Profit</div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--s3)">Active Clients (${state.activeClients.length})</div>
+        ${clientsHTML}
+      </div>
+      <div>
+        <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--s3)">Team (${state.employees.length})</div>
+        ${employeesHTML}
+      </div>
+      <div>
+        <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--s3)">Available Hires</div>
+        ${hirableHTML}
+      </div>
+    `;
+
+    document.getElementById('btn-close-mgmt')?.addEventListener('click', () => {
+      screen?.classList.add('hidden');
+      screen && (screen.style.display = 'none');
+    });
+
+    panel.querySelectorAll('button[data-hire]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.gameEngine.hireEmployee(btn.dataset.hire);
+        this._renderManagement();
+      });
+    });
+
+    const screen = document.getElementById('screen-management');
+  }
+
+  // ── Meta-Game Events ───────────────────────────────────────
+  showMilestone(milestone) {
+    this.showToast(`🏆 Milestone: "${milestone.title}" — ${milestone.reward}`, 'gold');
+  }
+
+  showVCEvent(state) {
+    this.showToast(`💼 Meridian Capital: "We've been watching your growth in ${state.unlockedDistricts.length} districts. Can we talk?" — Check Management tab.`, 'gold');
+  }
+
+  showAcquisitionOffer(state) {
+    const offer = Math.round(state.monthlyRevenue * 24);
+    this.showToast(`🤝 RegionPro Agency offers $${offer.toLocaleString()} to acquire ${state.businessName}. Go to Management to evaluate.`, 'amber');
+  }
+
+  // ── Utilities ──────────────────────────────────────────────
+  showToast(msg, type = 'default') {
+    const container = this.el.toastContainer;
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.animation = 'toastIn 0.3s reverse forwards';
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+
+  updateDebug(data) {
+    if (!this.el.debug) return;
+    this.el.debug.style.display = 'block';
+    this.el.debug.textContent =
+      `FPS:${Math.round(data.fps)} Frame:${data.frameTime?.toFixed(1)}ms\n` +
+      `Cam:(${Math.round(data.cam?.x)},${Math.round(data.cam?.y)}) Player:(${Math.round(data.player?.x)},${Math.round(data.player?.y)})\n` +
+      `Nearby: ${data.nearby}`;
+  }
+}
