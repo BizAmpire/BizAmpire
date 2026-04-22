@@ -1279,7 +1279,6 @@ export class UIManager {
       submitBtn?.addEventListener('click', submit);
       input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
       input?.focus();
-      }
     }
 
     document.getElementById('btn-exit-encounter')?.addEventListener('click', () => {

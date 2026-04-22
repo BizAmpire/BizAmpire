@@ -800,7 +800,6 @@ export class BizAmpireEngine {
         price: null,
         objections: [],
         resolved: [],
-        aiCoachBonusClaimed: false,
       },
     };
     this.state.pendingRapportBonus = 0;  // consume the coffee bonus
