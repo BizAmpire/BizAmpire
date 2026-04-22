@@ -1576,6 +1576,20 @@ export class UIManager {
       'Lean Startup': '#4aad7a',
       'Pattern Interrupt': '#4f98a3',
       'Direct Close': '#4aad7a',
+      'Direct Discovery': '#4f98a3',
+      'Objection Handling': '#e05c4a',
+    };
+    const frameworkWhy = {
+      'SPIN Selling': 'SPIN moves prospects from surface awareness to felt urgency — each phase builds on the last until inaction feels costly.',
+      'Pattern Interrupt': 'Opening with their specific pain breaks the "vendor pitch" script in the prospect\'s head, earning real attention before you ask for anything.',
+      'Challenger Sale': 'Leading with a reframe teaches them something before you sell anything — positioning you as an advisor, not just another vendor.',
+      'Direct Discovery': 'Asking for their biggest frustration skips the small talk and gets straight to qualifying whether there\'s a real problem to solve.',
+      'StoryBrand': 'Outcomes-led pitches land harder than feature lists because they connect to what the prospect actually cares about — their result, not your product.',
+      '$100M Offers': 'Framing value in terms of ROI and the cost of inaction makes price a relative number, not an absolute barrier.',
+      "Never Split the Difference": 'Tactical empathy — acknowledging the concern before reframing it — lowers resistance more effectively than logic alone.',
+      'Lean Startup': 'A scoped pilot reframes the decision from "big commitment" to "low-risk experiment," removing fear without dropping price.',
+      'Direct Close': 'Asking directly and going silent lets the prospect decide. Hedging signals doubt — and they mirror your confidence level.',
+      'Objection Handling': 'Addressing the root concern directly (rather than deflecting or conceding) signals confidence in your value proposition.',
     };
     const getFrameworkColor = (fw) => {
       if (!fw) return 'var(--violet)';
@@ -1583,6 +1597,13 @@ export class UIManager {
         if (fw.includes(key)) return color;
       }
       return 'var(--violet)';
+    };
+    const getFrameworkWhy = (fw) => {
+      if (!fw) return null;
+      for (const [key, why] of Object.entries(frameworkWhy)) {
+        if (fw.includes(key)) return why;
+      }
+      return null;
     };
 
     const totalPhases = choiceLog.length;
@@ -1592,11 +1613,19 @@ export class UIManager {
                        optimalCount >= totalPhases * 0.5 ? 'Solid Effort' : 'Needs Work';
     const scorePct = Math.round((optimalCount / totalPhases) * 100);
 
+    const frameworksApplied = [...new Set(choiceLog.filter(e => e.wasOptimal && e.framework).map(e => e.framework))];
+    const frameworksBar = frameworksApplied.length
+      ? `<div style="margin-top:var(--s3);display:flex;flex-wrap:wrap;gap:var(--s2)">
+          <span style="font-size:var(--text-xs);color:var(--text-muted);align-self:center">Applied:</span>
+          ${frameworksApplied.map(fw => `<span style="font-size:var(--text-xs);padding:2px 8px;border-radius:4px;background:${getFrameworkColor(fw)}22;color:${getFrameworkColor(fw)};border:1px solid ${getFrameworkColor(fw)}44">${fw}</span>`).join('')}
+        </div>`
+      : '';
+
     const rows = choiceLog.map(entry => {
       const icon = phaseIcons[entry.phase] || '•';
       const delta = entry.rapportDelta > 0 ? `<span style="color:var(--sage)">+${entry.rapportDelta}</span>` :
                     entry.rapportDelta < 0 ? `<span style="color:var(--crimson)">${entry.rapportDelta}</span>` :
-                    `<span style="color:var(--text-muted)">0</span>`;
+                    `<span style="color:var(--text-muted)">±0</span>`;
       const statusDot = entry.wasOptimal
         ? `<span style="color:var(--sage);font-size:1rem">✓</span>`
         : `<span style="color:var(--crimson);font-size:1rem">✗</span>`;
@@ -1605,11 +1634,17 @@ export class UIManager {
         ? `<span style="display:inline-block;font-size:var(--text-xs);padding:2px 8px;border-radius:4px;background:${getFrameworkColor(entry.framework)}22;color:${getFrameworkColor(entry.framework)};border:1px solid ${getFrameworkColor(entry.framework)}44;margin-top:var(--s2)">${entry.framework}</span>`
         : '';
 
+      const why = entry.wasOptimal && entry.framework ? getFrameworkWhy(entry.framework) : null;
+      const reinforced = why ? `
+        <div style="margin-top:var(--s3);padding:var(--s3) var(--s4);background:rgba(74,173,122,0.06);border:1px solid rgba(74,173,122,0.2);border-radius:var(--r-md)">
+          <div style="font-size:var(--text-xs);color:var(--sage);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--s2)">✓ Why this worked — ${entry.framework}</div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted);line-height:1.5">${why}</div>
+        </div>
+      ` : '';
+
       const missed = !entry.wasOptimal && entry.optimal ? `
         <div style="margin-top:var(--s3);padding:var(--s3) var(--s4);background:rgba(155,114,248,0.06);border:1px solid rgba(155,114,248,0.2);border-radius:var(--r-md)">
-          <div style="font-size:var(--text-xs);color:var(--violet);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--s2)">
-            📚 ${entry.optimal.framework} — Optimal Move
-          </div>
+          <div style="font-size:var(--text-xs);color:var(--violet);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--s2)">📚 ${entry.optimal.framework} — Optimal Move</div>
           <div style="font-size:var(--text-sm);color:var(--text);margin-bottom:var(--s2);font-style:italic">"${entry.optimal.text}"</div>
           <div style="font-size:var(--text-xs);color:var(--text-muted);line-height:1.5">${entry.optimal.frameworkDetail}</div>
         </div>
@@ -1626,6 +1661,7 @@ export class UIManager {
               </div>
               <div style="font-size:var(--text-sm);color:var(--text);line-height:1.4">${entry.chosen}</div>
               ${frameworkUsed}
+              ${reinforced}
               ${missed}
             </div>
           </div>
@@ -1636,15 +1672,18 @@ export class UIManager {
     body.innerHTML = `
       <div style="margin-bottom:var(--s4)">
         <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--s2)">Post-Encounter Debrief</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--s4);background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);margin-bottom:var(--s4)">
-          <div>
-            <div style="font-size:var(--text-xl);font-weight:800;color:${outcomeColor}">${scoreLabel}</div>
-            <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">${optimalCount} of ${totalPhases} moves optimal</div>
+        <div style="padding:var(--s4);background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);margin-bottom:var(--s4)">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div style="font-size:var(--text-xl);font-weight:800;color:${outcomeColor}">${scoreLabel}</div>
+              <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">${optimalCount} of ${totalPhases} moves optimal</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:2rem;font-weight:900;color:${outcomeColor}">${scorePct}%</div>
+              <div style="font-size:var(--text-xs);color:var(--text-muted)">execution score</div>
+            </div>
           </div>
-          <div style="text-align:right">
-            <div style="font-size:2rem;font-weight:900;color:${outcomeColor}">${scorePct}%</div>
-            <div style="font-size:var(--text-xs);color:var(--text-muted)">execution score</div>
-          </div>
+          ${frameworksBar}
         </div>
         ${rows}
       </div>
