@@ -11,6 +11,7 @@ import {
 import { EncounterEngine } from './engine.js';
 import { selectHint } from './hints.js';
 import { randomWisdom } from './wisdom.js';
+import * as LLM from './llm.js';
 
 // ── Pluralization helper ─────────────────────────────────────
 function pluralize(str) {
@@ -1168,9 +1169,166 @@ export class UIManager {
     });
 
     this._attachHintButton('discovery_' + q.phase, enc, state, { phase: 'discovery', subPhase: q.phase });
+
+    // AI Coach challenge — shown on Q1 of every encounter, disappears once bonus claimed
+    const bonusAvailable = questionIdx === 0 && !enc.stateFlags?.aiCoachBonusClaimed;
+    if (bonusAvailable) {
+      const area = document.createElement('div');
+      area.id = 'llm-challenge-area';
+      area.style.cssText = 'margin-top:var(--s4)';
+
+      if (!LLM.isReady()) {
+        // Not downloaded yet — show incentive prompt
+        area.innerHTML = `
+          <div style="display:flex;gap:var(--s3);align-items:center;padding:var(--s3) var(--s4);
+                      background:rgba(155,114,248,0.07);border:1px dashed rgba(155,114,248,0.3);
+                      border-radius:var(--r-md);cursor:pointer" id="btn-ai-coach-prompt">
+            <span style="font-size:1.2rem">🤖</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:var(--text-xs);color:var(--violet);font-weight:700;margin-bottom:2px">
+                AI Coach Challenge — earn <span style="color:var(--sage)">+0.5 bonus rapport</span>
+              </div>
+              <div style="font-size:var(--text-xs);color:var(--text-muted);line-height:1.5">
+                Type your own question instead of picking an option above.
+                Download AI Coach once (~400MB) to unlock.
+              </div>
+            </div>
+            <span style="font-size:var(--text-xs);color:var(--violet);font-weight:600;white-space:nowrap;flex-shrink:0">Download →</span>
+          </div>
+        `;
+        document.getElementById('encounter-body')?.appendChild(area);
+        document.getElementById('btn-ai-coach-prompt')?.addEventListener('click', () => this.toggleAICoach());
+      } else {
+        // AI Coach ready — show live input with bonus label
+        area.innerHTML = `
+          <div style="padding:var(--s3) var(--s4);background:rgba(155,114,248,0.07);
+                      border:1px solid rgba(155,114,248,0.25);border-radius:var(--r-md)">
+            <div style="font-size:var(--text-xs);color:var(--violet);font-weight:700;margin-bottom:var(--s2);display:flex;justify-content:space-between">
+              <span>🤖 AI Coach Challenge</span>
+              <span style="color:var(--sage)">+0.5 bonus rapport for original answer</span>
+            </div>
+            <div style="display:flex;gap:var(--s2)">
+              <input id="llm-text-input" type="text"
+                placeholder="Type your own question for ${enc.business?.owner || 'them'}…"
+                style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(155,114,248,0.3);
+                       border-radius:var(--r-md);padding:var(--s3) var(--s4);font-size:var(--text-sm);
+                       color:var(--text);outline:none;font-family:var(--font-body)"
+                maxlength="220" autocomplete="off" />
+              <button id="btn-llm-submit" class="btn btn-secondary" style="flex-shrink:0">Ask →</button>
+            </div>
+            <div id="llm-similarity-warn" style="display:none;font-size:var(--text-xs);color:var(--crimson);margin-top:var(--s2)"></div>
+            <div id="llm-thinking" style="display:none;font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--s2);font-style:italic">
+              🤖 Evaluating your question…
+            </div>
+          </div>
+        `;
+        document.getElementById('encounter-body')?.appendChild(area);
+
+        const input    = document.getElementById('llm-text-input');
+        const submitBtn = document.getElementById('btn-llm-submit');
+        const warn     = document.getElementById('llm-similarity-warn');
+        const thinking = document.getElementById('llm-thinking');
+
+        const submit = async () => {
+          const text = input?.value?.trim();
+          if (!text || text.length < 6) return;
+
+          // Similarity check against visible choices (must be < 70% overlap)
+          const similar = this._textSimilarity(text, q.question) > 0.70
+                       || this._textSimilarity(text, deflectionLine) > 0.70;
+          if (similar) {
+            warn.style.display = 'block';
+            warn.textContent = "Too similar to one of the options above — use your own words to earn the bonus.";
+            return;
+          }
+          warn.style.display = 'none';
+          submitBtn.disabled = true;
+          input.disabled = true;
+          thinking.style.display = 'block';
+
+          const result = await LLM.evaluate(text, q.phase, enc, q);
+          thinking.style.display = 'none';
+          if (!result) { submitBtn.disabled = false; input.disabled = false; return; }
+
+          // Apply bonus rapport for original attempt
+          const bonusRapport = 0.5;
+          result.rapportDelta += bonusRapport;
+          result.bonusApplied = true;
+
+          if (this.encounterEngine) {
+            if (enc.stateFlags) enc.stateFlags.aiCoachBonusClaimed = true;
+            this.encounterEngine.enc.rapport += result.rapportDelta;
+            if (!this.encounterEngine.flags.choiceLog) this.encounterEngine.flags.choiceLog = [];
+            this.encounterEngine.flags.choiceLog.push({
+              phase: 'Discovery',
+              phaseLabel: q.framework,
+              chosen: `AI Challenge: "${text}"`,
+              rapportDelta: result.rapportDelta,
+              wasOptimal: result.score >= 2,
+              optimal: result.score >= 2 ? null : {
+                text: result.stronger || q.question,
+                framework: q.framework,
+                frameworkDetail: result.feedback,
+              },
+              framework: result.score >= 2 ? q.framework : null,
+            });
+            this.encounterEngine.flags.spinPhase++;
+            const isLast = this.encounterEngine.flags.spinPhase >= (this.encounterEngine.flags.generatedQuestions?.length || 4);
+            this._showLLMFeedback(result, q, () => {
+              if (isLast) {
+                this.encounterEngine.enc.phase = 'pitch';
+                this.showPitchPhase(this.encounterEngine.enc, state);
+              } else {
+                this.showNextDiscoveryQuestion(this.encounterEngine.enc, state, this.encounterEngine.flags.spinPhase);
+              }
+            }, text);
+          }
+        };
+
+        submitBtn?.addEventListener('click', submit);
+        input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+        input?.focus();
+      }
+    }
+
     document.getElementById('btn-exit-encounter')?.addEventListener('click', () => {
       this.closeEncounter();
     });
+  }
+
+  _textSimilarity(a, b) {
+    const words = str => new Set((str || '').toLowerCase().match(/\b\w{3,}\b/g) || []);
+    const wa = words(a), wb = words(b);
+    const intersection = [...wa].filter(w => wb.has(w)).length;
+    const union = new Set([...wa, ...wb]).size;
+    return union === 0 ? 0 : intersection / union;
+  }
+
+  _showLLMFeedback(result, q, onContinue, playerText = '') {
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+    const scoreColor = result.score >= 2 ? 'var(--sage)' : result.score === 1 ? 'var(--amber)' : 'var(--crimson)';
+    const scoreLabel = result.score >= 2 ? '✓ Strong' : result.score === 1 ? '~ Decent' : '⚠ Weak';
+    const rapportLine = result.rapportDelta > 0 ? `+${result.rapportDelta.toFixed(1)} Rapport` : `${result.rapportDelta.toFixed(1)} Rapport`;
+    body.innerHTML = `
+      <div style="font-size:var(--text-xs);color:var(--violet);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--s3)">🤖 AI Coach Evaluation</div>
+      ${playerText ? `
+      <div style="padding:var(--s3) var(--s4);background:rgba(155,114,248,0.05);border:1px solid rgba(155,114,248,0.15);border-radius:var(--r-md);margin-bottom:var(--s3)">
+        <div style="font-size:var(--text-xs);color:var(--text-muted);margin-bottom:var(--s1)">You asked:</div>
+        <div style="font-size:var(--text-sm);color:var(--text);font-style:italic;line-height:1.5">"${playerText}"</div>
+      </div>` : ''}
+      <div style="padding:var(--s4);background:rgba(155,114,248,0.08);border:1px solid rgba(155,114,248,0.2);border-radius:var(--r-lg);margin-bottom:var(--s3)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--s2)">
+          <span style="font-size:var(--text-xs);font-weight:700;color:${scoreColor}">${scoreLabel}</span>
+          <span style="font-size:var(--text-sm);font-weight:700;color:${scoreColor}">${rapportLine}</span>
+        </div>
+        ${result.bonusApplied ? `<div style="font-size:var(--text-xs);color:var(--sage);margin-bottom:var(--s2)">✓ +0.5 bonus rapport for original answer</div>` : ''}
+        <div style="font-size:var(--text-sm);color:var(--text);line-height:1.6;margin-bottom:${result.stronger ? 'var(--s3)' : '0'}">${result.feedback}</div>
+        ${result.stronger ? `<div style="font-size:var(--text-xs);color:var(--text-muted);border-top:1px solid var(--border);padding-top:var(--s2);margin-top:var(--s2)"><strong style="color:var(--text)">Stronger version:</strong> "${result.stronger}"</div>` : ''}
+      </div>
+      <button class="btn btn-primary" id="btn-llm-continue" style="width:100%">Continue →</button>
+    `;
+    document.getElementById('btn-llm-continue')?.addEventListener('click', () => onContinue(), { once: true });
   }
 
   // ── Reaction beat shown AFTER player picks a response, BEFORE next question ──
@@ -1620,6 +1778,7 @@ export class UIManager {
             { key: 'close_direct', text: `"Based on everything we discussed, I'd love to move forward. Can we get started this month for $${price.toLocaleString()}/mo?"`, badge: `` },
             { key: 'pilot_offer', text: `"What if we do a 30-day pilot — reduced scope, specific metrics. If we hit them, we scale. No risk on your end."`, badge: `` },
             { key: 'schedule_followup', text: `"I don't want to rush you. Can we schedule a follow-up this week to get your questions answered?"`, badge: `` },
+            { key: 'referral', text: `"Hey, I appreciate your honesty. If you ever work with someone who does need our services, I'd love a referral. Let's stay in touch."`, badge: `` },
           ];
           for (let i = closeOptions.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -1657,6 +1816,15 @@ export class UIManager {
           { label: `+$${price.toLocaleString()}/mo`, cls: 'gold-chip', icon: '💰' },
           { label: `+${100 + rapport * 20} XP`, cls: 'xp-chip', icon: '⚡' },
           { label: `+25 Reputation`, cls: '', icon: '⭐' },
+        ],
+      },
+      referral: {
+        icon: '🌐', title: 'Network Partner', className: 'win',
+        body: `${biz.owner} appreciates your honesty. "Hey, when you work with a company that needs this, send them our way." You've just built your first referral partnership. Bad fit today = lead source tomorrow.`,
+        rewards: [
+          { label: '+20 XP (relationship)', cls: 'xp-chip', icon: '⚡' },
+          { label: '+3 Warmth', cls: '', icon: '🔥' },
+          { label: '+10 Reputation (integrity)', cls: '', icon: '⭐' },
         ],
       },
       followup: {
@@ -1719,7 +1887,7 @@ export class UIManager {
     const body = document.getElementById('encounter-body');
     if (!body) return;
 
-    const outcomeColors = { closed: 'var(--sage)', followup: 'var(--amber)', lost: 'var(--crimson)', ghosted: 'var(--crimson)' };
+    const outcomeColors = { closed: 'var(--sage)', referral: 'var(--teal)', followup: 'var(--amber)', lost: 'var(--crimson)', ghosted: 'var(--crimson)' };
     const outcomeColor = outcomeColors[outcomeType] || 'var(--text-muted)';
 
     const phaseIcons = { Opener: '👋', Discovery: '🔍', Pitch: '🎯', Objection: '⚡', Close: '🤝' };
@@ -2574,6 +2742,127 @@ export class UIManager {
     };
     document.getElementById('btn-dismiss-wisdom')?.addEventListener('click', dismiss);
     setTimeout(dismiss, 9000);
+  }
+
+  // ── AI Coach ─────────────────────────────────────────────────
+  toggleAICoach() {
+    if (LLM.isReady()) {
+      this.showToast('🤖 AI Coach already loaded and active.', 'success');
+      return;
+    }
+    if (LLM.getStatus() === 'loading') {
+      this.showToast('🤖 AI Coach is still downloading…', 'info');
+      return;
+    }
+
+    // Show download confirmation
+    const existing = document.getElementById('ai-coach-modal');
+    if (existing) { existing.remove(); return; }
+
+    const modal = document.createElement('div');
+    modal.id = 'ai-coach-modal';
+    modal.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;
+      display:flex;align-items:center;justify-content:center;padding:16px
+    `;
+    modal.innerHTML = `
+      <div style="background:var(--surface-2,#1a1a2e);border:1px solid rgba(155,114,248,0.35);
+                  border-radius:16px;padding:28px;max-width:400px;width:100%;text-align:center">
+        <div style="font-size:2rem;margin-bottom:12px">🤖</div>
+        <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">AI Coach</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:20px">
+          Download a local AI model (~400MB, one-time) to unlock free-text input
+          during encounters. Runs entirely on your device — no API, no cost, works offline.
+        </div>
+        <div id="ai-coach-progress" style="display:none;margin-bottom:16px">
+          <div style="background:rgba(255,255,255,0.08);border-radius:8px;height:8px;overflow:hidden;margin-bottom:8px">
+            <div id="ai-coach-bar" style="height:100%;background:var(--violet);width:0%;transition:width .3s"></div>
+          </div>
+          <div id="ai-coach-msg" style="font-size:11px;color:var(--text-muted)">Starting…</div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:center">
+          <button id="btn-ai-start" class="btn btn-primary" style="flex:1">Download &amp; Enable</button>
+          <button id="btn-ai-cancel" class="btn btn-secondary" style="flex:1">Not Now</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('btn-ai-cancel')?.addEventListener('click', () => modal.remove());
+    document.getElementById('btn-ai-start')?.addEventListener('click', async () => {
+      document.getElementById('btn-ai-start').disabled = true;
+      document.getElementById('btn-ai-cancel').disabled = true;
+      document.getElementById('ai-coach-progress').style.display = 'block';
+
+      await LLM.load(({ progress, message }) => {
+        const bar = document.getElementById('ai-coach-bar');
+        const msg = document.getElementById('ai-coach-msg');
+        if (bar) bar.style.width = `${progress}%`;
+        if (msg) msg.textContent = message;
+        if (progress >= 100) {
+          setTimeout(() => {
+            modal.remove();
+            this.showToast('🤖 AI Coach ready — free-text input now available in encounters!', 'success');
+            const btn = document.getElementById('btn-ai-coach');
+            if (btn) { btn.textContent = '🤖 AI Coach ✓'; btn.style.borderColor = 'rgba(80,224,88,0.4)'; }
+          }, 600);
+        }
+      });
+    });
+  }
+
+  // ── Free-text AI input for discovery ─────────────────────────
+  showFreeTextInput(enc, state, q, onSubmit) {
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+    const biz = enc.business;
+
+    // Inject a free-text box below the existing choices
+    const existing = document.getElementById('llm-input-area');
+    if (existing) { existing.remove(); return; }
+
+    const area = document.createElement('div');
+    area.id = 'llm-input-area';
+    area.style.cssText = 'margin-top:var(--s4)';
+    area.innerHTML = `
+      <div style="font-size:var(--text-xs);color:var(--violet);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--s2)">
+        🤖 Or type your own question
+      </div>
+      <div style="display:flex;gap:var(--s2)">
+        <input id="llm-text-input" type="text" placeholder="Ask ${biz.owner} something…"
+          style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(155,114,248,0.3);
+                 border-radius:var(--r-md);padding:var(--s3) var(--s4);font-size:var(--text-sm);
+                 color:var(--text);outline:none;font-family:var(--font-body)"
+          maxlength="200" autocomplete="off" />
+        <button id="btn-llm-submit" class="btn btn-secondary" style="flex-shrink:0;padding:var(--s3) var(--s4)">Ask →</button>
+      </div>
+      <div id="llm-thinking" style="display:none;font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--s2);font-style:italic">
+        🤖 AI Coach is evaluating…
+      </div>
+    `;
+    body.appendChild(area);
+
+    const input = document.getElementById('llm-text-input');
+    const submitBtn = document.getElementById('btn-llm-submit');
+    const thinking = document.getElementById('llm-thinking');
+
+    const submit = async () => {
+      const text = input?.value?.trim();
+      if (!text || text.length < 4) return;
+      submitBtn.disabled = true;
+      input.disabled = true;
+      thinking.style.display = 'block';
+
+      const result = await LLM.evaluate(text, q.phase, enc, q);
+      thinking.style.display = 'none';
+
+      if (!result) { submitBtn.disabled = false; input.disabled = false; return; }
+      onSubmit(text, result);
+    };
+
+    submitBtn?.addEventListener('click', submit);
+    input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+    input?.focus();
   }
 
   updateDebug(_data) {

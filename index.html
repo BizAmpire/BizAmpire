@@ -320,6 +320,9 @@
       <button class="btn btn-secondary" onclick="window.__bizampireUI?.showManagement()" style="padding:var(--s2) var(--s3);font-size:var(--text-xs)" title="Management [M]">🏢 Manage</button>
       <button class="btn btn-secondary" onclick="window.__bizampireUI?.showJournal()" style="padding:var(--s2) var(--s3);font-size:var(--text-xs)" title="Field Journal [J]">📓 Journal</button>
       <button class="btn btn-secondary" onclick="window.__bizampirePortfolio?.show()" style="padding:var(--s2) var(--s3);font-size:var(--text-xs)" title="Business Portfolio [P]">🏗️ Portfolio</button>
+      <button class="btn btn-secondary" id="btn-ai-coach" onclick="window.__bizampireUI?.toggleAICoach()"
+        style="padding:var(--s2) var(--s3);font-size:var(--text-xs);border-color:rgba(155,114,248,0.35)"
+        title="Download AI Coach for free-text input">🤖 AI Coach</button>
       <button class="btn btn-secondary" id="btn-exit-to-title"
         style="padding:var(--s2) var(--s3);font-size:var(--text-xs);border-color:rgba(200,64,48,0.35);color:var(--text-muted)"
         title="Save &amp; Exit to Main Menu">🚪 Menu</button>
@@ -567,7 +570,7 @@ function launchFromSave(saveData) {
   try {
     const setup = {
       name: saveData.businessName,
-      industry: saveData.businessIndustry || 'tech_software',
+      industry: saveData.businessIndustry || { id: 'it', name: 'IT / Tech', icon: '💻' },
       description: saveData.businessDescription || '',
       personas: saveData.businessPersonas || [],
     };
@@ -578,6 +581,7 @@ function launchFromSave(saveData) {
       'unlockedSkills','unlockedDistricts','milestonesReached','legacyArc',
       'journalEntries','relationshipMap','competitorDeals',
       'totalXpEarned','survivalMode','playerName','monthTimer','daysSinceLastDeal','trainingDaysLeft','startupCost',
+      'referralPartners',
     ];
     for (const f of fields) {
       if (saveData[f] !== undefined) state[f] = saveData[f];

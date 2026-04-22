@@ -222,6 +222,7 @@ export const SaveSystem = {
       businessPersonas:    state.businessPersonas,
       monthTimer:          state.monthTimer,
       daysSinceLastDeal:   state.daysSinceLastDeal,
+      referralPartners:    state.referralPartners,
       districtSnapshot,
     };
   },

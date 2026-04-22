@@ -761,11 +761,15 @@ export class BizAmpireEngine {
     if (!business.visits || business.visits === 0) this._advanceDailyGoal('new_visits');
 
     // Resolve prospect category and ICP fit score
-    const playerIndustry = (this.state.businessIndustry?.id || this.state.businessIndustry || 'consulting').toString();
+    const VALID_INDUSTRIES = ['marketing','it','finance','law','construction','auto','realestate','health','consulting'];
+    const rawIndustry = (this.state.businessIndustry?.id || this.state.businessIndustry || 'consulting').toString();
+    const playerIndustry = VALID_INDUSTRIES.includes(rawIndustry) ? rawIndustry : 'consulting';
+    if (rawIndustry !== playerIndustry) console.warn(`[BizAmpire] Unknown industry "${rawIndustry}", falling back to consulting`);
     const prospectCategory = getProspectCategory(business.type);
     const fitScore = (ICP_FIT_MATRIX[playerIndustry] || {})[prospectCategory] ?? 2;
 
     // Dynamically load only the player's industry question file (~70KB vs 676KB)
+    console.log(`[BizAmpire] Encounter: player=${playerIndustry} prospect=${business.type} (${prospectCategory})`);
     const industryBank = await loadIndustryQuestions(playerIndustry);
     const bankSets = industryBank ? industryBank[prospectCategory] : null;
     const setIdx = bankSets ? Math.floor(Math.random() * bankSets.length) : -1;
@@ -2967,6 +2971,9 @@ export class EncounterEngine {
       } else {
         outcome = 'followup';
       }
+    } else if (playerChoice === 'referral') {
+      // Network-building path — always succeeds as referral relationship
+      outcome = 'referral';
     } else {
       outcome = 'lost';
     }
@@ -3006,6 +3013,14 @@ export class EncounterEngine {
       this.state.seenWisdomIndices.push(wisdomIdx);
       this.ui.showOutcome('closed', biz, price, rapport, this.state,
         { prompts: JOURNAL_PROMPTS.after_close, context: journalContext, choiceLog, wisdom });
+    } else if (outcome === 'referral') {
+      // No fit, but strong relationship for future referrals
+      biz.warmth = Math.min(5, biz.warmth + 2);  // boost warmth as referral partner
+      if (!this.state.referralPartners.includes(biz.id)) {
+        this.state.referralPartners.push(biz.id);
+      }
+      this.ui.showOutcome('referral', biz, price, rapport, this.state,
+        { prompts: JOURNAL_PROMPTS.after_followup, context: { ...journalContext, outcome: 'referral' }, choiceLog });
     } else if (outcome === 'followup') {
       biz.cooldownDays = 3;
       this.ui.showOutcome('followup', biz, price, rapport, this.state,

@@ -952,6 +952,9 @@ export function createInitialState(businessSetup) {
         { id: 'new_visits',  label: '2 new businesses',   target: 2, current: 0 },
       ],
     },
+
+    // Relationship network — tracks referral partners
+    referralPartners: [],
   };
 }
 
