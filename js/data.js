@@ -859,6 +859,11 @@ export const MILESTONES = [
 
 // ── Field Journal Prompts ─────────────────────────────────────
 export const JOURNAL_PROMPTS = {
+  after_ghosted: [
+    "They didn't say no — they just disappeared. Think of a real prospect who went quiet on you. What could you do this week to re-engage without coming across as desperate?",
+    "Being ghosted isn't a no — it's an unfinished conversation. Write down one follow-up you could send that offers value first, with zero pressure to reply.",
+    "Ghosting usually means timing or fit was off, not that you failed. What signal did you miss during that meeting that might have told you this wasn't the right moment?",
+  ],
   after_cold_fail: [
     "You just had a cold approach not go as planned. What's ONE real prospect you've been avoiding calling? What will you do this week?",
     "That opener didn't land. Write down the last time you walked into a business cold. What would you do differently now?",

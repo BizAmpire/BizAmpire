@@ -500,6 +500,7 @@ img, canvas { display: block; max-width: 100%; }
 .toast.danger { border-left-color: var(--crimson); }
 .toast.success { border-left-color: var(--sage); }
 .toast.gold { border-left-color: var(--gold); }
+.toast.info { border-left-color: #38bdf8; }  /* sky-blue: partial credit / informational */
 
 @keyframes toastIn {
   from { opacity: 0; transform: translateX(20px); }

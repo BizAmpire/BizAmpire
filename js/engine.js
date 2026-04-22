@@ -655,7 +655,7 @@ export class BizAmpireEngine {
     this.state.currentEncounter = {
       business,
       phase: 'recon',
-      rapport: (fitScore === 1 ? -1 : 0) + (this.state.pendingRapportBonus || 0),  // rapport penalty for weak-fit; bonus from coffee meetings etc
+      rapport: (fitScore === 0 ? -2 : fitScore === 1 ? -1 : 0) + (this.state.pendingRapportBonus || 0),  // poor fit=-2, possible fit=-1, good/perfect=0; bonus from coffee meetings etc
       stateFlags: {
         didRecon: false,
         openerQuality: 'cold',
@@ -944,6 +944,7 @@ export class BizAmpireEngine {
     business.cooldownDays = 5 + (this.state.survivalMode ? 3 : 0);
     this.state.reputation = Math.max(0, this.state.reputation - 5);
     this.state.cash = Math.max(0, this.state.cash - 50); // Time cost
+    this.ui.showToast('⏳ -$50 time cost — that meeting didn’t pan out.', 'warn');
     this.ui.updateHUD(this.state);
   }
 
@@ -1102,10 +1103,9 @@ export class BizAmpireEngine {
     if (idx === -1) return;
     const v = this.state.vendors[idx];
 
-    // Reverse recurring cost effect on overhead
-    if (v.recurring && v.monthlyCost > 0) {
-      this.state.monthlyOverhead = Math.max(0, this.state.monthlyOverhead - v.monthlyCost);
-    }
+    // Note: recurring vendor costs are paid directly via monthly cash deduction — they are NOT
+    // added to monthlyOverhead when purchased, so we must NOT subtract them here on cancel.
+    // (Only overheadReduction effects are tracked on monthlyOverhead — reversed below.)
 
     // Reverse warmth bonus
     if (v.warmthBonusApplied) {
@@ -2319,7 +2319,7 @@ export class EncounterEngine {
   _checkEarlyExit(phase) {
     // Thresholds per phase — later phases are harder to bomb out of
     const thresholds = {
-      opener:     -1,   // one bad open → they're already suspicious
+      opener:     -2,   // opener ejects only on active rapport damage (generic opener on a weak-fit shouldn't auto-eject)
       discovery:  -2,   // two wasted discovery questions → they lose patience
       pitch:      -3,   // bad pitch on top of weak discovery
       pricing:    -4,   // they'll tolerate a bad price attempt longer
@@ -2347,6 +2347,15 @@ export class EncounterEngine {
     this.ui.updateHUD(this.state);
   }
 
+  // Warn the player when they're close to the ejection threshold (one step away)
+  _warnIfLowRapport(phase) {
+    const thresholds = { opener: -2, discovery: -2, pitch: -3, pricing: -4, objections: -3 };
+    const floor = thresholds[phase] ?? -3;
+    if (this.enc.rapport === floor + 1) {
+      this.ui.showToast('⚠️ They’re losing patience — one more misstep and they’ll walk.', 'warn');
+    }
+  }
+
   handleOpener(choice) {
     const baseRapport = choice.rapport || 0;
     const bonus = this.flags.didRecon ? 0.5 : 0;
@@ -2356,6 +2365,7 @@ export class EncounterEngine {
 
     if (choice.technique) this.flags.lastTechnique = choice.technique;
 
+    this._warnIfLowRapport('opener');
     if (this._checkEarlyExit('opener')) return;
 
     this.enc.phase = 'discovery';
@@ -2376,22 +2386,35 @@ export class EncounterEngine {
       this.enc.rapport += q.rapportOnGood;
       this.flags.discoveryScore += q.rapportOnGood;
       this.ui.showToast(`✓ ${q.framework}`, 'success');
+    } else if (effectiveResponse === 'ok') {
+      // Skill not unlocked — partial credit: half of good, minimum 0
+      const partialRapport = Math.floor(q.rapportOnGood / 2);
+      this.enc.rapport += partialRapport;
+      this.flags.discoveryScore += partialRapport;
+      this.ui.showToast(`~ Decent point — unlock ${q.framework} for full effect`, 'info');
     } else {
       this.enc.rapport += q.rapportOnBad || 0;
       this.ui.showToast(`Missed opportunity — ${q.framework}`, 'warn');
     }
 
+    this._warnIfLowRapport('discovery');
     if (this._checkEarlyExit('discovery')) return;
 
     this.flags.spinPhase++;
-    const totalSPIN = questions.length;  // use dynamic question count
+    const totalSPIN = questions.length;
+    const isLast = this.flags.spinPhase >= totalSPIN;
 
-    if (this.flags.spinPhase >= totalSPIN) {
-      this.enc.phase = 'pitch';
-      this.ui.showPitchPhase(this.enc, this.state);
-    } else {
-      this.ui.showNextDiscoveryQuestion(this.enc, this.state, this.flags.spinPhase);
-    }
+    // Show reaction beat first, then advance on Continue
+    const advance = () => {
+      if (isLast) {
+        this.enc.phase = 'pitch';
+        this.ui.showPitchPhase(this.enc, this.state);
+      } else {
+        this.ui.showNextDiscoveryQuestion(this.enc, this.state, this.flags.spinPhase);
+      }
+    };
+    advance._isLast = isLast;
+    this.ui.showDiscoveryReaction(this.enc, this.state, q, responseType, advance);
   }
 
   handlePitch(responseType) {
@@ -2406,6 +2429,7 @@ export class EncounterEngine {
       this.ui.showToast('🔬 Challenger Insight activated! Rapport +3', 'success');
     }
 
+    this._warnIfLowRapport('pitch');
     if (this._checkEarlyExit('pitch')) return;
 
     this.enc.phase = 'pricing';
@@ -2462,6 +2486,11 @@ export class EncounterEngine {
     if (this.biz.currentVendor !== 'None') objectionPool.push('incumbent');
     objectionPool.push('timing');
 
+    // Shuffle pool so objection order is unpredictable across runs
+    for (let i = objectionPool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [objectionPool[i], objectionPool[j]] = [objectionPool[j], objectionPool[i]];
+    }
     // Pick 1-2 based on rapport
     const count = this.enc.rapport >= 3 ? 1 : 2;
     this.flags.objections = objectionPool.slice(0, count);
@@ -2473,7 +2502,7 @@ export class EncounterEngine {
       this._moveToClose();
       return;
     }
-    const obj = objectionSet[0];
+    const obj = objectionSet[Math.floor(Math.random() * objectionSet.length)];
     const response = obj.counters[responseKey];
     if (!response) return;
 
@@ -2485,6 +2514,7 @@ export class EncounterEngine {
       this.ui.showToast(response.framework, effectiveRapport > 0 ? 'success' : 'warn');
     }
 
+    this._warnIfLowRapport('objections');
     if (this._checkEarlyExit('objections')) return;
 
     this.flags.resolved.push(objectionType);
@@ -2526,7 +2556,15 @@ export class EncounterEngine {
         outcome = 'ghosted';
       }
     } else if (playerChoice === 'pilot_offer') {
-      outcome = rapport >= 2 ? 'closed' : 'followup';
+      // Pilot is lower commitment — better floor odds, but not a guaranteed close.
+      // Base 55% close if rapport ≥2, 30% if rapport 0-1, drops to followup otherwise.
+      const pilotRoll = Math.random();
+      const pilotCloseThreshold = rapport >= 2 ? 0.55 : 0.30;
+      if (pilotRoll < pilotCloseThreshold) {
+        outcome = 'closed';
+      } else {
+        outcome = 'followup';
+      }
     } else {
       outcome = 'lost';
     }
@@ -2544,6 +2582,10 @@ export class EncounterEngine {
       biz.cooldownDays = 3;
       this.ui.showOutcome('followup', biz, price, rapport);
       setTimeout(() => this.ui.showJournalPrompt(JOURNAL_PROMPTS.after_objection, journalContext), 2000);
+    } else if (outcome === 'ghosted') {
+      this.game.lostDeal(biz, outcome);
+      this.ui.showOutcome('lost', biz, price, rapport);
+      setTimeout(() => this.ui.showJournalPrompt(JOURNAL_PROMPTS.after_ghosted, journalContext), 2000);
     } else {
       this.game.lostDeal(biz, outcome);
       this.ui.showOutcome('lost', biz, price, rapport);

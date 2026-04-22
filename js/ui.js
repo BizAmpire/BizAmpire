@@ -1005,6 +1005,107 @@ export class UIManager {
     });
   }
 
+  // ── Reaction beat shown AFTER player picks a response, BEFORE next question ──
+  showDiscoveryReaction(enc, state, q, responseType, nextCallback) {
+    this._refreshEncounterHeader(enc);
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+
+    const biz = enc.business;
+    const isGood = responseType === 'good';
+    const chosenText = isGood ? q.goodResponse : q.badResponse;
+
+    // Prospect reaction to what the player said — keyed to good/bad + phase
+    const reactions = {
+      situation: {
+        good: [
+          `"Hm. Yeah, that makes sense. I hadn't thought about it that way."`,
+          `"Right, right. That's a fair point actually."`,
+          `"OK — yeah. I can see that being an issue for us."`
+        ],
+        bad: [
+          `"[looks away] Sure... anyway."`,
+          `"I mean, I guess. I'm not sure where you're going with this."`,
+          `"[unimpressed] Yeah, we'll see."`
+        ]
+      },
+      problem: {
+        good: [
+          `"[leans in] Yeah — that's exactly the problem. More than once a year."`,
+          `"You know what, it's happened more than I want to admit."`,
+          `"That's... actually a really good point. We haven't fixed it."`
+        ],
+        bad: [
+          `"I mean, sure, but I don't know if it's that big a deal."`,
+          `"[shrugs] We've managed so far."`,
+          `"We handle it. It's fine."`
+        ]
+      },
+      implication: {
+        good: [
+          `"[pauses] When you put it that way... that number's bigger than I thought."`,
+          `"Yeah. That's... a real cost we're not tracking."`,
+          `"OK that math actually concerns me a bit."`
+        ],
+        bad: [
+          `"I don't know if the numbers are quite that dramatic."`,
+          `"[skeptical] Maybe. I'd have to think about it."`,
+          `"We've been dealing with it this long, so..."`
+        ]
+      },
+      need_payoff: {
+        good: [
+          `"[sits up] Yeah. If you can actually deliver that, I want to hear more."`,
+          `"That would genuinely change how we operate. Walk me through it."`,
+          `"OK — I'm interested. What does that actually look like?"`
+        ],
+        bad: [
+          `"[noncommittal] Yeah, maybe. Send me something and I'll take a look."`,
+          `"I've heard that before. What makes you different?"`,
+          `"[checks watch] Sure. I'll think about it."`
+        ]
+      }
+    };
+
+    const pool = reactions[q.phase]?.[isGood ? 'good' : 'bad'] || reactions.situation[isGood ? 'good' : 'bad'];
+    const reactionLine = pool[Math.floor(Math.random() * pool.length)];
+    const rapportDelta = isGood ? (q.rapportOnGood || 0) : (q.rapportOnBad || 0);
+    const rapportColor = rapportDelta > 0 ? 'var(--sage)' : rapportDelta < 0 ? 'var(--crimson)' : 'var(--text-muted)';
+    const rapportLabel = rapportDelta > 0 ? `+${rapportDelta} Rapport` : rapportDelta < 0 ? `${rapportDelta} Rapport` : 'No rapport change';
+
+    body.innerHTML = `
+      <!-- WHAT YOU SAID -->
+      <div class="dialogue-box player-dialogue" style="background:rgba(79,152,163,0.08);border-color:var(--teal,#4f98a3);margin-bottom:var(--s3)">
+        <div class="dialogue-speaker" style="color:var(--teal,#4f98a3)">You said</div>
+        <div class="dialogue-text">${this._subQText(chosenText, biz)}</div>
+      </div>
+
+      <!-- HOW THEY REACTED -->
+      <div class="dialogue-box" style="margin-bottom:var(--s3)">
+        <div class="dialogue-speaker">${biz.owner} — ${biz.ownerTitle}</div>
+        <div class="dialogue-text" style="font-style:italic">${reactionLine}</div>
+      </div>
+
+      <!-- RAPPORT RESULT -->
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  background:rgba(255,255,255,0.03);border:1px solid var(--border);
+                  border-radius:var(--r-md);padding:var(--s3) var(--s4);margin-bottom:var(--s4)">
+        <div style="font-size:var(--text-xs);color:var(--text-muted)">
+          ${isGood ? '✓ Good response — ' + q.framework : '⚠ Missed — ' + q.framework}
+        </div>
+        <div style="font-size:var(--text-sm);font-weight:700;color:${rapportColor}">${rapportLabel}</div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-next-question" style="width:100%">
+        ${nextCallback._isLast ? 'Move to Pitch →' : 'Continue →'}
+      </button>
+    `;
+
+    document.getElementById('btn-next-question')?.addEventListener('click', () => {
+      nextCallback();
+    }, { once: true });
+  }
+
   showPitchPhase(enc, state) {
     this._refreshEncounterHeader(enc);
     const body = document.getElementById('encounter-body');
