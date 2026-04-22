@@ -1385,8 +1385,8 @@ export class UIManager {
       <div class="choices">
         ${(() => {
           const pitchOptions = [
-            { key: 'bad', text: `"We're ${businessName}. We provide ${pitchServiceLabel} to businesses like ${biz.name}. We've helped similar companies and our clients see real results."`, badge: `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Feature-led pitch</span>` },
-            { key: 'good', text: `"Based on what you told me — ${biz.pain || 'your growth challenge'} — that's exactly the problem our ${pitchServiceLabel} solves. We don't just deliver a service; we deliver a specific outcome: ${state.businessDescription || 'measurable results that compound'}. That's what I'd like to explore with you."`, badge: `<span class="choice-badge">StoryBrand — outcome-led</span>` },
+            { key: 'bad', text: `"We're ${businessName}. We provide ${pitchServiceLabel} to businesses like ${biz.name}. We've helped similar companies and our clients see real results."`, badge: `` },
+            { key: 'good', text: `"Based on what you told me — ${biz.pain || 'your growth challenge'} — that's exactly the problem our ${pitchServiceLabel} solves. We don't just deliver a service; we deliver a specific outcome: ${state.businessDescription || 'measurable results that compound'}. That's what I'd like to explore with you."`, badge: `` },
             ...(hasChallenger ? [{ key: 'technique', text: `"Most ${pluralize(biz.type)} I work with think ${biz.pain?.split(' ').slice(0,5).join(' ')}... is the main problem. But in my experience delivering ${pitchServiceLabel}, what's really underneath it is a systems gap. Here's what the top performers in your space are doing differently."`, badge: `<span class="choice-badge" style="color:var(--violet)">🔬 Challenger Insight</span>` }] : []),
           ];
           for (let i = pitchOptions.length - 1; i > 0; i--) {

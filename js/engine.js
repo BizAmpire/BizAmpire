@@ -772,9 +772,7 @@ export class BizAmpireEngine {
     const generatedQuestions = bankSets
       ? bankSets[setIdx]
       : DISCOVERY_QUESTIONS;  // fallback to static questions if file load fails
-    console.log(`[BizAmpire] Encounter: player=${playerIndustry} prospect=${prospectCategory} fit=${fitScore} set=${setIdx >= 0 ? setIdx : 'FALLBACK'} biz="${business.type}"`);
     if (!bankSets) console.warn(`[BizAmpire] No question bank for ${playerIndustry}/${prospectCategory}`);
-    if (fitScore === 0) console.log(`[BizAmpire] Poor ICP fit — showing fit block`);
 
     // Fit dialogue for score 0 or 1
     const fitDialogue = FIT_DIALOGUE[`score_${fitScore}`] || null;
@@ -995,9 +993,12 @@ export class BizAmpireEngine {
       b.business && !b.business.closed && !b.business.lostToCompetitor
     );
 
-    const chosen = [...fallbackPool]
-      .sort(() => Math.random() - 0.5)
-      .slice(0, count);
+    const shuffled = [...fallbackPool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const chosen = shuffled.slice(0, count);
 
     chosen.forEach(bld => {
       // Give the building a temporary "lead incoming" warmth boost so player knows
@@ -2888,9 +2889,11 @@ export class EncounterEngine {
     // Log for debrief
     if (!this.flags.choiceLog) this.flags.choiceLog = [];
     // Find the best counter for comparison
-    const allCounters = Object.entries(obj.counters);
-    const bestCounter = allCounters.reduce((best, [k, c]) => c.rapport > best[1].rapport ? [k, c] : best, allCounters[0]);
-    const wasOptimal = response.rapport >= bestCounter[1].rapport;
+    const allCounters = Object.entries(obj.counters || {});
+    const bestCounter = allCounters.length > 0
+      ? allCounters.reduce((best, [k, c]) => c.rapport > best[1].rapport ? [k, c] : best, allCounters[0])
+      : null;
+    const wasOptimal = !bestCounter || response.rapport >= bestCounter[1].rapport;
     this.flags.choiceLog.push({
       phase: 'Objection',
       phaseLabel: objectionType.charAt(0).toUpperCase() + objectionType.slice(1),
