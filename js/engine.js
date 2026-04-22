@@ -2321,6 +2321,7 @@ export class EncounterEngine {
 
   completeRecon() {
     this.flags.didRecon = true;
+    this.flags.choiceLog = [];
     this.enc.rapport += 1;
     this.enc.phase = 'opener';
     this.ui.showToast('📋 Market intel gathered. Rapport +1', 'success');
@@ -2328,6 +2329,7 @@ export class EncounterEngine {
   }
 
   skipRecon() {
+    this.flags.choiceLog = [];
     this.enc.phase = 'opener';
     this.ui.showOpenerPhase(this.enc, this.state);
   }
@@ -2383,6 +2385,23 @@ export class EncounterEngine {
 
     if (choice.technique) this.flags.lastTechnique = choice.technique;
 
+    // Log for debrief
+    const isOptimal = baseRapport >= 1 && (choice.technique != null || baseRapport >= 2);
+    const optimal = isOptimal ? null : {
+      text: 'Lead with a pain-specific hook rather than a generic intro',
+      framework: 'Pattern Interrupt',
+      frameworkDetail: 'Reference their specific pain point to stand out from every other vendor who opens with "we provide services to companies like yours."',
+    };
+    if (!this.flags.choiceLog) this.flags.choiceLog = [];
+    this.flags.choiceLog.push({
+      phase: 'Opener',
+      chosen: choice.text || 'Generic opener',
+      rapportDelta: baseRapport + bonus + patternBonus,
+      wasOptimal: isOptimal,
+      optimal,
+      framework: choice.technique || null,
+    });
+
     this._warnIfLowRapport('opener');
     if (this._checkEarlyExit('opener')) return;
 
@@ -2421,6 +2440,22 @@ export class EncounterEngine {
       this.ui.showToast(`Missed opportunity — ${q.framework}`, 'warn');
     }
 
+    // Log for debrief
+    if (!this.flags.choiceLog) this.flags.choiceLog = [];
+    this.flags.choiceLog.push({
+      phase: 'Discovery',
+      phaseLabel: q.framework,
+      chosen: responseType === 'good' ? `Asked: "${q.question}"` : `Skipped: "${q.question}"`,
+      rapportDelta: effectiveResponse === 'good' ? q.rapportOnGood : effectiveResponse === 'ok' ? Math.floor(q.rapportOnGood/2) : (q.rapportOnBad || 0),
+      wasOptimal: responseType === 'good',
+      optimal: responseType === 'good' ? null : {
+        text: `Ask: "${q.question}"`,
+        framework: q.framework,
+        frameworkDetail: q.coaching || `This question uses ${q.framework} to uncover deeper pain and build rapport.`,
+      },
+      framework: responseType === 'good' ? q.framework : null,
+    });
+
     this._warnIfLowRapport('discovery');
     if (this._checkEarlyExit('discovery')) return;
 
@@ -2442,16 +2477,38 @@ export class EncounterEngine {
   }
 
   handlePitch(responseType) {
-    const bonuses = {
-      good: 2,
-      technique: 3,
-      bad: -1,
-    };
-    this.enc.rapport += bonuses[responseType] || 0;
+    const bonuses = { good: 2, technique: 3, bad: -1 };
+    const delta = bonuses[responseType] || 0;
+    this.enc.rapport += delta;
 
     if (responseType === 'technique' && this.state.unlockedSkills.includes('challenger_insight')) {
       this.ui.showToast('🔬 Challenger Insight activated! Rapport +3', 'success');
     }
+
+    // Log for debrief
+    const pitchLabels = {
+      bad: 'Feature-led pitch',
+      good: 'StoryBrand outcome-led pitch',
+      technique: 'Challenger Insight pitch',
+    };
+    const pitchOptimal = {
+      bad: {
+        text: 'Lead with the specific outcome you'll deliver, not a feature list',
+        framework: 'StoryBrand',
+        frameworkDetail: 'StoryBrand: Make the customer the hero with a clear problem/solution/outcome arc. "We don't just deliver a service — we solve [specific pain] and deliver [measurable outcome]."',
+      },
+      good: null, // was optimal
+      technique: null, // was optimal
+    };
+    if (!this.flags.choiceLog) this.flags.choiceLog = [];
+    this.flags.choiceLog.push({
+      phase: 'Pitch',
+      chosen: pitchLabels[responseType] || responseType,
+      rapportDelta: delta,
+      wasOptimal: responseType !== 'bad',
+      optimal: pitchOptimal[responseType],
+      framework: responseType === 'bad' ? null : responseType === 'technique' ? 'Challenger Sale' : 'StoryBrand',
+    });
 
     this._warnIfLowRapport('pitch');
     if (this._checkEarlyExit('pitch')) return;
@@ -2539,6 +2596,28 @@ export class EncounterEngine {
       this.ui.showToast(response.framework, effectiveRapport > 0 ? 'success' : 'warn');
     }
 
+    // Log for debrief
+    if (!this.flags.choiceLog) this.flags.choiceLog = [];
+    // Find the best counter for comparison
+    const allCounters = Object.entries(obj.counters);
+    const bestCounter = allCounters.reduce((best, [k, c]) => c.rapport > best[1].rapport ? [k, c] : best, allCounters[0]);
+    const wasOptimal = response.rapport >= bestCounter[1].rapport;
+    this.flags.choiceLog.push({
+      phase: 'Objection',
+      phaseLabel: objectionType.charAt(0).toUpperCase() + objectionType.slice(1),
+      chosen: response.text || responseKey,
+      rapportDelta: effectiveRapport,
+      wasOptimal,
+      optimal: wasOptimal ? null : {
+        text: bestCounter[1].text,
+        framework: bestCounter[1].framework || 'Objection Handling',
+        frameworkDetail: bestCounter[1].framework
+          ? `${bestCounter[1].framework}: This counter addresses the root concern rather than deflecting or conceding.`
+          : 'Address the prospect's real concern directly — acknowledge it, reframe it, then move forward.',
+      },
+      framework: response.framework || null,
+    });
+
     this._warnIfLowRapport('objections');
     if (this._checkEarlyExit('objections')) return;
 
@@ -2605,22 +2684,44 @@ export class EncounterEngine {
 
     const journalContext = this._getJournalContext(outcome);
 
+    // Log close choice for debrief
+    const closeOptimal = {
+      close_direct: null,
+      pilot_offer: null,
+      schedule_followup: rapport < 3 ? null : {
+        text: '"Based on everything we discussed, I'd love to move forward. Can we get started this month?"',
+        framework: 'Direct Close — Never Split the Difference',
+        frameworkDetail: 'When rapport is ≥3, ask for the business directly then go silent. Whoever speaks first after the ask loses. A follow-up request signals you don't believe they're ready — and they often aren't because you telegraphed doubt.',
+      },
+    };
+    if (!this.flags.choiceLog) this.flags.choiceLog = [];
+    this.flags.choiceLog.push({
+      phase: 'Close',
+      chosen: { close_direct: 'Direct close', pilot_offer: '30-day pilot offer', schedule_followup: 'Schedule a follow-up' }[playerChoice] || playerChoice,
+      rapportDelta: 0,
+      wasOptimal: playerChoice !== 'schedule_followup' || rapport < 3,
+      optimal: closeOptimal[playerChoice],
+      framework: playerChoice === 'close_direct' ? 'Direct Close' : playerChoice === 'pilot_offer' ? 'Lean Startup — MVP Pilot' : null,
+    });
+
+    const choiceLog = [...(this.flags.choiceLog || [])];
+
     if (outcome === 'closed') {
       this.game.closeDeal(biz, price, rapport);
       this.ui.showOutcome('closed', biz, price, rapport, this.state,
-        { prompts: JOURNAL_PROMPTS.after_close, context: journalContext });
+        { prompts: JOURNAL_PROMPTS.after_close, context: journalContext, choiceLog });
     } else if (outcome === 'followup') {
       biz.cooldownDays = 3;
       this.ui.showOutcome('followup', biz, price, rapport, this.state,
-        { prompts: JOURNAL_PROMPTS.after_objection, context: journalContext });
+        { prompts: JOURNAL_PROMPTS.after_objection, context: journalContext, choiceLog });
     } else if (outcome === 'ghosted') {
       this.game.lostDeal(biz, outcome);
       this.ui.showOutcome('lost', biz, price, rapport, this.state,
-        { prompts: JOURNAL_PROMPTS.after_ghosted, context: journalContext });
+        { prompts: JOURNAL_PROMPTS.after_ghosted, context: journalContext, choiceLog });
     } else {
       this.game.lostDeal(biz, outcome);
       this.ui.showOutcome('lost', biz, price, rapport, this.state,
-        { prompts: JOURNAL_PROMPTS.after_cold_fail, context: journalContext });
+        { prompts: JOURNAL_PROMPTS.after_cold_fail, context: journalContext, choiceLog });
     }
   }
 

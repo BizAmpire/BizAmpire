@@ -872,7 +872,7 @@ export class UIManager {
     })();
     const choices = [
       { text: `"Hi, I'm ${state.businessName} — we provide ${serviceLabels[_indId] || 'business services'} to businesses in this area. Do you have 2 minutes?"`, rapport: 0, technique: null, badge: null, requiresSkill: null },
-      { text: `"I work with ${pluralize(biz.type)} specifically on ${painSnippet}. I've helped a few businesses in this district with exactly that — mind if I ask one quick question?"`, rapport: 1, technique: 'Pattern Interrupt', badge: 'Targeted', requiresSkill: 'pattern_interrupt' },
+      { text: `"I work with ${pluralize(biz.type)} specifically on ${painSnippet}. I've helped a few businesses in this district with exactly that — mind if I ask one quick question?"`, rapport: 1, technique: 'Pattern Interrupt', badge: null, requiresSkill: 'pattern_interrupt' },
       { text: `"Quick question — when it comes to ${serviceLabels[_indId] || 'what we do'}, what's your biggest frustration right now with how you're handling it?"`, rapport: biz.warmth >= 1 ? 2 : 0, technique: 'Direct Discovery', badge: warmthLabel !== 'cold' ? 'Relationship Capital' : null, requiresSkill: null },
     ];
     // Shuffle display order so button position doesn't telegraph quality
@@ -886,7 +886,7 @@ export class UIManager {
       const locked = c.requiresSkill && !state.unlockedSkills.includes(c.requiresSkill);
       const badgeHtml = c.badge ? `<span class="choice-badge" style="color:var(--violet);background:rgba(155,114,248,0.1)">${c.badge}</span>` : '';
       const lockedHtml = locked ? `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">🔒 Needs ${c.requiresSkill.replace(/_/g,' ')}</span>` : '';
-      return `<button class="choice-btn ${locked ? 'locked' : ''}" data-opener="${ci}" data-choice='${JSON.stringify({rapport: c.rapport, technique: c.technique, text: c.text})}' ${locked ? 'disabled' : ''}><span class="choice-key">${displayIdx+1}</span><div class="choice-body"><span class="choice-text">${c.text}</span>${badgeHtml}${lockedHtml}</div></button>`;
+      return `<button class="choice-btn ${locked ? 'locked' : ''}" data-opener="${ci}" data-choice="${JSON.stringify({rapport: c.rapport, technique: c.technique, text: c.text}).replace(/"/g,'&quot;')}" ${locked ? 'disabled' : ''}><span class="choice-key">${displayIdx+1}</span><div class="choice-body"><span class="choice-text">${c.text}</span>${badgeHtml}${lockedHtml}</div></button>`;
     }).join('');
   }
 
@@ -1241,29 +1241,18 @@ export class UIManager {
       </div>
       <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0;text-transform:uppercase;letter-spacing:.08em">Your pitch</div>
       <div class="choices">
-        <button class="choice-btn" data-pitch="bad">
-          <span class="choice-key">1</span>
-          <div class="choice-body">
-            <span class="choice-text">"We're ${businessName}. We provide ${pitchServiceLabel} to businesses like ${biz.name}. We've helped similar companies and our clients see real results."</span>
-          <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Feature-led pitch</span>
-          </div>
-        </button>
-        <button class="choice-btn technique" data-pitch="good">
-          <span class="choice-key">2</span>
-          <div class="choice-body">
-            <span class="choice-text">"Based on what you told me — ${biz.pain || 'your growth challenge'} — that's exactly the problem our ${pitchServiceLabel} solves. We don't just deliver a service; we deliver a specific outcome: ${state.businessDescription || 'measurable results that compound'}. That's what I'd like to explore with you."</span>
-          <span class="choice-badge">StoryBrand — outcome-led</span>
-          </div>
-        </button>
-        ${hasChallenger ? `
-        <button class="choice-btn technique" data-pitch="technique">
-          <span class="choice-key">3</span>
-          <div class="choice-body">
-            <span class="choice-text">"Most ${pluralize(biz.type)} I work with think ${biz.pain?.split(' ').slice(0,5).join(' ')}... is the main problem. But in my experience delivering ${pitchServiceLabel}, what's really underneath it is a systems gap. Here's what the top performers in your space are doing differently."</span>
-          <span class="choice-badge" style="color:var(--violet)">🔬 Challenger Insight</span>
-          </div>
-        </button>
-        ` : ''}
+        ${(() => {
+          const pitchOptions = [
+            { key: 'bad', text: `"We're ${businessName}. We provide ${pitchServiceLabel} to businesses like ${biz.name}. We've helped similar companies and our clients see real results."`, badge: `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Feature-led pitch</span>` },
+            { key: 'good', text: `"Based on what you told me — ${biz.pain || 'your growth challenge'} — that's exactly the problem our ${pitchServiceLabel} solves. We don't just deliver a service; we deliver a specific outcome: ${state.businessDescription || 'measurable results that compound'}. That's what I'd like to explore with you."`, badge: `<span class="choice-badge">StoryBrand — outcome-led</span>` },
+            ...(hasChallenger ? [{ key: 'technique', text: `"Most ${pluralize(biz.type)} I work with think ${biz.pain?.split(' ').slice(0,5).join(' ')}... is the main problem. But in my experience delivering ${pitchServiceLabel}, what's really underneath it is a systems gap. Here's what the top performers in your space are doing differently."`, badge: `<span class="choice-badge" style="color:var(--violet)">🔬 Challenger Insight</span>` }] : []),
+          ];
+          for (let i = pitchOptions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [pitchOptions[i], pitchOptions[j]] = [pitchOptions[j], pitchOptions[i]];
+          }
+          return pitchOptions.map((p, i) => `<button class="choice-btn" data-pitch="${p.key}"><span class="choice-key">${i+1}</span><div class="choice-body"><span class="choice-text">${p.text}</span>${p.badge}</div></button>`).join('');
+        })()}
       </div>
     `;
 
@@ -1478,27 +1467,18 @@ export class UIManager {
         "The most important rule in closing: ask for the business, then shut up. Whoever speaks first loses." — Never Split the Difference
       </div>
       <div class="choices">
-        <button class="choice-btn technique" data-close="close_direct">
-          <span class="choice-key">1</span>
-          <div class="choice-body">
-            <span class="choice-text">"Based on everything we discussed, I'd love to move forward. Can we get started this month for $${price.toLocaleString()}/mo?"</span>
-          <span class="choice-badge">Direct Close — then silence</span>
-          </div>
-        </button>
-        <button class="choice-btn technique" data-close="pilot_offer">
-          <span class="choice-key">2</span>
-          <div class="choice-body">
-            <span class="choice-text">"What if we do a 30-day pilot — reduced scope, specific metrics. If we hit them, we scale. No risk on your end."</span>
-          <span class="choice-badge">Lean Startup — MVP Pilot</span>
-          </div>
-        </button>
-        <button class="choice-btn" data-close="schedule_followup">
-          <span class="choice-key">3</span>
-          <div class="choice-body">
-            <span class="choice-text">"I don't want to rush you. Can we schedule a follow-up this week to get your questions answered?"</span>
-          <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Soft close — lower odds</span>
-          </div>
-        </button>
+        ${(() => {
+          const closeOptions = [
+            { key: 'close_direct', text: `"Based on everything we discussed, I'd love to move forward. Can we get started this month for $${price.toLocaleString()}/mo?"`, badge: `<span class="choice-badge">Direct Close — then silence</span>` },
+            { key: 'pilot_offer', text: `"What if we do a 30-day pilot — reduced scope, specific metrics. If we hit them, we scale. No risk on your end."`, badge: `<span class="choice-badge">Lean Startup — MVP Pilot</span>` },
+            { key: 'schedule_followup', text: `"I don't want to rush you. Can we schedule a follow-up this week to get your questions answered?"`, badge: `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Soft close — lower odds</span>` },
+          ];
+          for (let i = closeOptions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [closeOptions[i], closeOptions[j]] = [closeOptions[j], closeOptions[i]];
+          }
+          return closeOptions.map((c, i) => `<button class="choice-btn" data-close="${c.key}"><span class="choice-key">${i+1}</span><div class="choice-body"><span class="choice-text">${c.text}</span>${c.badge}</div></button>`).join('');
+        })()}
       </div>
     `;
 
@@ -1560,20 +1540,121 @@ export class UIManager {
         <div class="outcome-rewards">
           ${outcome.rewards.map(r => `<div class="reward-chip ${r.cls}">${r.icon} ${r.label}</div>`).join('')}
         </div>
-        <button class="btn btn-primary" id="btn-return-city" style="margin-top:var(--s4)">Return to City →</button>
+        ${journalData?.choiceLog?.length ? '<button class="btn btn-primary" id="btn-show-debrief" style="margin-top:var(--s4);width:100%">📋 See Full Debrief →</button>' : ''}
+        <button class="btn btn-secondary" id="btn-return-city" style="margin-top:var(--s3);width:100%">Return to City</button>
       </div>
     `;
 
-    document.getElementById('btn-return-city')?.addEventListener('click', () => {
-      this.closeEncounter();  // always return to city first
+    const returnToCity = () => {
+      this.closeEncounter();
       if (journalData?.prompts) {
-        // Slight delay so the map transition settles before journal overlay appears
         setTimeout(() => this.showJournalPrompt(journalData.prompts, journalData.context), 150);
       }
+    };
+
+    document.getElementById('btn-return-city')?.addEventListener('click', returnToCity);
+    document.getElementById('btn-show-debrief')?.addEventListener('click', () => {
+      this.showDebrief(journalData.choiceLog, type, returnToCity);
     });
   }
 
-  // ── Early Exit / Ejection Screen ───────────────────────────
+  showDebrief(choiceLog, outcomeType, returnCallback) {
+    this._refreshEncounterHeader(null);
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+
+    const outcomeColors = { closed: 'var(--sage)', followup: 'var(--amber)', lost: 'var(--crimson)', ghosted: 'var(--crimson)' };
+    const outcomeColor = outcomeColors[outcomeType] || 'var(--text-muted)';
+
+    const phaseIcons = { Opener: '👋', Discovery: '🔍', Pitch: '🎯', Objection: '⚡', Close: '🤝' };
+    const frameworkColors = {
+      'SPIN Selling': '#4f98a3',
+      'Challenger Sale': '#9b72f8',
+      'StoryBrand': '#f59623',
+      '$100M Offers': '#f5a623',
+      "Never Split the Difference": '#e05c4a',
+      'Lean Startup': '#4aad7a',
+      'Pattern Interrupt': '#4f98a3',
+      'Direct Close': '#4aad7a',
+    };
+    const getFrameworkColor = (fw) => {
+      if (!fw) return 'var(--violet)';
+      for (const [key, color] of Object.entries(frameworkColors)) {
+        if (fw.includes(key)) return color;
+      }
+      return 'var(--violet)';
+    };
+
+    const totalPhases = choiceLog.length;
+    const optimalCount = choiceLog.filter(c => c.wasOptimal).length;
+    const scoreLabel = optimalCount === totalPhases ? 'Perfect Execution' :
+                       optimalCount >= totalPhases * 0.75 ? 'Strong Performance' :
+                       optimalCount >= totalPhases * 0.5 ? 'Solid Effort' : 'Needs Work';
+    const scorePct = Math.round((optimalCount / totalPhases) * 100);
+
+    const rows = choiceLog.map(entry => {
+      const icon = phaseIcons[entry.phase] || '•';
+      const delta = entry.rapportDelta > 0 ? `<span style="color:var(--sage)">+${entry.rapportDelta}</span>` :
+                    entry.rapportDelta < 0 ? `<span style="color:var(--crimson)">${entry.rapportDelta}</span>` :
+                    `<span style="color:var(--text-muted)">0</span>`;
+      const statusDot = entry.wasOptimal
+        ? `<span style="color:var(--sage);font-size:1rem">✓</span>`
+        : `<span style="color:var(--crimson);font-size:1rem">✗</span>`;
+
+      const frameworkUsed = entry.framework
+        ? `<span style="display:inline-block;font-size:var(--text-xs);padding:2px 8px;border-radius:4px;background:${getFrameworkColor(entry.framework)}22;color:${getFrameworkColor(entry.framework)};border:1px solid ${getFrameworkColor(entry.framework)}44;margin-top:var(--s2)">${entry.framework}</span>`
+        : '';
+
+      const missed = !entry.wasOptimal && entry.optimal ? `
+        <div style="margin-top:var(--s3);padding:var(--s3) var(--s4);background:rgba(155,114,248,0.06);border:1px solid rgba(155,114,248,0.2);border-radius:var(--r-md)">
+          <div style="font-size:var(--text-xs);color:var(--violet);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--s2)">
+            📚 ${entry.optimal.framework} — Optimal Move
+          </div>
+          <div style="font-size:var(--text-sm);color:var(--text);margin-bottom:var(--s2);font-style:italic">"${entry.optimal.text}"</div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted);line-height:1.5">${entry.optimal.frameworkDetail}</div>
+        </div>
+      ` : '';
+
+      return `
+        <div style="border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s4);background:var(--surface);margin-bottom:var(--s3)">
+          <div style="display:flex;align-items:flex-start;gap:var(--s3)">
+            <div style="font-size:1.1rem;line-height:1">${icon}</div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s2)">
+                <span style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">${entry.phase}${entry.phaseLabel ? ' — '+entry.phaseLabel : ''}</span>
+                <div style="display:flex;align-items:center;gap:var(--s2)">${statusDot} <span style="font-size:var(--text-xs);color:var(--text-muted)">rapport ${delta}</span></div>
+              </div>
+              <div style="font-size:var(--text-sm);color:var(--text);line-height:1.4">${entry.chosen}</div>
+              ${frameworkUsed}
+              ${missed}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    body.innerHTML = `
+      <div style="margin-bottom:var(--s4)">
+        <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:var(--s2)">Post-Encounter Debrief</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--s4);background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);margin-bottom:var(--s4)">
+          <div>
+            <div style="font-size:var(--text-xl);font-weight:800;color:${outcomeColor}">${scoreLabel}</div>
+            <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">${optimalCount} of ${totalPhases} moves optimal</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:2rem;font-weight:900;color:${outcomeColor}">${scorePct}%</div>
+            <div style="font-size:var(--text-xs);color:var(--text-muted)">execution score</div>
+          </div>
+        </div>
+        ${rows}
+      </div>
+      <button class="btn btn-primary" id="btn-debrief-return" style="width:100%">Return to City →</button>
+    `;
+
+    document.getElementById('btn-debrief-return')?.addEventListener('click', () => returnCallback(), { once: true });
+  }
+
+    // ── Early Exit / Ejection Screen ───────────────────────────
   showEjected(biz, phase, cashDrain, cooldownDays) {
     const body = document.getElementById('encounter-body');
     if (!body) return;
