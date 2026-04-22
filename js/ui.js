@@ -890,7 +890,7 @@ export class UIManager {
     }).join('');
   }
 
-  showOpenerReaction(enc, chosenText, openerQuality, nextCallback) {
+  showOpenerReaction(enc, chosenText, openerQuality, rapportDelta, nextCallback) {
     this._refreshEncounterHeader(enc);
     const body = document.getElementById('encounter-body');
     if (!body) return;
@@ -898,9 +898,9 @@ export class UIManager {
     const reactions = {
       warm: [
         `"[nods slowly] OK — yeah, that's actually relevant. Tell me more."`,
-        `"[leaning in] Hm. You've done your homework. Go on."`,
+        `"[leaning in] Alright, you've got my attention. What are you thinking?"`,
         `"That's... a pretty specific point. I'm listening."`,
-        `"[impressed] Alright, you've got my attention. What are you thinking?"`,
+        `"[impressed] Not the usual pitch. OK — go on."`,
       ],
       cold: [
         `"[noncommittal] OK... look, I'm pretty busy right now."`,
@@ -912,8 +912,9 @@ export class UIManager {
     const pool = reactions[openerQuality] || reactions.cold;
     const nameHash = (biz.name || '').split('').reduce((h, c) => h + c.charCodeAt(0), 0);
     const reactionLine = pool[(nameHash + Math.round(enc.rapport * 3)) % pool.length];
-    const rapportColor = enc.rapport > 0 ? 'var(--sage)' : enc.rapport < 0 ? 'var(--crimson)' : 'var(--text-muted)';
-    const rapportLabel = enc.rapport > 0 ? `+${enc.rapport.toFixed(1)} Rapport` : enc.rapport < 0 ? `${enc.rapport.toFixed(1)} Rapport` : 'No change yet';
+    const delta = rapportDelta ?? 0;
+    const rapportColor = delta > 0 ? 'var(--sage)' : delta < 0 ? 'var(--crimson)' : 'var(--text-muted)';
+    const rapportLabel = delta > 0 ? `+${delta.toFixed(1)} Rapport` : delta < 0 ? `${delta.toFixed(1)} Rapport` : '±0 Rapport';
     body.innerHTML = `
       <div class="dialogue-box player-dialogue" style="background:rgba(79,152,163,0.08);border-color:var(--teal,#4f98a3);margin-bottom:var(--s3)">
         <div class="dialogue-speaker" style="color:var(--teal,#4f98a3)">You said</div>
@@ -1063,15 +1064,12 @@ export class UIManager {
           <span class="choice-key">1</span>
           <div class="choice-body">
             <span class="choice-text">${this._subQText(q.question, biz)}</span>
-            <span class="choice-badge" style="color:var(--violet);background:rgba(155,114,248,0.1)">${q.framework}</span>
-            ${!hasSkill ? `<span class="choice-badge" style="color:var(--amber);background:rgba(245,166,35,0.1)">⚡ +bonus if you unlock ${q.skillTag.replace(/_/g,' ')}</span>` : `<span class="choice-badge" style="color:var(--sage);background:rgba(74,222,128,0.08)">✓ Skilled</span>`}
           </div>
         </button>
         <button class="choice-btn" data-response="bad" data-qid="${q.skillTag}">
           <span class="choice-key">2</span>
           <div class="choice-body">
             <span class="choice-text">${deflectionLine}</span>
-            <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Deflection</span>
           </div>
         </button>
       </div>
@@ -1119,55 +1117,63 @@ export class UIManager {
       : (deflectionFallbacks[q.phase] || q.badResponse); // they deflected
 
     // Prospect reaction to what the player said — keyed to good/bad + phase
+    // Situation = fact-finding, prospect answers/acknowledges the question naturally
+    // Problem = surfacing pain, prospect recognizes the issue
+    // Implication = amplifying consequence, prospect feels the weight
+    // Need-Payoff = articulating value, prospect gets excited about the solution
     const reactions = {
       situation: {
         good: [
-          `"Hm. Yeah, that makes sense. I hadn't thought about it that way."`,
-          `"Right, right. That's a fair point actually."`,
-          `"OK — yeah. I can see that being an issue for us."`
+          `"[thinks] Yeah, good question. Honestly more complicated than it probably should be."`,
+          `"[nods] Mm. That's something we've been dealing with actually."`,
+          `"That's... actually something we're in the middle of sorting out right now."`,
+          `"Good question — I don't think anyone's ever asked me that before."`,
         ],
         bad: [
-          `"[looks away] Sure... anyway."`,
-          `"I mean, I guess. I'm not sure where you're going with this."`,
-          `"[unimpressed] Yeah, we'll see."`
-        ]
+          `"[looks away] Sure... do you have a brochure or something?"`,
+          `"I'm not sure where you're going with this."`,
+          `"[unimpressed] We get a lot of vendors in here. What makes you different?"`,
+        ],
       },
       problem: {
         good: [
-          `"[leans in] Yeah — that's exactly the problem. More than once a year."`,
+          `"[leans in] Yeah — that's exactly it. More than once this quarter."`,
           `"You know what, it's happened more than I want to admit."`,
-          `"That's... actually a really good point. We haven't fixed it."`
+          `"That's... actually a really good point. We haven't fixed it."`,
+          `"[exhales] Yeah. That's been on my mind for a while."`,
         ],
         bad: [
           `"I mean, sure, but I don't know if it's that big a deal."`,
           `"[shrugs] We've managed so far."`,
-          `"We handle it. It's fine."`
-        ]
+          `"We handle it. It's fine."`,
+        ],
       },
       implication: {
         good: [
           `"[pauses] When you put it that way... that number's bigger than I thought."`,
           `"Yeah. That's... a real cost we're not tracking."`,
-          `"OK that math actually concerns me a bit."`
+          `"OK, that math actually concerns me."`,
+          `"Hm. I hadn't thought about it that way — that's significant."`,
         ],
         bad: [
           `"I don't know if the numbers are quite that dramatic."`,
           `"[skeptical] Maybe. I'd have to think about it."`,
-          `"We've been dealing with it this long, so..."`
-        ]
+          `"We've been dealing with it this long, so..."`,
+        ],
       },
       need_payoff: {
         good: [
           `"[sits up] Yeah. If you can actually deliver that, I want to hear more."`,
           `"That would genuinely change how we operate. Walk me through it."`,
-          `"OK — I'm interested. What does that actually look like?"`
+          `"OK — I'm interested. What does that actually look like?"`,
+          `"[leans forward] That's exactly what I'd want. How does it work?"`,
         ],
         bad: [
           `"[noncommittal] Yeah, maybe. Send me something and I'll take a look."`,
           `"I've heard that before. What makes you different?"`,
-          `"[checks watch] Sure. I'll think about it."`
-        ]
-      }
+          `"[checks watch] Sure. I'll think about it."`,
+        ],
+      },
     };
 
     // 'ok' uses the good reaction pool (player said the right thing, just no skill boost)

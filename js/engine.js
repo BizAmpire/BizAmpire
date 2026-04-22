@@ -2379,9 +2379,10 @@ export class EncounterEngine {
   handleOpener(choice) {
     const baseRapport = choice.rapport || 0;
     const bonus = this.flags.didRecon ? 0.5 : 0;
-    const patternBonus = this.state.unlockedSkills.includes('pattern_interrupt') ? 0.5 : 0;
-    this.enc.rapport += baseRapport + bonus + patternBonus;
-    this.flags.openerQuality = this.enc.rapport >= 2 ? 'warm' : 'cold';
+    const patternBonus = this.state.unlockedSkills.includes('pattern_interrupt') && baseRapport >= 1 ? 0.5 : 0;
+    const finalRapport = baseRapport + bonus + patternBonus;
+    this.enc.rapport += finalRapport;
+    this.flags.openerQuality = baseRapport >= 1 ? 'warm' : 'cold';
 
     if (choice.technique) this.flags.lastTechnique = choice.technique;
 
@@ -2396,7 +2397,7 @@ export class EncounterEngine {
     this.flags.choiceLog.push({
       phase: 'Opener',
       chosen: choice.text || 'Generic opener',
-      rapportDelta: baseRapport + bonus + patternBonus,
+      rapportDelta: finalRapport,
       wasOptimal: isOptimal,
       optimal,
       framework: choice.technique || null,
@@ -2412,7 +2413,7 @@ export class EncounterEngine {
       this.enc.phase = 'discovery';
       this.ui.showDiscoveryPhase(this.enc, this.state);
     };
-    this.ui.showOpenerReaction(this.enc, chosenText, openerQuality, proceed);
+    this.ui.showOpenerReaction(this.enc, chosenText, openerQuality, finalRapport, proceed);
   }
 
   handleDiscovery(questionId, responseType) {
