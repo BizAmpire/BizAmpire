@@ -936,7 +936,7 @@ export class UIManager {
     return order.map((ci, displayIdx) => {
       const c = choices[ci];
       const locked = c.requiresSkill && !state.unlockedSkills.includes(c.requiresSkill);
-      const badgeHtml = c.badge ? `<span class="choice-badge" style="color:var(--violet);background:rgba(155,114,248,0.1)">${c.badge}</span>` : '';
+      const badgeHtml = '';
       const lockedHtml = locked ? `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">🔒 Needs ${c.requiresSkill.replace(/_/g,' ')}</span>` : '';
       return `<button class="choice-btn ${locked ? 'locked' : ''}" data-opener="${ci}" data-choice="${JSON.stringify({rapport: c.rapport, technique: c.technique, text: c.text}).replace(/"/g,'&quot;')}" ${locked ? 'disabled' : ''}><span class="choice-key">${displayIdx+1}</span><div class="choice-body"><span class="choice-text">${c.text}</span>${badgeHtml}${lockedHtml}</div></button>`;
     }).join('');
@@ -1513,7 +1513,7 @@ export class UIManager {
           return entries.map(([key, c], i) => {
             const locked = c.skillRequired && !state.unlockedSkills.includes(c.skillRequired);
             const frameworkBadge = (c.framework && state.unlockedSkills.includes(c.skillRequired || ''))
-              ? `<span class="choice-badge" style="color:var(--violet);background:rgba(155,114,248,0.1)">${c.framework}</span>` : '';
+              ? '' : '';
             const lockedBadge = locked ? `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">🔒 Requires ${c.skillRequired?.replace(/_/g,' ')}</span>` : '';
             return `<button class="choice-btn ${locked ? 'locked' : ''}" data-objection="${objectionType}" data-response="${key}" ${locked ? 'disabled' : ''}><span class="choice-key">${i+1}</span><div class="choice-body"><span class="choice-text">${c.text.replace('{impliedCost}', '$'+Math.round(biz.budget[0]*0.5).toLocaleString()+'/month').replace('{impliedAnnual}', '$'+(biz.budget[0]*0.5*12).toLocaleString()).replace('{price}', enc.stateFlags?.price ? '$'+enc.stateFlags.price.toLocaleString()+'/mo' : 'our fee')}</span>${frameworkBadge}${lockedBadge}</div></button>`;
           }).join('');
@@ -1617,9 +1617,9 @@ export class UIManager {
       <div class="choices">
         ${(() => {
           const closeOptions = [
-            { key: 'close_direct', text: `"Based on everything we discussed, I'd love to move forward. Can we get started this month for $${price.toLocaleString()}/mo?"`, badge: `<span class="choice-badge">Direct Close — then silence</span>` },
-            { key: 'pilot_offer', text: `"What if we do a 30-day pilot — reduced scope, specific metrics. If we hit them, we scale. No risk on your end."`, badge: `<span class="choice-badge">Lean Startup — MVP Pilot</span>` },
-            { key: 'schedule_followup', text: `"I don't want to rush you. Can we schedule a follow-up this week to get your questions answered?"`, badge: `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Soft close — lower odds</span>` },
+            { key: 'close_direct', text: `"Based on everything we discussed, I'd love to move forward. Can we get started this month for $${price.toLocaleString()}/mo?"`, badge: `` },
+            { key: 'pilot_offer', text: `"What if we do a 30-day pilot — reduced scope, specific metrics. If we hit them, we scale. No risk on your end."`, badge: `` },
+            { key: 'schedule_followup', text: `"I don't want to rush you. Can we schedule a follow-up this week to get your questions answered?"`, badge: `` },
           ];
           for (let i = closeOptions.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
