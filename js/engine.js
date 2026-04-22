@@ -178,11 +178,10 @@ function _addTreeRing(map, x, y, w, h) {
 }
 
 // District building placement
-function buildDistrictBlocks() {
+function buildDistrictBlocks(tempMap) {
   const blocks = [];
 
-  // Pre-generate the map so we can test tile types during placement
-  const tempMap = generateCityMap();
+  // tempMap is passed in — avoids regenerating the city map a second time
 
   // Returns true if a 2x2 footprint at (tx,ty) is entirely on non-road,
   // non-water, non-park, non-tree tiles — i.e. genuine building-lot space
@@ -297,9 +296,10 @@ export class BizAmpireEngine {
       animTimer: 0,
     };
 
-    // Map
+    // Map — generate once and pass to buildDistrictBlocks to avoid double generation
     this.map = generateCityMap();
-    this.buildings = buildDistrictBlocks();
+    this.buildings = buildDistrictBlocks(this.map);
+    this._initBuildingCache(); // precompute px/py/pw/ph, sorted order, road tile list
 
     // Competitor agents — stagger timer so they don't all pick targets at once
     this.competitorAgents = COMPETITORS.map((c, i) => ({
@@ -333,6 +333,33 @@ export class BizAmpireEngine {
     this.minimapCtx = this.minimapCanvas ? this.minimapCanvas.getContext('2d') : null;
 
     this._bindInput();
+  }
+
+  // ── One-time cache of derived building data and road tiles ─────────────────
+  // Called once after this.buildings and this.map are ready.
+  _initBuildingCache() {
+    // Perf #2: stamp precomputed pixel coords onto each building so _collides
+    // and _getNearbyBuilding never do b.x * TILE at runtime.
+    for (const b of this.buildings) {
+      b.px  = b.x * TILE;
+      b.py  = b.y * TILE;
+      b.pw  = b.w * TILE;
+      b.ph  = b.h * TILE;
+      // Centre point used by _getNearbyBuilding
+      b.pcx = (b.x + b.w / 2) * TILE;
+      b.pcy = (b.y + b.h / 2) * TILE;
+    }
+
+    // Perf #1: sort once for painter-order rendering (y ascending = back-to-front)
+    this.sortedBuildings = [...this.buildings].sort((a, b) => a.y - b.y);
+
+    // Perf #6: cache road tiles so competitor wander doesn’t rescan all 2400 tiles
+    this._roadTiles = [];
+    for (let ty = 1; ty < MAP_H - 1; ty++) {
+      for (let tx = 1; tx < MAP_W - 1; tx++) {
+        if (this.map[ty]?.[tx] === 0) this._roadTiles.push({ tx, ty });
+      }
+    }
   }
 
   _bindInput() {
@@ -533,14 +560,12 @@ export class BizAmpireEngine {
     const tile = this.map[ty]?.[tx] ?? 2;
     if (tile === 4 || tile === 5) return true;
 
-    // Check buildings
+    // Check buildings — use precomputed pixel coords (set in _initBuildingCache)
     const pw = 28;
     for (const b of this.buildings) {
       if (b.type === 'sign') continue;
-      const bx = b.x * TILE, by = b.y * TILE;
-      const bw = b.w * TILE, bh = b.h * TILE;
-      if (px + pw/2 > bx && px - pw/2 < bx + bw &&
-          py + pw/2 > by && py - pw/2 < by + bh) {
+      if (px + pw/2 > b.px && px - pw/2 < b.px + b.pw &&
+          py + pw/2 > b.py && py - pw/2 < b.py + b.ph) {
         return true;
       }
     }
@@ -548,21 +573,20 @@ export class BizAmpireEngine {
   }
 
   _getNearbyBuilding() {
-    const range = TILE * 2.2;
+    const rangeSq = (TILE * 2.2) * (TILE * 2.2); // squared — avoids sqrt per building
     for (const b of this.buildings) {
       if (b.type === 'sign') continue;
-      const bx = (b.x + b.w / 2) * TILE;
-      const by = (b.y + b.h / 2) * TILE;
-      const dist = Math.hypot(this.player.x - bx, this.player.y - by);
-      if (dist < range) return b;
+      // b.pcx / b.pcy precomputed in _initBuildingCache
+      const dx = this.player.x - b.pcx, dy = this.player.y - b.pcy;
+      if (dx * dx + dy * dy < rangeSq) return b;
     }
     return null;
   }
 
   _getBuildingAt(wx, wy) {
     for (const b of this.buildings) {
-      if (wx >= b.x * TILE && wx < (b.x + b.w) * TILE &&
-          wy >= b.y * TILE && wy < (b.y + b.h) * TILE) {
+      if (wx >= b.px && wx < b.px + b.pw &&
+          wy >= b.py && wy < b.py + b.ph) {
         return b;
       }
     }
@@ -741,18 +765,11 @@ export class BizAmpireEngine {
       }
 
       // If no steal target, wander to a random road tile
-      if (!pickedTarget) {
-        const roadTiles = [];
-        for (let ty = 1; ty < MAP_H - 1; ty++) {
-          for (let tx = 1; tx < MAP_W - 1; tx++) {
-            if (this.map[ty]?.[tx] === 0) roadTiles.push({ tx, ty });
-          }
-        }
-        if (roadTiles.length > 0) {
-          const pick = roadTiles[Math.floor(Math.random() * roadTiles.length)];
-          comp.targetX = (pick.tx + 0.5) * TILE;
-          comp.targetY = (pick.ty + 0.5) * TILE;
-        }
+      // Use cached list — no need to rescan 2400 tiles every 45s
+      if (!pickedTarget && this._roadTiles.length > 0) {
+        const pick = this._roadTiles[Math.floor(Math.random() * this._roadTiles.length)];
+        comp.targetX = (pick.tx + 0.5) * TILE;
+        comp.targetY = (pick.ty + 0.5) * TILE;
       }
     });
   }
@@ -1207,6 +1224,9 @@ export class BizAmpireEngine {
 
   // ── Render ─────────────────────────────────────────────────
   render() {
+    // Cache timestamp once per frame — used by tile animations to avoid Date.now() in inner loops
+    this._frameTime = Date.now();
+
     // Iframe safety: canvas may be zero-sized on first paint — resize if needed
     if (this.canvas.width < 10 || this.canvas.height < 10) {
       const w = window.innerWidth  || document.documentElement.clientWidth  || document.body.clientWidth  || 800;
@@ -1378,7 +1398,7 @@ export class BizAmpireEngine {
           ctx.fillRect(px, py, T, T);
 
           // Animated sparkle tiles (time-based, only every other tile)
-          const sparkle = (tx + ty + Math.floor(Date.now() / 500)) % 4;
+          const sparkle = (tx + ty + Math.floor(this._frameTime / 500)) % 4;
           if (sparkle === 0) {
             ctx.fillStyle = C.waterLt;
             ctx.fillRect(px + 4, py + 4, T - 8, T - 8);
@@ -1494,12 +1514,10 @@ export class BizAmpireEngine {
   }
 
   _drawBuildings(ctx) {
-    // Sort so buildings closer to bottom (higher y) draw on top
-    const sorted = [...this.buildings].sort((a, b) => a.y - b.y);
-
-    for (const b of sorted) {
-      const bx = b.x * TILE, by = b.y * TILE;
-      const bw = b.w * TILE, bh = b.h * TILE;
+    // Use pre-sorted list (sorted once in _initBuildingCache, buildings never move)
+    for (const b of this.sortedBuildings) {
+      const bx = b.px, by = b.py;
+      const bw = b.pw, bh = b.ph;
       const color = b.districtColor;
 
       if (b.type === 'sign') {
@@ -1520,7 +1538,7 @@ export class BizAmpireEngine {
   }
 
   _drawDistrictSign(ctx, b) {
-    const bx = b.x * TILE, by = b.y * TILE;
+    const bx = b.px, by = b.py; // use precomputed pixel coords
     const color = b.districtColor;
     const W = TILE * 2, H = TILE * 0.7;
 
@@ -1841,10 +1859,10 @@ export class BizAmpireEngine {
       else                            color = b.districtColor || '#ffffff';
       mc.fillStyle = color + '80';
       mc.fillRect(
-        b.x * TILE * scaleX,
-        b.y * TILE * scaleY,
-        b.w * TILE * scaleX,
-        b.h * TILE * scaleY
+        b.px * scaleX,
+        b.py * scaleY,
+        b.pw * scaleX,
+        b.ph * scaleY
       );
     });
 
@@ -2230,8 +2248,8 @@ export class BizAmpireEngine {
   }
   _drawInteractPrompt(ctx, bld) {
     const biz = bld.business;
-    const bx = (bld.x + bld.w / 2) * TILE;
-    const by = bld.y * TILE - 8;
+    const bx = bld.pcx; // precomputed centre-x
+    const by = bld.py - 8;
     const warmthLabel = ['Cold', 'Familiar', 'Warm', 'Advocate'][biz.warmth] || 'Cold';
     const warmthColors = ['#7b7d8e', '#f5a623', '#ffd166', '#4ade80'];
 
@@ -2368,8 +2386,14 @@ export class EncounterEngine {
     this._warnIfLowRapport('opener');
     if (this._checkEarlyExit('opener')) return;
 
-    this.enc.phase = 'discovery';
-    this.ui.showDiscoveryPhase(this.enc, this.state);
+    // Show reaction beat — NPC responds to opener before discovery begins
+    const chosenText = choice.text || '';
+    const openerQuality = this.flags.openerQuality;
+    const proceed = () => {
+      this.enc.phase = 'discovery';
+      this.ui.showDiscoveryPhase(this.enc, this.state);
+    };
+    this.ui.showOpenerReaction(this.enc, chosenText, openerQuality, proceed);
   }
 
   handleDiscovery(questionId, responseType) {
@@ -2502,8 +2526,6 @@ export class EncounterEngine {
       this._moveToClose();
       return;
     }
-    // Use the index the UI already picked when it displayed this objection.
-    // If missing for any reason, fall back to 0.
     const objIdx = this.flags.currentObjIdx ?? 0;
     const obj = objectionSet[objIdx];
     const response = obj.counters[responseKey];
@@ -2523,11 +2545,17 @@ export class EncounterEngine {
     this.flags.resolved.push(objectionType);
     const remaining = this.flags.objections.filter(o => !this.flags.resolved.includes(o));
 
-    if (remaining.length === 0) {
-      this._moveToClose();
-    } else {
-      this.ui.showNextObjection(this.enc, this.state, remaining[0]);
-    }
+    // Show reaction beat — NPC responds to counter before moving on
+    const chosenText = response.text || '';
+    const nextCallback = () => {
+      if (remaining.length === 0) {
+        this._moveToClose();
+      } else {
+        this.ui.showNextObjection(this.enc, this.state, remaining[0]);
+      }
+    };
+    nextCallback._isLast = (remaining.length === 0);
+    this.ui.showObjectionReaction(this.enc, chosenText, effectiveRapport, objectionType, nextCallback);
   }
 
   _moveToClose() {

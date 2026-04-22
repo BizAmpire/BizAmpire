@@ -778,46 +778,68 @@ export class UIManager {
     this._refreshEncounterHeader(enc);
     const body = document.getElementById('encounter-body');
     if (!body) return;
-
     const biz = enc.business;
     const isWarm = biz.warmth >= 2;
-    const rapportDisplay = enc.rapport > 0 ? `<span style="color:var(--sage)">+${enc.rapport.toFixed(1)} Rapport</span>` : '';
+    const isAdv  = biz.warmth >= 3;
+
+    const coldOpeners = [
+      `"${biz.owner} glances up from their desk. 'Yeah? Can I help you with something?'"`,
+      `"[busy, doesn't look up immediately] 'Give me one sec... OK. What is it?'"`,
+      `"'Hi — do you have an appointment, or...?'"`,
+      `"[cautious] 'I don't recognize you. Are you selling something?'"`,
+    ];
+    const familiarOpeners = [
+      `"Oh, hey. I've seen you around the district before, right? What's up?"`,
+      `"[nods] 'Hey — come in. What can I do for you?'"`,
+      `"'Yeah, I know your name. What are you working on these days?'"`,
+    ];
+    const warmOpeners = [
+      `"${biz.owner} waves you over. 'Hey! Good to see you. Come in, sit down.'"`,
+      `"'Perfect timing — I was just thinking about you. What's going on?'"`,
+      `"'Always good when you stop by. What's the update?'"`,
+    ];
+    const advOpeners = [
+      `"${biz.owner} stands up to greet you. 'I was hoping you'd come by. We need to talk.'"`,
+      `"'Perfect — grab a coffee. I've been wanting to pick your brain on something.'"`,
+    ];
+
+    const warmthPool = isAdv ? advOpeners : isWarm ? warmOpeners : biz.warmth >= 1 ? familiarOpeners : coldOpeners;
+    const nameHash = (biz.name || '').split('').reduce((h, c) => h + c.charCodeAt(0), 0);
+    const npcLine = warmthPool[nameHash % warmthPool.length];
+
+    const rapportDisplay = enc.rapport > 0
+      ? `<div class="dialogue-sub" style="color:var(--sage)">+${enc.rapport.toFixed(1)} Rapport from market research</div>`
+      : '';
 
     body.innerHTML = `
-      <div class="dialogue-box">
+      <div class="dialogue-box" style="margin-bottom:var(--s4)">
         <div class="dialogue-speaker">${biz.owner} — ${biz.ownerTitle}</div>
-        <div class="dialogue-text" id="dialogue-text">
-          ${isWarm
-            ? `"Hey! Good to see you again. What brings you by?"` 
-            : `"${biz.owner} looks up from their desk. 'Can I help you?'"`}
-        </div>
-        ${enc.rapport > 0 ? `<div class="dialogue-sub">${rapportDisplay} from market research</div>` : ''}
+        <div class="dialogue-text" style="font-style:italic">${npcLine}</div>
+        ${rapportDisplay}
       </div>
+      <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0 var(--s3);text-transform:uppercase;letter-spacing:.08em">What do you say?</div>
       <div class="choices" id="choices-container">
-        <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0;text-transform:uppercase;letter-spacing:.08em;">Choose your opener</div>
         ${this._renderOpenerChoices(biz, state)}
       </div>
-      <button class="btn btn-secondary" style="margin-top:var(--s3);align-self:flex-end" id="btn-exit-encounter">✕ Leave</button>
+      <div style="margin-top:var(--s3);text-align:right">
+        <button class="btn btn-secondary btn-sm" id="btn-exit-encounter" style="padding:var(--s2) var(--s4);font-size:var(--text-xs)">✕ Leave</button>
+      </div>
     `;
 
     body.querySelectorAll('.choice-btn[data-opener]').forEach(btn => {
       btn.addEventListener('click', () => {
         try {
           const choice = JSON.parse(btn.dataset.choice || '{}');
-          if (!this.encounterEngine) { console.error('[BizAmpire] encounterEngine not set on UI'); return; }
+          if (!this.encounterEngine) return;
           this.encounterEngine.handleOpener(choice);
         } catch(e) { console.error('[BizAmpire] opener click error:', e); }
       });
     });
-
-    document.getElementById('btn-exit-encounter')?.addEventListener('click', () => {
-      this.closeEncounter();
-    });
+    document.getElementById('btn-exit-encounter')?.addEventListener('click', () => this.closeEncounter());
   }
 
   _renderOpenerChoices(biz, state) {
     const warmthLabel = ['cold','familiar','warm','advocate'][biz.warmth] || 'cold';
-    const hasPatternInterrupt = state.unlockedSkills.includes('pattern_interrupt');
     const serviceLabels = {
       it: 'IT & managed services', marketing: 'marketing & lead generation',
       finance: 'accounting & financial advisory', law: 'legal services',
@@ -825,55 +847,66 @@ export class UIManager {
       realestate: 'real estate & property management', health: 'healthcare services',
       consulting: 'operations consulting',
     };
-
     const _indId = state.businessIndustry?.id || state.businessIndustry;
+    const painSnippet = (() => {
+      const pain = biz.pain || '';
+      const sentenceMatch = pain.match(/^[^.!?]+[.!?]/);
+      const sentence = sentenceMatch ? sentenceMatch[0].replace(/[.!?]+$/, '') : pain.split(' ').slice(0, 8).join(' ');
+      return sentence.trim();
+    })();
     const choices = [
-      {
-        text: `"Hi, I'm ${state.businessName} — we provide ${serviceLabels[_indId] || 'business services'} to companies in this area. Do you have 2 minutes?"`,
-        rapport: 0,
-        label: 'Generic opener',
-        badge: null,
-        technique: null,
-      },
-      {
-        text: `"I work with ${pluralize(biz.type)} specifically on ${(() => {
-          const pain = biz.pain || '';
-          // Take the first complete sentence; fall back to first 8 words
-          const sentenceMatch = pain.match(/^[^.!?]+[.!?]/);
-          const sentence = sentenceMatch ? sentenceMatch[0].replace(/[.!?]+$/, '') : pain.split(' ').slice(0, 8).join(' ');
-          return sentence.trim();
-        })()}. I've helped a few businesses in this district with exactly that — mind if I ask one quick question?"`,
-        rapport: 1,
-        label: 'Pain-specific opener',
-        badge: 'Targeted',
-        technique: 'Pattern Interrupt',
-        requiresSkill: 'pattern_interrupt',
-      },
-      {
-        text: `"Quick question — when it comes to ${serviceLabels[_indId] || 'what we do'}, what's your biggest frustration right now with how you're handling it?"`,
-        rapport: biz.warmth >= 1 ? 2 : 0,
-        label: warmthLabel === 'cold' ? 'Direct (risky cold)' : 'Direct (warm relationship)',
-        badge: warmthLabel !== 'cold' ? 'Relationship Capital' : null,
-        technique: 'Direct Discovery',
-      },
+      { text: `"Hi, I'm ${state.businessName} — we provide ${serviceLabels[_indId] || 'business services'} to businesses in this area. Do you have 2 minutes?"`, rapport: 0, technique: null, badge: null, requiresSkill: null },
+      { text: `"I work with ${pluralize(biz.type)} specifically on ${painSnippet}. I've helped a few businesses in this district with exactly that — mind if I ask one quick question?"`, rapport: 1, technique: 'Pattern Interrupt', badge: 'Targeted', requiresSkill: 'pattern_interrupt' },
+      { text: `"Quick question — when it comes to ${serviceLabels[_indId] || 'what we do'}, what's your biggest frustration right now with how you're handling it?"`, rapport: biz.warmth >= 1 ? 2 : 0, technique: 'Direct Discovery', badge: warmthLabel !== 'cold' ? 'Relationship Capital' : null, requiresSkill: null },
     ];
-
     return choices.map((c, i) => {
       const locked = c.requiresSkill && !state.unlockedSkills.includes(c.requiresSkill);
-      return `
-        <button class="choice-btn ${c.badge ? 'technique' : ''} ${locked ? 'locked' : ''}" 
-                data-opener="${i}" 
-                data-choice='${JSON.stringify({rapport: c.rapport, technique: c.technique})}'
-                ${locked ? 'disabled' : ''}>
-          <span class="choice-key">${i+1}</span>
-          <div class="choice-body">
-            <span class="choice-text">${c.text}</span>
-            ${c.badge ? `<span class="choice-badge">${c.badge}</span>` : ''}
-            ${locked ? `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">🔒 Needs ${c.requiresSkill.replace(/_/g,' ')}</span>` : ''}
-          </div>
-        </button>
-      `;
+      const badgeHtml = c.badge ? `<span class="choice-badge" style="color:var(--violet);background:rgba(155,114,248,0.1)">${c.badge}</span>` : '';
+      const lockedHtml = locked ? `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">🔒 Needs ${c.requiresSkill.replace(/_/g,' ')}</span>` : '';
+      return `<button class="choice-btn ${c.badge ? 'technique' : ''} ${locked ? 'locked' : ''}" data-opener="${i}" data-choice='${JSON.stringify({rapport: c.rapport, technique: c.technique, text: c.text})}' ${locked ? 'disabled' : ''}><span class="choice-key">${i+1}</span><div class="choice-body"><span class="choice-text">${c.text}</span>${badgeHtml}${lockedHtml}</div></button>`;
     }).join('');
+  }
+
+  showOpenerReaction(enc, chosenText, openerQuality, nextCallback) {
+    this._refreshEncounterHeader(enc);
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+    const biz = enc.business;
+    const reactions = {
+      warm: [
+        `"[nods slowly] OK — yeah, that's actually relevant. Tell me more."`,
+        `"[leaning in] Hm. You've done your homework. Go on."`,
+        `"That's... a pretty specific point. I'm listening."`,
+        `"[impressed] Alright, you've got my attention. What are you thinking?"`,
+      ],
+      cold: [
+        `"[noncommittal] OK... look, I'm pretty busy right now."`,
+        `"[glances at watch] I've got about two minutes."`,
+        `"Mm. Sure. I'll hear you out — make it quick."`,
+        `"[skeptical] We get a lot of people come in here. What makes you different?"`,
+      ],
+    };
+    const pool = reactions[openerQuality] || reactions.cold;
+    const nameHash = (biz.name || '').split('').reduce((h, c) => h + c.charCodeAt(0), 0);
+    const reactionLine = pool[(nameHash + Math.round(enc.rapport * 3)) % pool.length];
+    const rapportColor = enc.rapport > 0 ? 'var(--sage)' : enc.rapport < 0 ? 'var(--crimson)' : 'var(--text-muted)';
+    const rapportLabel = enc.rapport > 0 ? `+${enc.rapport.toFixed(1)} Rapport` : enc.rapport < 0 ? `${enc.rapport.toFixed(1)} Rapport` : 'No change yet';
+    body.innerHTML = `
+      <div class="dialogue-box player-dialogue" style="background:rgba(79,152,163,0.08);border-color:var(--teal,#4f98a3);margin-bottom:var(--s3)">
+        <div class="dialogue-speaker" style="color:var(--teal,#4f98a3)">You said</div>
+        <div class="dialogue-text">${chosenText}</div>
+      </div>
+      <div class="dialogue-box" style="margin-bottom:var(--s3)">
+        <div class="dialogue-speaker">${biz.owner} — ${biz.ownerTitle}</div>
+        <div class="dialogue-text" style="font-style:italic">${reactionLine}</div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--r-md);padding:var(--s3) var(--s4);margin-bottom:var(--s4)">
+        <div style="font-size:var(--text-xs);color:var(--text-muted)">${openerQuality === 'warm' ? "✓ Strong opener — they're engaged" : "~ Opener landed cold — you're in, but on thin ice"}</div>
+        <div style="font-size:var(--text-sm);font-weight:700;color:${rapportColor}">${rapportLabel}</div>
+      </div>
+      <button class="btn btn-primary" id="btn-proceed-discovery" style="width:100%">Start Discovery →</button>
+    `;
+    document.getElementById('btn-proceed-discovery')?.addEventListener('click', () => nextCallback(), { once: true });
   }
 
   showDiscoveryPhase(enc, state) {
@@ -906,93 +939,121 @@ export class UIManager {
     const body = document.getElementById('encounter-body');
     if (!body) return;
 
-    // Use pre-generated industry-aware questions cached at encounter start in engine.js
     const questions = enc.stateFlags?.generatedQuestions || DISCOVERY_QUESTIONS;
     const q = questions[questionIdx];
     if (!q) {
-      // No more questions — advance to pitch
       if (window.__bizampireEngine) window.__bizampireEngine.encounterEngine?.handleDiscovery('_advance', 'good');
       return;
     }
 
     const biz = enc.business;
     const hasSkill = state.unlockedSkills.includes(q.skillTag);
+    const totalQ = questions.length;
+    const progress = questionIdx + 1;
 
-    // Player service label for UI context
-    const serviceLabels = {
-      it: 'IT Services', marketing: 'Marketing', finance: 'Accounting/Finance',
-      law: 'Legal Services', construction: 'Construction', auto: 'Auto/Fleet',
-      realestate: 'Real Estate', health: 'Healthcare', consulting: 'Consulting',
-    };
-    const _indId2 = state.businessIndustry?.id || state.businessIndustry;
-    const playerServiceLabel = serviceLabels[_indId2] || state.businessName;
-
-    // Phase-keyed prospect implied reply lines — what the NPC says after your question
-    const prospectReplies = {
+    // ── NPC opening lines — what they say before the player picks a question ──
+    // Keyed by SPIN phase. These set the scene the player must probe into.
+    const npcOpeners = {
       situation: [
-        `"Yeah, I mean... it's been working alright. We make do."`,
-        `"Honestly? We've never really looked at it that way before."`,
-        `"It's fine. Nothing crazy going on there."`
+        `"Yeah, things are moving along. Always something going on, you know?"`,
+        `"We've been at this for a few years now — kind of figured most things out as we went."`,
+        `"Honestly, not too bad. Running a little busy, but that's normal for us."`,
+        `"I mean, it depends on the week. Some weeks are great, some are... less great."`,
+        `"We get by. Built this thing from scratch, so we know every corner of it."`,
       ],
       problem: [
-        `"It comes up more than I'd like, honestly."`,
-        `"Yeah, that's... actually been a bit of a headache."`,
-        `"[pauses] More often than it should, probably."`
+        `"[shifts slightly] There's always something — I don't want to complain, but yeah."`,
+        `"I mean, nothing that's stopped us. But there are things I'd fix if I could."`,
+        `"[quieter] Between you and me, there are a couple of things that keep coming up."`,
+        `"It's not a crisis or anything, but yeah — there's friction in certain spots."`,
+        `"Look, every business has its headaches. We're no different."`,
       ],
       implication: [
-        `"Huh. When you put it like that... yeah, that adds up."`,
-        `"I never actually looked at the total cost of it."`,
-        `"[shifts] That's a real number. I didn't realize it was that much."`
+        `"[pauses] I guess I never really sat down and added up what it actually costs."`,
+        `"Yeah, it's one of those things where you just... accept it as part of doing business."`,
+        `"I know it's not ideal. But we've been running like this for a while, so..."`,
+        `"[distracted] Sorry — yeah. It's just the kind of thing that always gets pushed to next quarter."`,
+        `"The margins are tighter than I'd like. A lot of things eat into them."`,
       ],
       need_payoff: [
-        `"I mean... if it actually did all that, yeah. That'd be huge."`,
-        `"That would take a lot off my plate, honestly."`,
-        `"[nods] Yeah. That's exactly what I'd want."`
-      ]
+        `"[leans back] OK, I'm listening. But I've heard a lot of pitches."`,
+        `"[arms crossed] What exactly are you proposing here?"`,
+        `"[softening] Alright — if this is actually going to help, tell me what it looks like."`,
+        `"I'm not going to commit to anything today. But I'll hear you out."`,
+        `"[checks time] I've got a few minutes. What's the actual point?"`,
+      ],
     };
-    const phaseReplies = prospectReplies[q.phase] || prospectReplies.situation;
-    const prospectLine = phaseReplies[questionIdx % phaseReplies.length];
+
+    // ── Deflection lines — the weak "bad" choice the player might fall back to ──
+    // These represent dropping out of SPIN and pitching/deflecting instead.
+    const deflections = {
+      situation: [
+        `"Sounds good — can I leave you some information about what we offer?"`,
+        `"Great, well — we work with a lot of businesses like yours. We'd love to help."`,
+        `"Perfect. We have a few packages that might be a good fit."`,
+      ],
+      problem: [
+        `"Totally understandable. We actually have something that could help with that."`,
+        `"Yeah, we see that a lot. We can fix it pretty quickly."`,
+        `"We handle situations like that all the time. Want to hear about our pricing?"`,
+      ],
+      implication: [
+        `"Yeah, it adds up. We're actually pretty affordable compared to alternatives."`,
+        `"Totally. Well, we can take that off your plate — want to talk about what that looks like?"`,
+        `"Right, that's why a lot of people come to us. We keep it simple."`,
+      ],
+      need_payoff: [
+        `"Exactly — so here's our pricing, and we can get started pretty quickly."`,
+        `"Yeah, so if you want, I can send over a proposal and we can go from there."`,
+        `"Great — so the next step would be signing the agreement. Pretty straightforward."`,
+      ],
+    };
+
+    const phaseOpeners = npcOpeners[q.phase] || npcOpeners.situation;
+    const phaseDeflections = deflections[q.phase] || deflections.situation;
+
+    // Vary opener by position within the conversation so it doesn't always feel like Q1
+    const npcLine = phaseOpeners[(questionIdx * 3 + Math.floor(enc.rapport)) % phaseOpeners.length];
+    const deflectionLine = phaseDeflections[questionIdx % phaseDeflections.length];
+
+    // Progress indicator label
+    const phaseLabel = { situation: 'Situation', problem: 'Problem', implication: 'Implication', need_payoff: 'Need-Payoff' }[q.phase] || q.phase;
 
     body.innerHTML = `
-      <div style="font-size:var(--text-xs);color:var(--text-muted);padding-bottom:var(--s2);text-transform:uppercase;letter-spacing:.08em">
-        📍 ${q.framework} · ${biz.name}
-        ${!hasSkill ? ` · <span style="color:var(--amber)">⚡ Unlock "${q.skillTag.replace(/_/g,' ')}" for bonus Rapport</span>` : ''}
+      <div style="font-size:var(--text-xs);color:var(--text-muted);padding-bottom:var(--s2);text-transform:uppercase;letter-spacing:.08em;display:flex;justify-content:space-between;align-items:center">
+        <span>📍 SPIN – ${phaseLabel} · Question ${progress}/${totalQ}</span>
+        <span>Rapport: <strong style="color:${enc.rapport >= 3 ? 'var(--sage)' : enc.rapport >= 1 ? 'var(--amber)' : 'var(--text)'}">${enc.rapport.toFixed(1)}</strong></span>
       </div>
 
-      <!-- YOU SAY -->
-      <div class="dialogue-box player-dialogue" style="background:rgba(79,152,163,0.08);border-color:var(--teal,#4f98a3);margin-bottom:var(--s3)">
-        <div class="dialogue-speaker" style="color:var(--teal,#4f98a3)">You → ${biz.owner}</div>
-        <div class="dialogue-text">${this._subQText(q.question, biz)}</div>
-      </div>
-
-      <!-- THEY SAY -->
-      <div class="dialogue-box" style="margin-bottom:var(--s3)">
+      <!-- NPC SPEAKS FIRST -->
+      <div class="dialogue-box" style="margin-bottom:var(--s4)">
         <div class="dialogue-speaker">${biz.owner} — ${biz.ownerTitle}</div>
-        <div class="dialogue-text" style="font-style:italic">${prospectLine}</div>
+        <div class="dialogue-text" style="font-style:italic">${npcLine}</div>
       </div>
 
-      <!-- YOUR FOLLOW-UP -->
-      <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0;text-transform:uppercase;letter-spacing:.08em">
-        How do you respond?
+      <!-- PLAYER PICKS WHAT TO ASK -->
+      <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0 var(--s3);text-transform:uppercase;letter-spacing:.08em">
+        What do you ask next?
       </div>
       <div class="choices">
         <button class="choice-btn technique" data-response="good" data-qid="${q.skillTag}">
           <span class="choice-key">1</span>
           <div class="choice-body">
-            <span class="choice-text">${this._subQText(q.goodResponse, biz)}</span>
-            <span class="choice-badge">${hasSkill ? `+${q.rapportOnGood} Rapport` : 'Partial effect'}</span>
+            <span class="choice-text">${this._subQText(q.question, biz)}</span>
+            <span class="choice-badge" style="color:var(--violet);background:rgba(155,114,248,0.1)">${q.framework}</span>
+            ${!hasSkill ? `<span class="choice-badge" style="color:var(--amber);background:rgba(245,166,35,0.1)">⚡ +bonus if you unlock ${q.skillTag.replace(/_/g,' ')}</span>` : `<span class="choice-badge" style="color:var(--sage);background:rgba(74,222,128,0.08)">✓ Skilled</span>`}
           </div>
         </button>
         <button class="choice-btn" data-response="bad" data-qid="${q.skillTag}">
           <span class="choice-key">2</span>
           <div class="choice-body">
-            <span class="choice-text">${this._subQText(q.badResponse, biz)}</span>
-            <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Missed opportunity</span>
+            <span class="choice-text">${deflectionLine}</span>
+            <span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">Deflection</span>
           </div>
         </button>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:var(--s3)">
-        <div style="font-size:var(--text-xs);color:var(--text-muted)">Rapport: <strong style="color:${enc.rapport >= 3 ? 'var(--sage)' : enc.rapport >= 1 ? 'var(--amber)' : 'var(--text)'}">${enc.rapport.toFixed(1)}</strong></div>
+
+      <div style="margin-top:var(--s3);text-align:right">
         <button class="btn btn-secondary btn-sm" id="btn-exit-encounter" style="padding:var(--s2) var(--s4);font-size:var(--text-xs)">Leave</button>
       </div>
     `;
@@ -1020,8 +1081,19 @@ export class UIManager {
     const biz = enc.business;
     const isGood = responseType === 'good';
     const isOk = responseType === 'ok';  // partial credit: no skill unlocked but good choice
-    // 'ok': player said the right thing, just lacks the skill for full impact
-    const chosenText = (isGood || isOk) ? q.goodResponse : q.badResponse;
+
+    // In the new flow the player chose WHICH QUESTION TO ASK, not a follow-up.
+    // Show the question they asked in the 'You said' bubble.
+    // Good/ok = they asked the skilled SPIN question. Bad = they deflected.
+    const deflectionFallbacks = {
+      situation:   'Sounds good — can I leave you some information about what we offer?',
+      problem:     'Totally understandable. We actually have something that could help with that.',
+      implication: 'Yeah, it adds up. We’re actually pretty affordable compared to alternatives.',
+      need_payoff: 'Exactly — so here’s our pricing, and we can get started pretty quickly.',
+    };
+    const chosenText = (isGood || isOk)
+      ? q.question   // they asked the skilled SPIN question
+      : (deflectionFallbacks[q.phase] || q.badResponse); // they deflected
 
     // Prospect reaction to what the player said — keyed to good/bad + phase
     const reactions = {
@@ -1104,7 +1176,7 @@ export class UIManager {
                   background:rgba(255,255,255,0.03);border:1px solid var(--border);
                   border-radius:var(--r-md);padding:var(--s3) var(--s4);margin-bottom:var(--s4)">
         <div style="font-size:var(--text-xs);color:var(--text-muted)">
-          ${isGood ? '✓ Good response — ' + q.framework : isOk ? '~ Partial — unlock ' + q.framework + ' for full effect' : '⚠ Missed — ' + q.framework}
+          ${isGood ? '✓ Sharp question — ' + q.framework : isOk ? '~ Decent ask — unlock ' + q.skillTag.replace(/_/g,' ') + ' for full effect' : '⚠ Deflection — missed the ' + q.framework + ' moment'}
         </div>
         <div style="font-size:var(--text-sm);font-weight:700;color:${rapportColor}">${rapportLabel}</div>
       </div>
@@ -1255,53 +1327,103 @@ export class UIManager {
     this._refreshEncounterHeader(enc);
     const body = document.getElementById('encounter-body');
     if (!body) return;
-
     const biz = enc.business;
     const objSet = OBJECTION_LIBRARY[objectionType] || OBJECTION_LIBRARY['timing'];
-    // Pick random variant and store index on stateFlags so engine uses the same obj
     const objIdx = Math.floor(Math.random() * objSet.length);
-    if (enc.stateFlags) enc.stateFlags.currentObjIdx = objIdx;  // engine reads this
+    if (enc.stateFlags) enc.stateFlags.currentObjIdx = objIdx;
     if (this.encounterEngine) this.encounterEngine.flags.currentObjIdx = objIdx;
     const obj = objSet[objIdx];
-
+    const objTypeLabel = objectionType.charAt(0).toUpperCase() + objectionType.slice(1);
     body.innerHTML = `
-      <div class="dialogue-box">
-        <div class="dialogue-speaker">${biz.owner}</div>
-        <div class="dialogue-text">"${obj.objection}"</div>
-        <div class="dialogue-sub">Objection type: <strong style="color:var(--crimson)">${objectionType.charAt(0).toUpperCase() + objectionType.slice(1)}</strong> · Current Rapport: ${enc.rapport.toFixed(1)}</div>
+      <div style="font-size:var(--text-xs);color:var(--text-muted);padding-bottom:var(--s2);text-transform:uppercase;letter-spacing:.08em;display:flex;justify-content:space-between">
+        <span>⚡ Objection — ${objTypeLabel}</span>
+        <span>Rapport: <strong style="color:${enc.rapport >= 3 ? 'var(--sage)' : enc.rapport >= 1 ? 'var(--amber)' : 'var(--text)'}">${enc.rapport.toFixed(1)}</strong></span>
       </div>
-      <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0;text-transform:uppercase;letter-spacing:.08em">How do you respond?</div>
+      <div class="dialogue-box" style="border-color:var(--crimson);background:rgba(200,64,48,0.05);margin-bottom:var(--s4)">
+        <div class="dialogue-speaker" style="color:var(--crimson)">${biz.owner} — ${biz.ownerTitle}</div>
+        <div class="dialogue-text" style="font-style:italic">"${obj.objection}"</div>
+      </div>
+      <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0 var(--s3);text-transform:uppercase;letter-spacing:.08em">How do you respond?</div>
       <div class="choices">
         ${Object.entries(obj.counters).map(([key, c], i) => {
           const locked = c.skillRequired && !state.unlockedSkills.includes(c.skillRequired);
-          return `
-            <button class="choice-btn ${c.rapport > 1 ? 'technique' : ''} ${locked ? 'locked' : ''}"
-                    data-objection="${objectionType}" data-response="${key}"
-                    ${locked ? 'disabled' : ''}>
-              <span class="choice-key">${i+1}</span>
-              <div class="choice-body">
-                <span class="choice-text">${c.text.replace('{impliedCost}', `$${Math.round(biz.budget[0]*0.5).toLocaleString()}/month`).replace('{impliedAnnual}', `$${(biz.budget[0]*0.5*12).toLocaleString()}`).replace('{price}', enc.stateFlags?.price ? `$${enc.stateFlags.price.toLocaleString()}/mo` : 'our fee')}</span>
-                ${c.framework ? `<span class="choice-badge" style="color:var(--violet);background:rgba(155,114,248,0.1)">${c.framework}</span>` : ''}
-                <span class="choice-badge ${c.rapport <= 0 ? 'style="color:var(--crimson);background:rgba(255,68,102,.1)"' : ''}">${c.label}</span>
-                ${locked ? `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">🔒 Requires ${c.skillRequired?.replace(/_/g,' ')}</span>` : ''}
-              </div>
-            </button>
-          `;
+          const frameworkBadge = (c.framework && state.unlockedSkills.includes(c.skillRequired || ''))
+            ? `<span class="choice-badge" style="color:var(--violet);background:rgba(155,114,248,0.1)">${c.framework}</span>` : '';
+          const lockedBadge = locked ? `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">🔒 Requires ${c.skillRequired?.replace(/_/g,' ')}</span>` : '';
+          return `<button class="choice-btn ${c.rapport > 1 ? 'technique' : ''} ${locked ? 'locked' : ''}" data-objection="${objectionType}" data-response="${key}" ${locked ? 'disabled' : ''}><span class="choice-key">${i+1}</span><div class="choice-body"><span class="choice-text">${c.text.replace('{impliedCost}', '$'+Math.round(biz.budget[0]*0.5).toLocaleString()+'/month').replace('{impliedAnnual}', '$'+(biz.budget[0]*0.5*12).toLocaleString()).replace('{price}', enc.stateFlags?.price ? '$'+enc.stateFlags.price.toLocaleString()+'/mo' : 'our fee')}</span>${frameworkBadge}${lockedBadge}</div></button>`;
         }).join('')}
       </div>
     `;
-
     body.querySelectorAll('.choice-btn[data-objection]').forEach(btn => {
       btn.addEventListener('click', () => {
         try {
-          if (!this.encounterEngine) { console.error('[BizAmpire] encounterEngine not set'); return; }
+          if (!this.encounterEngine) return;
           this.encounterEngine.handleObjection(btn.dataset.objection, btn.dataset.response);
         } catch(e) { console.error('[BizAmpire] objection click error:', e); }
       });
     });
   }
 
-  showClosePhase(enc, state) {
+  showObjectionReaction(enc, chosenText, effectiveRapport, objType, nextCallback) {
+    this._refreshEncounterHeader(enc);
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+    const biz = enc.business;
+    const isGood = effectiveRapport > 1;
+    const isOk   = effectiveRapport > 0 && effectiveRapport <= 1;
+    const reactions = {
+      price: {
+        good: [`"[pauses] OK... I hadn't looked at it that way. That math actually makes sense."`, `"[sits back] Hm. When you put it like that, the cost of not solving it is the bigger number."`, `"Alright. I can see the logic. Let me think about that."`],
+        ok:   [`"Yeah, I hear you. I just need to check on budget."`, `"[neutral] OK, that's a fair point. I'll need to think on it."`, `"[noncommittal] Sure, I'll consider it."`],
+        bad:  [`"[shakes head] No — that's not going to work."`, `"[firm] Price is price. I can't justify it."`, `"[skeptical] That's what everyone says."`],
+      },
+      trust: {
+        good: [`"[leans forward] OK. That's actually different from what most people say."`, `"[softening] Alright — a pilot is reasonable. I can do 30 days."`, `"That's... more honest than I expected."`],
+        ok:   [`"[cautious] I guess that's fair. I just have to see results."`, `"We'll see. I'm not promising anything."`, `"[slightly warmer] OK. I'll keep an open mind."`],
+        bad:  [`"[unimpressed] That's what the last three said."`, `"I've heard that pitch. Show me something real."`, `"[arms crossed] I'm not convinced."`],
+      },
+      incumbent: {
+        good: [`"[surprised] Huh. You're not trying to replace them outright. That's actually smart."`, `"[considering] A gap analysis. That's not a bad idea."`, `"Fair enough. I'm always looking for where we're leaving value on the table."`],
+        ok:   [`"[neutral] I mean, maybe. Our current vendor is fine."`, `"I'll think about it. Not making any changes right now."`, `"[polite] We'd have to compare a few things."`],
+        bad:  [`"We're locked in for another year. Not interested."`, `"[firm] We're happy with who we have. Thanks though."`, `"I don't see why I'd switch."`],
+      },
+      timing: {
+        good: [`"[pauses] A small pilot before Q3... that could actually work."`, `"If the scope is right, yeah. Let's talk about what that looks like."`, `"[considering] That's a fair approach. No big commitment yet."`],
+        ok:   [`"I mean, maybe. We'd have to see."`, `"[noncommittal] Q3 still works better for us."`, `"Yeah, I'll think about it."`],
+        bad:  [`"[firm] No — Q3. That's final for now."`, `"This isn't the right time. Come back later."`, `"[distracted] Not now."`],
+      },
+    };
+    const tier = isGood ? 'good' : isOk ? 'ok' : 'bad';
+    const pool = (reactions[objType] || reactions.timing)[tier];
+    const reactionLine = pool[Math.floor(Math.random() * pool.length)];
+    const rapportColor = effectiveRapport > 0 ? 'var(--sage)' : effectiveRapport < 0 ? 'var(--crimson)' : 'var(--text-muted)';
+    const rapportLabel = effectiveRapport > 0 ? `+${effectiveRapport} Rapport` : effectiveRapport < 0 ? `${effectiveRapport} Rapport` : 'No change';
+    const resultLabel = isGood ? '✓ Objection addressed' : isOk ? "~ Partial — they're not fully convinced" : '⚠ Objection stands';
+    body.innerHTML = `
+      <div class="dialogue-box player-dialogue" style="background:rgba(79,152,163,0.08);border-color:var(--teal,#4f98a3);margin-bottom:var(--s3)">
+        <div class="dialogue-speaker" style="color:var(--teal,#4f98a3)">You said</div>
+        <div class="dialogue-text">${chosenText
+          .replace('{impliedCost}', '$'+Math.round((enc.business?.budget?.[0]||2000)*0.5).toLocaleString()+'/month')
+          .replace('{impliedAnnual}', '$'+((enc.business?.budget?.[0]||2000)*0.5*12).toLocaleString())
+          .replace('{price}', enc.stateFlags?.price ? '$'+enc.stateFlags.price.toLocaleString()+'/mo' : 'our fee')
+        }</div>
+      </div>
+      <div class="dialogue-box" style="margin-bottom:var(--s3)">
+        <div class="dialogue-speaker">${biz.owner} — ${biz.ownerTitle}</div>
+        <div class="dialogue-text" style="font-style:italic">${reactionLine}</div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--r-md);padding:var(--s3) var(--s4);margin-bottom:var(--s4)">
+        <div style="font-size:var(--text-xs);color:var(--text-muted)">${resultLabel}</div>
+        <div style="font-size:var(--text-sm);font-weight:700;color:${rapportColor}">${rapportLabel}</div>
+      </div>
+      <button class="btn btn-primary" id="btn-objection-continue" style="width:100%">
+        ${nextCallback._isLast ? 'Move to Close →' : 'Continue →'}
+      </button>
+    `;
+    document.getElementById('btn-objection-continue')?.addEventListener('click', () => nextCallback(), { once: true });
+  }
+
+    showClosePhase(enc, state) {
     this._refreshEncounterHeader(enc);
     const body = document.getElementById('encounter-body');
     if (!body) return;
