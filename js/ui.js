@@ -904,6 +904,82 @@ export class UIManager {
       });
     });
     this._attachHintButton('opener', enc, state, { phase: 'opener' });
+
+    // AI Coach challenge on opener
+    const bonusAvailableOpener = !enc.stateFlags?.aiCoachBonusClaimed;
+    if (bonusAvailableOpener) {
+      const area = document.createElement('div');
+      area.id = 'llm-challenge-area-opener';
+      area.style.cssText = 'margin-top:var(--s4);position:relative';
+
+      const isReady = LLM.isReady();
+      area.innerHTML = `
+        <div style="padding:var(--s3) var(--s4);background:rgba(155,114,248,0.07);
+                    border:1px solid rgba(155,114,248,0.25);border-radius:var(--r-md);position:relative">
+          <div style="font-size:var(--text-xs);color:var(--violet);font-weight:700;margin-bottom:var(--s2);display:flex;justify-content:space-between">
+            <span>🤖 AI Coach Challenge</span>
+            <span style="color:var(--sage)">+0.5 bonus rapport for original answer</span>
+          </div>
+          <div style="display:flex;gap:var(--s2)${!isReady ? ';opacity:0.5;pointer-events:none' : ''}">
+            <input id="llm-text-input-opener" type="text"
+              placeholder="Type your own opener for ${enc.business?.owner || 'them'}…"
+              style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(155,114,248,0.3);
+                     border-radius:var(--r-md);padding:var(--s3) var(--s4);font-size:var(--text-sm);
+                     color:var(--text);outline:none;font-family:var(--font-body)"
+              maxlength="220" autocomplete="off" ${!isReady ? 'disabled' : ''} />
+            <button id="btn-llm-submit-opener" class="btn btn-secondary" style="flex-shrink:0" ${!isReady ? 'disabled' : ''}>Ask →</button>
+          </div>
+          <div id="llm-thinking-opener" style="display:none;font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--s2);font-style:italic">
+            🤖 Evaluating your opener…
+          </div>
+          ${!isReady ? `
+          <div style="position:absolute;inset:0;background:rgba(0,0,0,0.5);border-radius:var(--r-md);
+                      display:flex;align-items:center;justify-content:center;cursor:pointer" id="llm-download-overlay-opener">
+            <div style="text-align:center">
+              <div style="font-size:14px;color:var(--text);font-weight:700;margin-bottom:4px">Download AI Coach</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">~400MB, one-time</div>
+              <div style="font-size:11px;color:var(--violet);font-weight:600">Click to enable →</div>
+            </div>
+          </div>
+          ` : ''}
+        </div>
+      `;
+      body?.appendChild(area);
+
+      document.getElementById('llm-download-overlay-opener')?.addEventListener('click', () => this.toggleAICoach());
+
+      const input = document.getElementById('llm-text-input-opener');
+      const submitBtn = document.getElementById('btn-llm-submit-opener');
+      const thinking = document.getElementById('llm-thinking-opener');
+
+      const submit = async () => {
+        const text = input?.value?.trim();
+        if (!text || text.length < 6) return;
+        submitBtn.disabled = true;
+        input.disabled = true;
+        thinking.style.display = 'block';
+
+        const result = await LLM.evaluate(text, 'opener', enc);
+        thinking.style.display = 'none';
+        if (!result) { submitBtn.disabled = false; input.disabled = false; return; }
+
+        const bonusRapport = 0.5;
+        result.rapportDelta += bonusRapport;
+
+        if (this.encounterEngine) {
+          if (enc.stateFlags) enc.stateFlags.aiCoachBonusClaimed = true;
+          this.encounterEngine.enc.rapport += result.rapportDelta;
+          this._showLLMFeedback(result, { phase: 'opener' }, () => {
+            this.showOpenerPhase(this.encounterEngine.enc, this.state);
+          }, text);
+        }
+      };
+
+      submitBtn?.addEventListener('click', submit);
+      input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+      input?.focus();
+    }
+
     document.getElementById('btn-exit-encounter')?.addEventListener('click', () => this.closeEncounter());
   }
 
@@ -2796,8 +2872,9 @@ export class UIManager {
             const btn = document.getElementById('btn-ai-coach');
             if (btn) { btn.textContent = '🤖 AI Coach ✓'; btn.style.borderColor = 'rgba(80,224,88,0.4)'; }
             // Re-render the discovery question to show live AI Coach input (replaces download prompt)
-            if (this.encounterEngine?.enc && this.encounterEngine.flags?.spinPhase !== undefined) {
-              this.showNextDiscoveryQuestion(this.encounterEngine.enc, this.state, this.encounterEngine.flags.spinPhase);
+            if (this.encounterEngine) {
+              const spinPhase = this.encounterEngine.flags?.spinPhase ?? 0;
+              this.showNextDiscoveryQuestion(this.encounterEngine.enc, this.state, spinPhase);
             }
           }, 600);
         }
