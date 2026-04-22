@@ -9,6 +9,8 @@ import {
   INDUSTRY_STARTUP_COSTS, STARTUP_DIFFICULTY_LABELS
 } from './data.js';
 import { EncounterEngine } from './engine.js';
+import { selectHint } from './hints.js';
+import { randomWisdom } from './wisdom.js';
 
 // ── Pluralization helper ─────────────────────────────────────
 function pluralize(str) {
@@ -105,6 +107,37 @@ export class UIManager {
         }, { passive: false });
       }
     }
+  }
+
+  // ── Hint system ───────────────────────────────────────────
+  _hintButtonHTML(hintKey, state) {
+    const used = this.encounterEngine?.flags?.hintsUsed?.[hintKey];
+    const cash = state?.cash ?? 0;
+    if (used) return `<div style="font-size:var(--text-xs);color:var(--text-muted);text-align:center;padding:var(--s2)">💡 Coaching used this phase</div>`;
+    if (cash < 500) return `<button class="btn btn-secondary btn-sm" disabled style="width:100%;opacity:0.4;margin-top:var(--s3)">💡 Get Coaching — $500 (insufficient funds)</button>`;
+    return `<button class="btn btn-secondary btn-sm" id="btn-hint-${hintKey}" style="width:100%;margin-top:var(--s3)">💡 Get Coaching — $500</button>`;
+  }
+
+  _attachHintButton(hintKey, enc, state, hintCtx) {
+    const btn = document.getElementById(`btn-hint-${hintKey}`);
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const ind = state.businessIndustry?.id || state.businessIndustry;
+      const hint = selectHint(hintCtx.phase, hintCtx.subPhase, enc.business?.warmth ?? 0, enc.rapport, ind, hintCtx.objType);
+      if (!hint) return;
+      state.cash = Math.max(0, (state.cash || 0) - 500);
+      this.updateHUD(state);
+      if (this.encounterEngine) {
+        if (!this.encounterEngine.flags.hintsUsed) this.encounterEngine.flags.hintsUsed = {};
+        this.encounterEngine.flags.hintsUsed[hintKey] = true;
+      }
+      const container = btn.parentElement;
+      container.innerHTML = `
+        <div style="margin-top:var(--s3);padding:var(--s4);background:rgba(155,114,248,0.08);border:1px solid rgba(155,114,248,0.25);border-radius:var(--r-lg)">
+          <div style="font-size:var(--text-xs);color:var(--violet);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--s2)">💡 Coaching Note <span style="color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0">— $500</span></div>
+          <div style="font-size:var(--text-sm);color:var(--text);line-height:1.6">${hint}</div>
+        </div>`;
+    }, { once: true });
   }
 
   // ── Loading ────────────────────────────────────────────────
@@ -474,6 +507,21 @@ export class UIManager {
     }
 
     this._updateSkillBar(state);
+    this._updateDailyGoals(state);
+  }
+
+  _updateDailyGoals(state) {
+    const el = document.getElementById('hud-daily-goals');
+    if (!el || !state.dailyGoals?.goals) return;
+    el.innerHTML = state.dailyGoals.goals.map(g => {
+      const done = g.current >= g.target;
+      return `<div style="display:flex;align-items:center;gap:4px;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;letter-spacing:.02em;
+        background:${done ? 'rgba(80,224,88,0.15)' : 'rgba(255,255,255,0.06)'};
+        border:1px solid ${done ? 'rgba(80,224,88,0.35)' : 'rgba(255,255,255,0.1)'};
+        color:${done ? '#50e058' : 'var(--text-muted)'}">
+        ${done ? '✓' : `${g.current}/${g.target}`}&thinsp;<span style="font-weight:400">${g.label}</span>
+      </div>`;
+    }).join('');
   }
 
   _updateSkillBar(state) {
@@ -837,6 +885,9 @@ export class UIManager {
       <div class="choices" id="choices-container">
         ${this._renderOpenerChoices(biz, state)}
       </div>
+      <div style="margin-top:var(--s3)">
+        ${this._hintButtonHTML('opener', state)}
+      </div>
       <div style="margin-top:var(--s3);text-align:right">
         <button class="btn btn-secondary btn-sm" id="btn-exit-encounter" style="padding:var(--s2) var(--s4);font-size:var(--text-xs)">✕ Leave</button>
       </div>
@@ -851,6 +902,7 @@ export class UIManager {
         } catch(e) { console.error('[BizAmpire] opener click error:', e); }
       });
     });
+    this._attachHintButton('opener', enc, state, { phase: 'opener' });
     document.getElementById('btn-exit-encounter')?.addEventListener('click', () => this.closeEncounter());
   }
 
@@ -890,7 +942,7 @@ export class UIManager {
     }).join('');
   }
 
-  showOpenerReaction(enc, chosenText, openerQuality, rapportDelta, nextCallback) {
+  showOpenerReaction(enc, chosenText, openerQuality, rapportDelta, technique, nextCallback) {
     this._refreshEncounterHeader(enc);
     const body = document.getElementById('encounter-body');
     if (!body) return;
@@ -902,6 +954,18 @@ export class UIManager {
         `"That's... a pretty specific point. I'm listening."`,
         `"[impressed] Not the usual pitch. OK — go on."`,
       ],
+      cold_direct: [
+        `"[caught off guard] That's... pretty forward. We just met."`,
+        `"Huh. OK — why do you ask?"`,
+        `"[slightly defensive] I mean, there's always something. Who are you again?"`,
+        `"[pauses] That's a different kind of question. What are you getting at?"`,
+      ],
+      cold_pattern: [
+        `"[looks up] Wait — how do you know about that?"`,
+        `"[interested despite themselves] That's actually specific. Go on."`,
+        `"Hmm. That's not the usual intro. OK, I'm listening."`,
+        `"[raises an eyebrow] You've done some homework. Keep going."`,
+      ],
       cold: [
         `"[noncommittal] OK... look, I'm pretty busy right now."`,
         `"[glances at watch] I've got about two minutes."`,
@@ -909,7 +973,10 @@ export class UIManager {
         `"[skeptical] We get a lot of people come in here. What makes you different?"`,
       ],
     };
-    const pool = reactions[openerQuality] || reactions.cold;
+    const pool = openerQuality === 'warm' ? reactions.warm
+      : technique === 'Direct Discovery' ? reactions.cold_direct
+      : technique === 'Pattern Interrupt' ? reactions.cold_pattern
+      : reactions.cold;
     const nameHash = (biz.name || '').split('').reduce((h, c) => h + c.charCodeAt(0), 0);
     const reactionLine = pool[(nameHash + Math.round(enc.rapport * 3)) % pool.length];
     const delta = rapportDelta ?? 0;
@@ -1043,10 +1110,14 @@ export class UIManager {
 
     // Progress indicator label
     const phaseLabel = { situation: 'Situation', problem: 'Problem', implication: 'Implication', need_payoff: 'Need-Payoff' }[q.phase] || q.phase;
+    const phaseCounts = enc.stateFlags?.phaseCounts || {};
+    const phaseBudget = enc.stateFlags?.phaseBudget || { situation: 2, problem: 2, implication: 1, need_payoff: 1 };
+    const phaseUsed = (phaseCounts[q.phase] || 0) + 1;
+    const phaseMax = phaseBudget[q.phase] || 2;
 
     body.innerHTML = `
       <div style="font-size:var(--text-xs);color:var(--text-muted);padding-bottom:var(--s2);text-transform:uppercase;letter-spacing:.08em;display:flex;justify-content:space-between;align-items:center">
-        <span>📍 SPIN – ${phaseLabel} · Question ${progress}/${totalQ}</span>
+        <span>📍 ${phaseLabel} ${phaseUsed}/${phaseMax} · Q${progress}/${totalQ}</span>
         <span>Rapport: <strong style="color:${enc.rapport >= 3 ? 'var(--sage)' : enc.rapport >= 1 ? 'var(--amber)' : 'var(--text)'}">${enc.rapport.toFixed(1)}</strong></span>
       </div>
 
@@ -1075,6 +1146,9 @@ export class UIManager {
         </button>
       </div>
 
+      <div style="margin-top:var(--s3)">
+        ${this._hintButtonHTML('discovery_' + q.phase, state)}
+      </div>
       <div style="margin-top:var(--s3);text-align:right">
         <button class="btn btn-secondary btn-sm" id="btn-exit-encounter" style="padding:var(--s2) var(--s4);font-size:var(--text-xs)">Leave</button>
       </div>
@@ -1089,6 +1163,7 @@ export class UIManager {
       });
     });
 
+    this._attachHintButton('discovery_' + q.phase, enc, state, { phase: 'discovery', subPhase: q.phase });
     document.getElementById('btn-exit-encounter')?.addEventListener('click', () => {
       this.closeEncounter();
     });
@@ -1228,6 +1303,55 @@ export class UIManager {
     }, { once: true });
   }
 
+  showCounterQuestion(enc, state, counterQ, onComplete) {
+    this._refreshEncounterHeader(enc);
+    const body = document.getElementById('encounter-body');
+    if (!body) return;
+    const biz = enc.business;
+    body.innerHTML = `
+      <div style="font-size:var(--text-xs);color:var(--crimson);padding-bottom:var(--s2);text-transform:uppercase;letter-spacing:.08em">
+        ⚡ Prospect pushes back
+      </div>
+      <div class="dialogue-box" style="border-color:var(--crimson);background:rgba(200,64,48,0.05);margin-bottom:var(--s4)">
+        <div class="dialogue-speaker" style="color:var(--crimson)">${biz.owner} — ${biz.ownerTitle}</div>
+        <div class="dialogue-text" style="font-style:italic">"${counterQ.npc}"</div>
+      </div>
+      <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0 var(--s3);text-transform:uppercase;letter-spacing:.08em">How do you respond?</div>
+      <div class="choices">
+        ${(() => {
+          const shuffled = [...counterQ.responses];
+          for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+          }
+          return shuffled.map((r, i) => `<button class="choice-btn" data-cq-idx="${counterQ.responses.indexOf(r)}"><span class="choice-key">${i+1}</span><div class="choice-body"><span class="choice-text">${r.text}</span></div></button>`).join('');
+        })()}
+      </div>
+    `;
+    body.querySelectorAll('.choice-btn[data-cq-idx]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const response = counterQ.responses[parseInt(btn.dataset.cqIdx)];
+        if (!response) return;
+        if (this.encounterEngine) this.encounterEngine.handleCounterQuestion(response, counterQ);
+        // Show a brief reaction before continuing
+        const rapportColor = response.rapport > 0 ? 'var(--sage)' : response.rapport < 0 ? 'var(--crimson)' : 'var(--text-muted)';
+        const rapportLabel = response.rapport > 0 ? `+${response.rapport} Rapport` : response.rapport < 0 ? `${response.rapport} Rapport` : 'No change';
+        body.innerHTML = `
+          <div class="dialogue-box player-dialogue" style="background:rgba(79,152,163,0.08);border-color:var(--teal,#4f98a3);margin-bottom:var(--s3)">
+            <div class="dialogue-speaker" style="color:var(--teal,#4f98a3)">You said</div>
+            <div class="dialogue-text">${response.text}</div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--r-md);padding:var(--s3) var(--s4);margin-bottom:var(--s4)">
+            <div style="font-size:var(--text-xs);color:var(--text-muted)">${response.quality === 'good' ? '✓ Good recovery — they respect the honesty' : '⚠ Deflection — they noticed'}</div>
+            <div style="font-size:var(--text-sm);font-weight:700;color:${rapportColor}">${rapportLabel}</div>
+          </div>
+          <button class="btn btn-primary" id="btn-cq-continue" style="width:100%">Continue →</button>
+        `;
+        document.getElementById('btn-cq-continue')?.addEventListener('click', () => onComplete(), { once: true });
+      }, { once: true });
+    });
+  }
+
   showPitchPhase(enc, state) {
     this._refreshEncounterHeader(enc);
     const body = document.getElementById('encounter-body');
@@ -1268,6 +1392,7 @@ export class UIManager {
           return pitchOptions.map((p, i) => `<button class="choice-btn" data-pitch="${p.key}"><span class="choice-key">${i+1}</span><div class="choice-body"><span class="choice-text">${p.text}</span>${p.badge}</div></button>`).join('');
         })()}
       </div>
+      <div>${this._hintButtonHTML('pitch', state)}</div>
     `;
 
     body.querySelectorAll('.choice-btn[data-pitch]').forEach(btn => {
@@ -1278,6 +1403,7 @@ export class UIManager {
         } catch(e) { console.error('[BizAmpire] pitch click error:', e); }
       });
     });
+    this._attachHintButton('pitch', enc, state, { phase: 'pitch' });
   }
 
   showPricingPhase(enc, state) {
@@ -1387,6 +1513,7 @@ export class UIManager {
           }).join('');
         })()}
       </div>
+      <div>${this._hintButtonHTML('objection_' + objectionType, state)}</div>
     `;
     body.querySelectorAll('.choice-btn[data-objection]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1396,6 +1523,7 @@ export class UIManager {
         } catch(e) { console.error('[BizAmpire] objection click error:', e); }
       });
     });
+    this._attachHintButton('objection_' + objectionType, enc, state, { phase: 'objections', objType: objectionType });
   }
 
   showObjectionReaction(enc, chosenText, effectiveRapport, objType, nextCallback) {
@@ -1494,6 +1622,7 @@ export class UIManager {
           return closeOptions.map((c, i) => `<button class="choice-btn" data-close="${c.key}"><span class="choice-key">${i+1}</span><div class="choice-body"><span class="choice-text">${c.text}</span>${c.badge}</div></button>`).join('');
         })()}
       </div>
+      <div>${this._hintButtonHTML('close', state)}</div>
     `;
 
     body.querySelectorAll('.choice-btn[data-close]').forEach(btn => {
@@ -1504,6 +1633,7 @@ export class UIManager {
         } catch(e) { console.error('[BizAmpire] close click error:', e); }
       });
     });
+    this._attachHintButton('close', enc, state, { phase: 'close' });
   }
 
   showOutcome(type, biz, price, rapport, state, journalData = null) {
@@ -1554,6 +1684,12 @@ export class UIManager {
         <div class="outcome-rewards">
           ${outcome.rewards.map(r => `<div class="reward-chip ${r.cls}">${r.icon} ${r.label}</div>`).join('')}
         </div>
+        ${journalData?.wisdom ? `
+        <div style="margin-top:var(--s5);padding:var(--s4);background:rgba(248,200,64,0.06);border:1px solid rgba(248,200,64,0.2);border-radius:var(--r-lg);text-align:left">
+          <div style="font-size:var(--text-xs);color:#c8a820;text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:var(--s2)">💡 Think &amp; Grow Rich — ${journalData.wisdom.principle}</div>
+          <div style="font-size:var(--text-sm);color:var(--text);font-style:italic;line-height:1.65;margin-bottom:var(--s3)">"${journalData.wisdom.quote}"</div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted);line-height:1.5"><strong style="color:var(--text)">Apply today:</strong> ${journalData.wisdom.apply}</div>
+        </div>` : ''}
         ${journalData?.choiceLog?.length ? '<button class="btn btn-primary" id="btn-show-debrief" style="margin-top:var(--s4);width:100%">📋 See Full Debrief →</button>' : ''}
         <button class="btn btn-secondary" id="btn-return-city" style="margin-top:var(--s3);width:100%">Return to City</button>
       </div>
@@ -2395,6 +2531,43 @@ export class UIManager {
       toast.style.animation = 'toastIn 0.3s reverse forwards';
       setTimeout(() => toast.remove(), 300);
     }, 4000);
+  }
+
+  showWisdomToast(wisdom) {
+    if (!wisdom) return;
+    const existing = document.getElementById('wisdom-banner');
+    if (existing) existing.remove();
+
+    const el = document.createElement('div');
+    el.id = 'wisdom-banner';
+    el.style.cssText = `
+      position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
+      max-width:480px;width:calc(100% - 32px);
+      background:#1a1608;border:1px solid rgba(248,200,64,0.35);border-radius:12px;
+      padding:14px 16px;z-index:9999;opacity:0;
+      transition:opacity .35s ease,transform .35s ease;
+      box-shadow:0 4px 24px rgba(0,0,0,0.6);
+    `;
+    el.innerHTML = `
+      <div style="font-size:10px;color:#c8a820;text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:6px">💡 Think &amp; Grow Rich — ${wisdom.principle}</div>
+      <div style="font-size:12px;color:#e8d898;font-style:italic;line-height:1.6;margin-bottom:6px">"${wisdom.quote}"</div>
+      <div style="font-size:11px;color:#888;line-height:1.45"><strong style="color:#aaa">Apply today:</strong> ${wisdom.apply}</div>
+      <button style="position:absolute;top:8px;right:10px;background:none;border:none;color:#666;font-size:14px;cursor:pointer;padding:2px 4px" id="btn-dismiss-wisdom">✕</button>
+    `;
+    document.body.appendChild(el);
+
+    requestAnimationFrame(() => {
+      el.style.opacity = '1';
+      el.style.transform = 'translateX(-50%) translateY(0)';
+    });
+
+    const dismiss = () => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(-50%) translateY(10px)';
+      setTimeout(() => el.remove(), 350);
+    };
+    document.getElementById('btn-dismiss-wisdom')?.addEventListener('click', dismiss);
+    setTimeout(dismiss, 9000);
   }
 
   updateDebug(_data) {

@@ -12,6 +12,7 @@ import {
 import {
   ICP_FIT_MATRIX, FIT_DIALOGUE
 } from './q_shared.js';
+import { randomWisdom } from './wisdom.js';
 
 // Per-industry question files — dynamically imported at encounter start
 // Each file is ~60-75KB instead of the full 676KB questions.js
@@ -27,6 +28,76 @@ async function loadIndustryQuestions(industry) {
     return null;
   }
 }
+
+// ── Discovery tuning ─────────────────────────────────────────
+const PHASE_BUDGET = { situation: 2, problem: 2, implication: 1, need_payoff: 1 };
+
+const COUNTER_QUESTIONS = {
+  situation: [
+    {
+      npc: "Hold on — is this just a sales call? Because I get five of these a week.",
+      responses: [
+        { text: "Fair enough. I'm not here to pitch — I want to understand if there's actually a fit before either of us wastes time.", quality: 'good', rapport: 0.5 },
+        { text: "No no — this is totally different. Let me tell you what we do.", quality: 'bad', rapport: -0.5 },
+      ],
+    },
+    {
+      npc: "You're asking a lot of questions. What's this actually for?",
+      responses: [
+        { text: "So I understand your situation before I say anything about what we do. If there's no fit, I'll tell you now.", quality: 'good', rapport: 0.5 },
+        { text: "Just making sure I can help you. So — about those challenges...", quality: 'bad', rapport: -0.5 },
+      ],
+    },
+  ],
+  problem: [
+    {
+      npc: "Every vendor asks me about my pain points. What makes you different?",
+      responses: [
+        { text: "Because I won't propose anything until I actually understand what's costing you. So — what's the biggest thing eating into your time right now?", quality: 'good', rapport: 0.5 },
+        { text: "We have a really unique approach — let me walk you through our platform.", quality: 'bad', rapport: -1 },
+      ],
+    },
+    {
+      npc: "[skeptical] Are you just trying to make my problems sound worse so I'll buy something?",
+      responses: [
+        { text: "That's a fair concern. I'm not. If we can't move the needle on something real, I'd rather know that now.", quality: 'good', rapport: 0.5 },
+        { text: "Not at all! We genuinely care about helping businesses like yours.", quality: 'bad', rapport: -0.5 },
+      ],
+    },
+  ],
+  implication: [
+    {
+      npc: "You're making this sound like a crisis. It's really not that bad.",
+      responses: [
+        { text: "You know your business better than I do. I'm just running the numbers you gave me — what do you think it actually costs per year?", quality: 'good', rapport: 0.5 },
+        { text: "These things do add up over time. Trust me, I see it a lot.", quality: 'bad', rapport: -0.5 },
+      ],
+    },
+    {
+      npc: "[leans back] I'm not sure all these problems are actually connected.",
+      responses: [
+        { text: "Maybe they're not. But they're both consuming the same resource — your time. That's worth understanding.", quality: 'good', rapport: 0.5 },
+        { text: "Right, so that's actually why our platform handles multiple things at once.", quality: 'bad', rapport: -0.5 },
+      ],
+    },
+  ],
+  need_payoff: [
+    {
+      npc: "I've heard this exact conversation before. What actually happens after I buy?",
+      responses: [
+        { text: "Good question. Here's what the first 30 days look like — and here's the specific metric you'd use to know if it's working.", quality: 'good', rapport: 1 },
+        { text: "We have an amazing onboarding team. You'll be in great hands.", quality: 'bad', rapport: -0.5 },
+      ],
+    },
+    {
+      npc: "[flat] So what's your close rate? How many of these solutions actually deliver?",
+      responses: [
+        { text: "I can give you references — same industry, similar size. And I'll tell you about one where it didn't work and why.", quality: 'good', rapport: 1 },
+        { text: "We have a very high customer satisfaction rate. Our clients love us.", quality: 'bad', rapport: -0.5 },
+      ],
+    },
+  ],
+};
 
 // ── Constants ────────────────────────────────────────────────
 const TILE = 48;
@@ -650,12 +721,44 @@ export class BizAmpireEngine {
     await this._beginSellEncounter(business);
   }
 
+  _checkDailyReset() {
+    const today = new Date().toISOString().slice(0, 10);
+    if (!this.state.dailyGoals || this.state.dailyGoals.date !== today) {
+      this.state.dailyGoals = {
+        date: today,
+        goals: [
+          { id: 'approaches', label: '3 approaches',    target: 3, current: 0 },
+          { id: 'close_deal', label: 'Close 1 deal',     target: 1, current: 0 },
+          { id: 'new_visits', label: '2 new businesses', target: 2, current: 0 },
+        ],
+      };
+    }
+  }
+
+  _advanceDailyGoal(id) {
+    this._checkDailyReset();
+    const g = this.state.dailyGoals.goals.find(g => g.id === id);
+    if (g && g.current < g.target) {
+      g.current++;
+      if (g.current >= g.target) {
+        this.ui.showToast(`✓ Daily goal complete: ${g.label}`, 'success');
+      }
+      this.ui.updateHUD(this.state);
+    }
+  }
+
   // ── Separated so Sell path can be called from approach choice ─
   async _beginSellEncounter(business) {
     if (business.closed) {
       this.ui.showToast(`${business.name} is already a client!`, 'success');
       return;
     }
+
+    this._checkDailyReset();
+
+    // Track daily goals
+    this._advanceDailyGoal('approaches');
+    if (!business.visits || business.visits === 0) this._advanceDailyGoal('new_visits');
 
     // Resolve prospect category and ICP fit score
     const playerIndustry = (this.state.businessIndustry?.id || this.state.businessIndustry || 'consulting').toString();
@@ -685,7 +788,9 @@ export class BizAmpireEngine {
         openerQuality: 'cold',
         discoveryScore: 0,
         spinPhase: 0,
-        generatedQuestions,   // industry-aware SPIN questions for this encounter
+        generatedQuestions,   // industry-aware SPIN questions for this encounter (budget-trimmed)
+        phaseBudget: { ...PHASE_BUDGET },
+        phaseCounts: { situation: 0, problem: 0, implication: 0, need_payoff: 0 },
         fitScore,             // 0=poor, 1=possible, 2=good, 3=perfect
         fitDialogue,          // flavour text if fit is weak
         prospectCategory,     // for UI display
@@ -950,6 +1055,10 @@ export class BizAmpireEngine {
       this.state.level++;
       this.state.skillPoints += 2;
       this.ui.showToast(`🎉 Level Up! Now Level ${this.state.level}. +2 Skill Points!`, 'gold');
+      if (!this.state.seenWisdomIndices) this.state.seenWisdomIndices = [];
+      const { wisdom: lvlWisdom, index: lvlWisdomIdx } = randomWisdom(this.state.seenWisdomIndices);
+      this.state.seenWisdomIndices.push(lvlWisdomIdx);
+      setTimeout(() => this.ui.showWisdomToast(lvlWisdom), 1200);
     }
 
     // Milestone check
@@ -1359,19 +1468,20 @@ export class BizAmpireEngine {
 
         // ── PARK / GRASS ──────────────────────────────────────
         } else if (tile === 3) {
-          // Checkerboard grass variation (Pokémon style)
+          // Checkerboard grass variation (Pokémon GBA style)
           const v = (tx + ty) % 2;
           ctx.fillStyle = v === 0 ? C.grass : C.grassDk;
           ctx.fillRect(px, py, T, T);
 
-          // Tiny blade marks (2x2 dot clusters)
+          // Grass blade clusters
           if ((tx * 3 + ty * 7) % 5 === 0) {
             ctx.fillStyle = C.grassLt;
-            ctx.fillRect(px + (tx*7)%36 + 4, py + (ty*11)%36 + 4, 2, 3);
-            ctx.fillRect(px + (tx*13)%36 + 4, py + (ty*5)%36 + 8, 2, 3);
+            ctx.fillRect(px + (tx*7)%36 + 4,  py + (ty*11)%36 + 4,  2, 4);
+            ctx.fillRect(px + (tx*13)%36 + 4, py + (ty*5)%36 + 8,   2, 4);
+            ctx.fillRect(px + (tx*9)%32 + 10, py + (ty*15)%32 + 6,  2, 3);
           }
 
-          // Stone path inside park (every 3 tiles horizontal)
+          // Stone path inside park
           const isParkPath = (ty % 3 === 0) && (tx % 2 === 0);
           if (isParkPath) {
             ctx.fillStyle = C.path;
@@ -1381,37 +1491,107 @@ export class BizAmpireEngine {
             ctx.fillRect(px + 4, py + T/2 + 2, T - 8, 1);
           }
 
-          // Flower dots
-          if ((tx * 11 + ty * 13) % 17 === 0) {
-            ctx.fillStyle = '#f8e040';
-            ctx.fillRect(px + (tx*7)%30 + 8, py + (ty*9)%30 + 8, 3, 3);
+          // Flower clusters — 5-pixel cross shape instead of single dot
+          const _fc = (tx * 11 + ty * 13) % 17;
+          if (_fc === 0) {
+            const fx = px + (tx*7)%28 + 8, fy = py + (ty*9)%28 + 9;
+            ctx.fillStyle = '#f8e040'; // yellow
+            ctx.fillRect(fx, fy - 1, 3, 5); ctx.fillRect(fx - 1, fy, 5, 3); // cross petals
+            ctx.fillStyle = '#f8a820'; ctx.fillRect(fx + 1, fy + 1, 1, 1);   // center
           }
           if ((tx * 17 + ty * 7) % 19 === 0) {
-            ctx.fillStyle = '#f86080';
-            ctx.fillRect(px + (tx*11)%28 + 10, py + (ty*13)%28 + 10, 3, 3);
+            const fx = px + (tx*11)%26 + 10, fy = py + (ty*13)%26 + 11;
+            ctx.fillStyle = '#f86080'; // pink
+            ctx.fillRect(fx, fy - 1, 3, 5); ctx.fillRect(fx - 1, fy, 5, 3);
+            ctx.fillStyle = '#c03060'; ctx.fillRect(fx + 1, fy + 1, 1, 1);
+          }
+          if ((tx * 7 + ty * 19) % 23 === 0) {
+            const fx = px + (tx*5)%24 + 14, fy = py + (ty*17)%24 + 7;
+            ctx.fillStyle = '#80d0ff'; // blue
+            ctx.fillRect(fx, fy - 1, 3, 5); ctx.fillRect(fx - 1, fy, 5, 3);
+            ctx.fillStyle = '#3080c0'; ctx.fillRect(fx + 1, fy + 1, 1, 1);
+          }
+
+          // Berry tree (fat round canopy, hash-seeded, rare)
+          if ((tx * 7 + ty * 13) % 29 === 0) {
+            const tcx = px + T/2, tcy = py + T/2 - 4;
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.fillRect(px + 9, py + T - 9, T - 14, 4);
+            ctx.fillStyle = '#2a7018';
+            ctx.beginPath(); ctx.arc(tcx, tcy, T * 0.30, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#44a028';
+            ctx.beginPath(); ctx.arc(tcx, tcy - 3, T * 0.22, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#60c038';  // highlight
+            ctx.fillRect(tcx - 5, tcy - 9, 5, 4);
+            // Red berries
+            ctx.fillStyle = '#d82020';
+            [[-5,0],[3,-2],[-2,4],[5,1],[-1,-5]].forEach(([bx2,by2]) => ctx.fillRect(tcx+bx2,tcy+by2,3,3));
+            ctx.fillStyle = '#6a3818'; // trunk
+            ctx.fillRect(tcx - 2, tcy + T*0.22, 4, 8);
+          }
+
+          // Boulder (grey rock cluster, rarer, no overlap with berry tree)
+          if ((tx * 11 + ty * 5) % 37 === 0 && (tx * 7 + ty * 13) % 29 !== 0) {
+            const rx = px + T/2 - 8, ry = py + T/2 - 4;
+            ctx.fillStyle = 'rgba(0,0,0,0.22)';
+            ctx.fillRect(rx + 2, ry + 12, 16, 4);
+            ctx.fillStyle = '#8a8070'; // rock base
+            ctx.fillRect(rx, ry + 5, 4, 8); ctx.fillRect(rx + 4, ry, 8, 14); ctx.fillRect(rx + 12, ry + 5, 4, 8);
+            ctx.fillStyle = '#b0a898'; // highlight
+            ctx.fillRect(rx + 5, ry + 1, 4, 3);
+            ctx.fillStyle = '#605850'; // shadow/outline
+            ctx.fillRect(rx - 1, ry + 4, 2, 9); ctx.fillRect(rx + 15, ry + 4, 2, 9);
+            ctx.fillRect(rx + 3, ry - 1, 10, 2); ctx.fillRect(rx + 3, ry + 14, 10, 2);
+          }
+
+          // GBA ledge — darker south edge when park meets non-park below
+          const tileS = this.map[ty+1]?.[tx];
+          if (tileS !== 3 && tileS !== 5 && tileS !== undefined) {
+            ctx.fillStyle = '#287010';
+            ctx.fillRect(px, py + T - 5, T, 5);
+            ctx.fillStyle = '#184808';
+            ctx.fillRect(px, py + T - 2, T, 2);
           }
 
         // ── WATER ─────────────────────────────────────────────
         } else if (tile === 4) {
-          // Flat water base
+          // Base water fill
           ctx.fillStyle = C.water;
           ctx.fillRect(px, py, T, T);
 
-          // Animated sparkle tiles (time-based, only every other tile)
-          const sparkle = (tx + ty + Math.floor(this._frameTime / 500)) % 4;
-          if (sparkle === 0) {
-            ctx.fillStyle = C.waterLt;
-            ctx.fillRect(px + 4, py + 4, T - 8, T - 8);
-          } else if (sparkle === 2) {
+          // Deep-water patches (offset by tile position for variety)
+          if ((tx + ty) % 3 === 0) {
             ctx.fillStyle = C.waterDk;
-            ctx.fillRect(px + 6, py + 6, T - 12, T - 12);
+            ctx.fillRect(px + 6, py + 6, T - 14, T - 14);
+          }
+
+          // 3-frame GBA-style horizontal wave bands scrolling downward
+          const waveFrame = Math.floor(this._frameTime / 160) % 3;
+          const bandH = 2;
+          const bandGap = 10;
+          const waveShift = waveFrame * 3;
+          ctx.fillStyle = C.waterLt;
+          for (let band = 0; band < 6; band++) {
+            // Stagger every other tile column slightly for a ripple feel
+            const colOff = (tx % 2 === 0) ? 0 : 5;
+            const bandY = ((band * bandGap + waveShift + colOff) % (T + bandGap)) - bandGap;
+            if (bandY >= -bandH && bandY < T) {
+              ctx.fillRect(px + 3, py + bandY, T - 6, bandH);
+            }
+          }
+
+          // Bright sparkle dot on leading wave edge (cycles per tile)
+          const sparkPhase = (tx * 3 + ty * 7 + Math.floor(this._frameTime / 320)) % 12;
+          if (sparkPhase < 2) {
+            ctx.fillStyle = '#d0f0ff';
+            ctx.fillRect(px + 8 + (tx * 5 % 24), py + 5, 2, 2);
           }
 
           // Hard white edge foam
           const au4 = this.map[ty-1]?.[tx], ad4 = this.map[ty+1]?.[tx];
           const al4 = this.map[ty]?.[tx-1],  ar4 = this.map[ty]?.[tx+1];
-          ctx.fillStyle = '#a8d8f8';
-          if (au4 !== 4 && au4 !== undefined) ctx.fillRect(px, py, T, 4);
+          ctx.fillStyle = '#c8ecff';
+          if (au4 !== 4 && au4 !== undefined) { ctx.fillRect(px, py, T, 4); ctx.fillStyle = '#e8f8ff'; ctx.fillRect(px + 4, py, T - 8, 2); ctx.fillStyle = '#c8ecff'; }
           if (ad4 !== 4 && ad4 !== undefined) ctx.fillRect(px, py+T-4, T, 4);
           if (al4 !== 4 && al4 !== undefined) ctx.fillRect(px, py, 4, T);
           if (ar4 !== 4 && ar4 !== undefined) ctx.fillRect(px+T-4, py, 4, T);
@@ -1514,7 +1694,6 @@ export class BizAmpireEngine {
   }
 
   _drawBuildings(ctx) {
-    // Use pre-sorted list (sorted once in _initBuildingCache, buildings never move)
     for (const b of this.sortedBuildings) {
       const bx = b.px, by = b.py;
       const bw = b.pw, bh = b.ph;
@@ -1534,7 +1713,61 @@ export class BizAmpireEngine {
       this._drawBuilding(ctx, bx, by, bw, bh, color, {
         isLocked, isClosed, isLostToComp, isNearby, biz,
       });
+
+      // Floating marker above buildings — gives the player somewhere to go
+      if (!isLocked && !isClosed && !isLostToComp && biz) {
+        this._drawBuildingMarker(ctx, bx, by, bw, biz);
+      }
     }
+  }
+
+  _drawBuildingMarker(ctx, bx, by, bw, biz) {
+    if (biz.cooldownDays > 0) return;
+
+    // Pick marker type: ! for warm/hot, ? for never visited
+    let marker = null, bgA, bgB, textC;
+    const pulse = 0.55 + 0.45 * Math.sin(this._frameTime / 420);
+
+    if (biz.warmth >= 2) {
+      marker = '!'; bgA = 248; bgB = 200; textC = '#201000';
+    } else if (biz.warmth === 1) {
+      marker = '!'; bgA = 220; bgB = 140; textC = '#201000';
+    } else if (!biz.visits || biz.visits === 0) {
+      marker = '?'; bgA = 160; bgB = 160; textC = '#303030';
+    }
+    if (!marker) return;
+
+    const T = TILE;
+    const mx = bx + bw / 2;
+    const bobY = Math.sin(this._frameTime / 600) * 2;
+    const my = by - 14 + bobY;
+    const bSize = 11;
+
+    // Shadow
+    ctx.fillStyle = `rgba(0,0,0,${0.25 * pulse})`;
+    ctx.fillRect(mx - bSize/2 + 1, my - bSize + 1, bSize, bSize);
+
+    // Border
+    ctx.fillStyle = '#101010';
+    ctx.fillRect(mx - bSize/2 - 1, my - bSize - 1, bSize + 2, bSize + 2);
+
+    // Fill (pulsing alpha)
+    ctx.fillStyle = marker === '!'
+      ? `rgba(${bgA},${bgB},40,${0.9 * pulse})`
+      : `rgba(${bgA},${bgB},${bgB},${0.75 * pulse})`;
+    ctx.fillRect(mx - bSize/2, my - bSize, bSize, bSize);
+
+    // Letter
+    ctx.fillStyle = textC;
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(marker, mx, my - 2);
+
+    // Stem
+    ctx.fillStyle = '#101010';
+    ctx.fillRect(mx - 1, my, 2, 4);
+    ctx.fillStyle = '#303030';
+    ctx.fillRect(mx - 1, my + 1, 2, 2);
   }
 
   _drawDistrictSign(ctx, b) {
@@ -2431,7 +2664,6 @@ export class EncounterEngine {
       this.flags.discoveryScore += q.rapportOnGood;
       this.ui.showToast(`✓ ${q.framework}`, 'success');
     } else if (effectiveResponse === 'ok') {
-      // Skill not unlocked — partial credit: half of good, minimum 0
       const partialRapport = Math.floor(q.rapportOnGood / 2);
       this.enc.rapport += partialRapport;
       this.flags.discoveryScore += partialRapport;
@@ -2439,6 +2671,16 @@ export class EncounterEngine {
     } else {
       this.enc.rapport += q.rapportOnBad || 0;
       this.ui.showToast(`Missed opportunity — ${q.framework}`, 'warn');
+    }
+
+    // Track bad streak and phase counts
+    if (responseType === 'bad') {
+      this.flags.badStreak = (this.flags.badStreak || 0) + 1;
+    } else {
+      this.flags.badStreak = 0;
+    }
+    if (this.enc.stateFlags?.phaseCounts) {
+      this.enc.stateFlags.phaseCounts[q.phase] = (this.enc.stateFlags.phaseCounts[q.phase] || 0) + 1;
     }
 
     // Log for debrief
@@ -2465,8 +2707,7 @@ export class EncounterEngine {
     const totalSPIN = questions.length;
     const isLast = this.flags.spinPhase >= totalSPIN;
 
-    // Show reaction beat first, then advance on Continue
-    const advance = () => {
+    const goNext = () => {
       if (isLast) {
         this.enc.phase = 'pitch';
         this.ui.showPitchPhase(this.enc, this.state);
@@ -2474,8 +2715,54 @@ export class EncounterEngine {
         this.ui.showNextDiscoveryQuestion(this.enc, this.state, this.flags.spinPhase);
       }
     };
+
+    // Check if prospect fires a counter-question before we continue
+    const counterQ = !isLast ? this._pickCounterQuestion(q.phase) : null;
+    const advance = counterQ
+      ? () => this.ui.showCounterQuestion(this.enc, this.state, counterQ, goNext)
+      : goNext;
     advance._isLast = isLast;
+
     this.ui.showDiscoveryReaction(this.enc, this.state, q, responseType, advance);
+  }
+
+  _pickCounterQuestion(phase) {
+    // Fire a counter-question based on rapport pressure or bad streak, never back-to-back
+    if (this.flags.lastWasCounter) {
+      this.flags.lastWasCounter = false;
+      return null;
+    }
+    const badStreak = this.flags.badStreak || 0;
+    const rapport = this.enc.rapport;
+    const rand = Math.random();
+    const shouldFire =
+      (badStreak >= 2 && rand < 0.75) ||
+      (rapport < 0 && rand < 0.40) ||
+      (rapport >= 0 && rand < 0.15);
+    if (!shouldFire) return null;
+    const pool = COUNTER_QUESTIONS[phase] || COUNTER_QUESTIONS.situation;
+    const cq = pool[Math.floor(Math.random() * pool.length)];
+    this.flags.lastWasCounter = true;
+    return cq;
+  }
+
+  handleCounterQuestion(response, counterQ) {
+    this.enc.rapport += response.rapport || 0;
+    if (!this.flags.choiceLog) this.flags.choiceLog = [];
+    this.flags.choiceLog.push({
+      phase: 'Discovery',
+      phaseLabel: 'Counter-Question',
+      chosen: response.text,
+      rapportDelta: response.rapport,
+      wasOptimal: response.quality === 'good',
+      optimal: response.quality === 'good' ? null : {
+        text: counterQ.responses.find(r => r.quality === 'good')?.text,
+        framework: 'Active Listening',
+        frameworkDetail: "When a prospect challenges your intent, honesty and curiosity disarm them far better than any pitch or reassurance.",
+      },
+    });
+    this._warnIfLowRapport('discovery');
+    this._checkEarlyExit('discovery');
   }
 
   handlePitch(responseType) {
@@ -2710,8 +2997,12 @@ export class EncounterEngine {
 
     if (outcome === 'closed') {
       this.game.closeDeal(biz, price, rapport);
+      this._advanceDailyGoal('close_deal');
+      if (!this.state.seenWisdomIndices) this.state.seenWisdomIndices = [];
+      const { wisdom, index: wisdomIdx } = randomWisdom(this.state.seenWisdomIndices);
+      this.state.seenWisdomIndices.push(wisdomIdx);
       this.ui.showOutcome('closed', biz, price, rapport, this.state,
-        { prompts: JOURNAL_PROMPTS.after_close, context: journalContext, choiceLog });
+        { prompts: JOURNAL_PROMPTS.after_close, context: journalContext, choiceLog, wisdom });
     } else if (outcome === 'followup') {
       biz.cooldownDays = 3;
       this.ui.showOutcome('followup', biz, price, rapport, this.state,

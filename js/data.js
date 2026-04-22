@@ -942,6 +942,16 @@ export function createInitialState(businessSetup) {
     vendors: [],           // { bizId, bizName, bizType, icon, service, purchasedAt, referralCooldown }
     vendorWarmthBonus: 0,  // cumulative warmth bonus from marketing vendors
     vendorOverheadReduction: 0, // monthly overhead reduction from ops vendors
+
+    // Daily goals — reset each calendar day
+    dailyGoals: {
+      date: null,
+      goals: [
+        { id: 'approaches',  label: '3 approaches',      target: 3, current: 0 },
+        { id: 'close_deal',  label: 'Close 1 deal',       target: 1, current: 0 },
+        { id: 'new_visits',  label: '2 new businesses',   target: 2, current: 0 },
+      ],
+    },
   };
 }
 
