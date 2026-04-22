@@ -1387,13 +1387,15 @@ export class UIManager {
           const pitchOptions = [
             { key: 'bad', text: `"We're ${businessName}. We provide ${pitchServiceLabel} to businesses like ${biz.name}. We've helped similar companies and our clients see real results."`, badge: `` },
             { key: 'good', text: `"Based on what you told me — ${biz.pain || 'your growth challenge'} — that's exactly the problem our ${pitchServiceLabel} solves. We don't just deliver a service; we deliver a specific outcome: ${state.businessDescription || 'measurable results that compound'}. That's what I'd like to explore with you."`, badge: `` },
-            ...(hasChallenger ? [{ key: 'technique', text: `"Most ${pluralize(biz.type)} I work with think ${biz.pain?.split(' ').slice(0,5).join(' ')}... is the main problem. But in my experience delivering ${pitchServiceLabel}, what's really underneath it is a systems gap. Here's what the top performers in your space are doing differently."`, badge: `<span class="choice-badge" style="color:var(--violet)">🔬 Challenger Insight</span>` }] : []),
+            ...(hasChallenger
+              ? [{ key: 'technique', text: `"Most ${pluralize(biz.type)} I work with think ${biz.pain?.split(' ').slice(0,5).join(' ')}... is the main problem. But in my experience delivering ${pitchServiceLabel}, what's really underneath it is a systems gap. Here's what the top performers in your space are doing differently."`, badge: `` }]
+              : [{ key: 'technique', text: `"Most ${pluralize(biz.type)} I work with think ${biz.pain?.split(' ').slice(0,5).join(' ')}... is the main problem. But in my experience delivering ${pitchServiceLabel}, what's really underneath it is a systems gap. Here's what the top performers in your space are doing differently."`, badge: `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">🔒 Requires Challenger Insight</span>`, locked: true }]),
           ];
           for (let i = pitchOptions.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [pitchOptions[i], pitchOptions[j]] = [pitchOptions[j], pitchOptions[i]];
           }
-          return pitchOptions.map((p, i) => `<button class="choice-btn" data-pitch="${p.key}"><span class="choice-key">${i+1}</span><div class="choice-body"><span class="choice-text">${p.text}</span>${p.badge}</div></button>`).join('');
+          return pitchOptions.map((p, i) => `<button class="choice-btn ${p.locked ? 'locked' : ''}" data-pitch="${p.key}" ${p.locked ? 'disabled' : ''}><span class="choice-key">${i+1}</span><div class="choice-body"><span class="choice-text">${p.text}</span>${p.badge}</div></button>`).join('');
         })()}
       </div>
       <div>${this._hintButtonHTML('pitch', state)}</div>
