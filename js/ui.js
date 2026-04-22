@@ -976,7 +976,12 @@ export class UIManager {
       };
 
       submitBtn?.addEventListener('click', submit);
-      input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+      input?.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') submit();
+      });
+      input?.addEventListener('keyup', (e) => e.stopPropagation());
+      input?.addEventListener('keypress', (e) => e.stopPropagation());
       input?.focus();
     }
 
@@ -1353,7 +1358,12 @@ export class UIManager {
       };
 
       submitBtn?.addEventListener('click', submit);
-      input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+      input?.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') submit();
+      });
+      input?.addEventListener('keyup', (e) => e.stopPropagation());
+      input?.addEventListener('keypress', (e) => e.stopPropagation());
       input?.focus();
     }
 
