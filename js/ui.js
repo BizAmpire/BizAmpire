@@ -1038,7 +1038,8 @@ export class UIManager {
 
     // Vary opener by position within the conversation so it doesn't always feel like Q1
     const npcLine = phaseOpeners[(questionIdx * 3 + Math.floor(enc.rapport)) % phaseOpeners.length];
-    const deflectionLine = phaseDeflections[questionIdx % phaseDeflections.length];
+    // Use the question's own badResponse — it's specific to this question vs a generic deflection
+    const deflectionLine = q.badResponse || phaseDeflections[questionIdx % phaseDeflections.length];
 
     // Progress indicator label
     const phaseLabel = { situation: 'Situation', problem: 'Problem', implication: 'Implication', need_payoff: 'Need-Payoff' }[q.phase] || q.phase;
@@ -1199,6 +1200,13 @@ export class UIManager {
         <div class="dialogue-speaker">${biz.owner} — ${biz.ownerTitle}</div>
         <div class="dialogue-text" style="font-style:italic">${reactionLine}</div>
       </div>
+
+      <!-- EXPERT CONTINUATION — only on good/ok to show how the conversation flows forward -->
+      ${(isGood || isOk) && q.goodResponse ? `
+      <div class="dialogue-box player-dialogue" style="background:rgba(79,152,163,0.05);border-color:rgba(79,152,163,0.3);margin-bottom:var(--s3)">
+        <div class="dialogue-speaker" style="color:var(--teal,#4f98a3)">You continued</div>
+        <div class="dialogue-text" style="color:var(--text-muted)">${this._subQText(q.goodResponse, biz)}</div>
+      </div>` : ''}
 
       <!-- RAPPORT RESULT -->
       <div style="display:flex;align-items:center;justify-content:space-between;
@@ -1645,6 +1653,7 @@ export class UIManager {
         <div style="margin-top:var(--s3);padding:var(--s3) var(--s4);background:rgba(74,173,122,0.06);border:1px solid rgba(74,173,122,0.2);border-radius:var(--r-md)">
           <div style="font-size:var(--text-xs);color:var(--sage);text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--s2)">✓ Why this worked — ${entry.framework}</div>
           <div style="font-size:var(--text-xs);color:var(--text-muted);line-height:1.5">${why}</div>
+          ${entry.expertContinuation ? `<div style="margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid rgba(74,173,122,0.15);font-size:var(--text-xs);color:var(--text-muted);font-style:italic;line-height:1.5">↗ "${entry.expertContinuation}"</div>` : ''}
         </div>
       ` : '';
 

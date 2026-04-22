@@ -2449,6 +2449,7 @@ export class EncounterEngine {
       chosen: responseType === 'good' ? `Asked: "${q.question}"` : `Skipped: "${q.question}"`,
       rapportDelta: effectiveResponse === 'good' ? q.rapportOnGood : effectiveResponse === 'ok' ? Math.floor(q.rapportOnGood/2) : (q.rapportOnBad || 0),
       wasOptimal: responseType === 'good',
+      expertContinuation: (responseType === 'good' || effectiveResponse === 'ok') ? (q.goodResponse || null) : null,
       optimal: responseType === 'good' ? null : {
         text: `Ask: "${q.question}"`,
         framework: q.framework,
