@@ -9,7 +9,7 @@
 import { pipeline, env }
   from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3/dist/transformers.min.js';
 
-const MODEL_ID  = 'Xenova/Qwen2.5-0.5B-Instruct';
+const MODEL_ID  = 'Xenova/TinyLlama-1.1B-Chat-v1.0';
 const MODEL_DTYPE = 'q4';   // 4-bit quantised — smallest footprint
 
 // ── State ────────────────────────────────────────────────────
