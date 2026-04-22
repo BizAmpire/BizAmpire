@@ -2502,7 +2502,10 @@ export class EncounterEngine {
       this._moveToClose();
       return;
     }
-    const obj = objectionSet[Math.floor(Math.random() * objectionSet.length)];
+    // Use the index the UI already picked when it displayed this objection.
+    // If missing for any reason, fall back to 0.
+    const objIdx = this.flags.currentObjIdx ?? 0;
+    const obj = objectionSet[objIdx];
     const response = obj.counters[responseKey];
     if (!response) return;
 
@@ -2576,20 +2579,20 @@ export class EncounterEngine {
 
     if (outcome === 'closed') {
       this.game.closeDeal(biz, price, rapport);
-      this.ui.showOutcome('closed', biz, price, rapport);
-      setTimeout(() => this.ui.showJournalPrompt(JOURNAL_PROMPTS.after_close, journalContext), 2000);
+      this.ui.showOutcome('closed', biz, price, rapport, this.state,
+        { prompts: JOURNAL_PROMPTS.after_close, context: journalContext });
     } else if (outcome === 'followup') {
       biz.cooldownDays = 3;
-      this.ui.showOutcome('followup', biz, price, rapport);
-      setTimeout(() => this.ui.showJournalPrompt(JOURNAL_PROMPTS.after_objection, journalContext), 2000);
+      this.ui.showOutcome('followup', biz, price, rapport, this.state,
+        { prompts: JOURNAL_PROMPTS.after_objection, context: journalContext });
     } else if (outcome === 'ghosted') {
       this.game.lostDeal(biz, outcome);
-      this.ui.showOutcome('lost', biz, price, rapport);
-      setTimeout(() => this.ui.showJournalPrompt(JOURNAL_PROMPTS.after_ghosted, journalContext), 2000);
+      this.ui.showOutcome('lost', biz, price, rapport, this.state,
+        { prompts: JOURNAL_PROMPTS.after_ghosted, context: journalContext });
     } else {
       this.game.lostDeal(biz, outcome);
-      this.ui.showOutcome('lost', biz, price, rapport);
-      setTimeout(() => this.ui.showJournalPrompt(JOURNAL_PROMPTS.after_cold_fail, journalContext), 2000);
+      this.ui.showOutcome('lost', biz, price, rapport, this.state,
+        { prompts: JOURNAL_PROMPTS.after_cold_fail, context: journalContext });
     }
   }
 

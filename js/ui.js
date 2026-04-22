@@ -836,7 +836,13 @@ export class UIManager {
         technique: null,
       },
       {
-        text: `"I work with ${pluralize(biz.type)} specifically on ${biz.pain?.split(' ').slice(0,6).join(' ')}... I've helped a few businesses in this district with exactly that — mind if I ask one quick question?"`,
+        text: `"I work with ${pluralize(biz.type)} specifically on ${(() => {
+          const pain = biz.pain || '';
+          // Take the first complete sentence; fall back to first 8 words
+          const sentenceMatch = pain.match(/^[^.!?]+[.!?]/);
+          const sentence = sentenceMatch ? sentenceMatch[0].replace(/[.!?]+$/, '') : pain.split(' ').slice(0, 8).join(' ');
+          return sentence.trim();
+        })()}. I've helped a few businesses in this district with exactly that — mind if I ask one quick question?"`,
         rapport: 1,
         label: 'Pain-specific opener',
         badge: 'Targeted',
@@ -1013,7 +1019,9 @@ export class UIManager {
 
     const biz = enc.business;
     const isGood = responseType === 'good';
-    const chosenText = isGood ? q.goodResponse : q.badResponse;
+    const isOk = responseType === 'ok';  // partial credit: no skill unlocked but good choice
+    // 'ok': player said the right thing, just lacks the skill for full impact
+    const chosenText = (isGood || isOk) ? q.goodResponse : q.badResponse;
 
     // Prospect reaction to what the player said — keyed to good/bad + phase
     const reactions = {
@@ -1067,9 +1075,14 @@ export class UIManager {
       }
     };
 
-    const pool = reactions[q.phase]?.[isGood ? 'good' : 'bad'] || reactions.situation[isGood ? 'good' : 'bad'];
+    // 'ok' uses the good reaction pool (player said the right thing, just no skill boost)
+    const reactionKey = (isGood || isOk) ? 'good' : 'bad';
+    const pool = reactions[q.phase]?.[reactionKey] || reactions.situation[reactionKey];
     const reactionLine = pool[Math.floor(Math.random() * pool.length)];
-    const rapportDelta = isGood ? (q.rapportOnGood || 0) : (q.rapportOnBad || 0);
+    // Actual rapport credited: good = full, ok = partial (floor half), bad = rapportOnBad
+    const rapportDelta = isGood ? (q.rapportOnGood || 0)
+                       : isOk   ? Math.floor((q.rapportOnGood || 0) / 2)
+                       :          (q.rapportOnBad || 0);
     const rapportColor = rapportDelta > 0 ? 'var(--sage)' : rapportDelta < 0 ? 'var(--crimson)' : 'var(--text-muted)';
     const rapportLabel = rapportDelta > 0 ? `+${rapportDelta} Rapport` : rapportDelta < 0 ? `${rapportDelta} Rapport` : 'No rapport change';
 
@@ -1091,7 +1104,7 @@ export class UIManager {
                   background:rgba(255,255,255,0.03);border:1px solid var(--border);
                   border-radius:var(--r-md);padding:var(--s3) var(--s4);margin-bottom:var(--s4)">
         <div style="font-size:var(--text-xs);color:var(--text-muted)">
-          ${isGood ? '✓ Good response — ' + q.framework : '⚠ Missed — ' + q.framework}
+          ${isGood ? '✓ Good response — ' + q.framework : isOk ? '~ Partial — unlock ' + q.framework + ' for full effect' : '⚠ Missed — ' + q.framework}
         </div>
         <div style="font-size:var(--text-sm);font-weight:700;color:${rapportColor}">${rapportLabel}</div>
       </div>
@@ -1245,7 +1258,11 @@ export class UIManager {
 
     const biz = enc.business;
     const objSet = OBJECTION_LIBRARY[objectionType] || OBJECTION_LIBRARY['timing'];
-    const obj = objSet[0];
+    // Pick random variant and store index on stateFlags so engine uses the same obj
+    const objIdx = Math.floor(Math.random() * objSet.length);
+    if (enc.stateFlags) enc.stateFlags.currentObjIdx = objIdx;  // engine reads this
+    if (this.encounterEngine) this.encounterEngine.flags.currentObjIdx = objIdx;
+    const obj = objSet[objIdx];
 
     body.innerHTML = `
       <div class="dialogue-box">
@@ -1342,14 +1359,17 @@ export class UIManager {
     });
   }
 
-  showOutcome(type, biz, price, rapport) {
+  showOutcome(type, biz, price, rapport, state, journalData = null) {
     const body = document.getElementById('encounter-body');
     if (!body) return;
+
+    const totalDeals = state?.totalDeals ?? 0;
+    const dealOrdinal = totalDeals === 1 ? 'your first deal' : totalDeals === 2 ? 'your second deal' : `deal #${totalDeals}`;
 
     const outcomes = {
       closed: {
         icon: '🤝', title: 'Deal Closed!', className: 'win',
-        body: `${biz.owner} extends their hand. "${biz.name} is in — let's make this work." You've closed your first deal in this district.`,
+        body: `${biz.owner} extends their hand. "${biz.name} is in — let's make this work." That's ${dealOrdinal} closed.`,
         rewards: [
           { label: `+$${price.toLocaleString()}/mo`, cls: 'gold-chip', icon: '💰' },
           { label: `+${100 + rapport * 20} XP`, cls: 'xp-chip', icon: '⚡' },
@@ -1392,7 +1412,11 @@ export class UIManager {
     `;
 
     document.getElementById('btn-return-city')?.addEventListener('click', () => {
-      this.closeEncounter();
+      this.closeEncounter();  // always return to city first
+      if (journalData?.prompts) {
+        // Slight delay so the map transition settles before journal overlay appears
+        setTimeout(() => this.showJournalPrompt(journalData.prompts, journalData.context), 150);
+      }
     });
   }
 
@@ -1927,8 +1951,14 @@ export class UIManager {
           <div style="font-size:var(--text-xs);color:var(--text-muted)">Monthly Overhead</div>
         </div>
         <div class="panel panel-sm" style="text-align:center">
-          <div style="font-size:var(--text-2xl);font-family:var(--font-display);font-weight:700;color:${state.monthlyRevenue - state.monthlyOverhead > 0 ? 'var(--sage)' : 'var(--crimson)'}">$${(state.monthlyRevenue - state.monthlyOverhead).toLocaleString()}</div>
-          <div style="font-size:var(--text-xs);color:var(--text-muted)">Net Profit</div>
+          ${(() => {
+            const empCosts = (state.employees || []).reduce((s, e) => s + (e.cost || 0), 0);
+            const vendorCosts = (state.vendors || []).filter(v => v.recurring).reduce((s, v) => s + (v.monthlyCost || 0), 0);
+            const trueNet = state.monthlyRevenue - state.monthlyOverhead - empCosts - vendorCosts;
+            return `<div style="font-size:var(--text-2xl);font-family:var(--font-display);font-weight:700;color:${trueNet > 0 ? 'var(--sage)' : 'var(--crimson)'}">$${trueNet.toLocaleString()}</div>
+            <div style="font-size:var(--text-xs);color:var(--text-muted)">Net Profit</div>
+            ${(empCosts + vendorCosts) > 0 ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">incl. $${(empCosts+vendorCosts).toLocaleString()} staff+vendors</div>` : ''}`;
+          })()}
         </div>
       </div>
 
@@ -2023,13 +2053,44 @@ export class UIManager {
     this.showToast(`🏆 Milestone: "${milestone.title}" — ${milestone.reward}`, 'gold');
   }
 
+  // Persistent modal for high-stakes events that can't be missed
+  showEventModal({ icon, title, body, ctaLabel = 'OK', onCta = null }) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:9000;display:flex;align-items:center;justify-content:center;padding:var(--s4)';
+    overlay.innerHTML = `
+      <div style="background:var(--bg-panel,#1a1a2e);border:1px solid var(--border);border-radius:var(--r-lg,12px);padding:var(--s6);max-width:420px;width:100%;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.8)">
+        <div style="font-size:2.5rem;margin-bottom:var(--s3)">${icon}</div>
+        <div style="font-family:var(--font-display);font-size:var(--text-xl);font-weight:700;margin-bottom:var(--s3);color:var(--text)">${title}</div>
+        <div style="font-size:var(--text-sm);color:var(--text-muted);line-height:1.6;margin-bottom:var(--s5)">${body}</div>
+        <button id="event-modal-cta" class="btn btn-primary" style="width:100%">${ctaLabel}</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById('event-modal-cta').addEventListener('click', () => {
+      overlay.remove();
+      if (onCta) onCta();
+    });
+  }
+
   showVCEvent(state) {
-    this.showToast(`💼 Meridian Capital: "We've been watching your growth in ${state.unlockedDistricts.length} districts. Can we talk?" — Check Management tab.`, 'gold');
+    this.showEventModal({
+      icon: '💼',
+      title: 'Investor Interest',
+      body: `Meridian Capital: <em>"We've been watching your growth across ${state.unlockedDistricts.length} districts. We'd like to talk."</em><br><br>Open the <strong>Management tab</strong> to evaluate the VC offer.`,
+      ctaLabel: 'Go to Management',
+      onCta: () => this.showManagement(),
+    });
   }
 
   showAcquisitionOffer(state) {
     const offer = Math.round(state.monthlyRevenue * 24);
-    this.showToast(`🤝 RegionPro Agency offers $${offer.toLocaleString()} to acquire ${state.businessName}. Go to Management to evaluate.`, 'amber');
+    this.showEventModal({
+      icon: '🏢',
+      title: 'Acquisition Offer',
+      body: `RegionPro Agency wants to acquire <strong>${state.businessName}</strong> for <strong style="color:var(--gold)">$${offer.toLocaleString()}</strong>.<br><br>This is a <em>life-changing</em> decision. Open <strong>Management</strong> to review the terms and decide.`,
+      ctaLabel: 'Review the Offer',
+      onCta: () => this.showManagement(),
+    });
   }
 
   // ── Utilities ──────────────────────────────────────────────
