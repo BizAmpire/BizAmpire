@@ -2493,9 +2493,9 @@ export class EncounterEngine {
     };
     const pitchOptimal = {
       bad: {
-        text: 'Lead with the specific outcome you'll deliver, not a feature list',
+        text: "Lead with the specific outcome you'll deliver, not a feature list",
         framework: 'StoryBrand',
-        frameworkDetail: 'StoryBrand: Make the customer the hero with a clear problem/solution/outcome arc. "We don't just deliver a service — we solve [specific pain] and deliver [measurable outcome]."',
+        frameworkDetail: "StoryBrand: Make the customer the hero with a clear problem/solution/outcome arc. \"We don't just deliver a service — we solve [specific pain] and deliver [measurable outcome].\"",
       },
       good: null, // was optimal
       technique: null, // was optimal
@@ -2613,7 +2613,7 @@ export class EncounterEngine {
         framework: bestCounter[1].framework || 'Objection Handling',
         frameworkDetail: bestCounter[1].framework
           ? `${bestCounter[1].framework}: This counter addresses the root concern rather than deflecting or conceding.`
-          : 'Address the prospect's real concern directly — acknowledge it, reframe it, then move forward.',
+          : "Address the prospect's real concern directly — acknowledge it, reframe it, then move forward.",
       },
       framework: response.framework || null,
     });
@@ -2689,9 +2689,9 @@ export class EncounterEngine {
       close_direct: null,
       pilot_offer: null,
       schedule_followup: rapport < 3 ? null : {
-        text: '"Based on everything we discussed, I'd love to move forward. Can we get started this month?"',
+        text: `"Based on everything we discussed, I'd love to move forward. Can we get started this month?"`,
         framework: 'Direct Close — Never Split the Difference',
-        frameworkDetail: 'When rapport is ≥3, ask for the business directly then go silent. Whoever speaks first after the ask loses. A follow-up request signals you don't believe they're ready — and they often aren't because you telegraphed doubt.',
+        frameworkDetail: "When rapport is ≥3, ask for the business directly then go silent. Whoever speaks first after the ask loses. A follow-up request signals you don't believe they're ready — and they often aren't because you telegraphed doubt.",
       },
     };
     if (!this.flags.choiceLog) this.flags.choiceLog = [];
