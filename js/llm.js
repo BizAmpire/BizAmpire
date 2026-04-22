@@ -39,20 +39,27 @@ export function detectNoFitOpportunity(text) { return _detectNoFit(text); }
  * @param {Function} onProgress  called with { progress 0-100, message }
  */
 export async function load(onProgress) {
-  if (_status === 'ready' || _status === 'loading') return;
+  if (_status === 'ready' || _status === 'loading') {
+    console.log('[BizAmpire LLM] Already loading or ready:', _status);
+    return;
+  }
   _status = 'loading';
   _onProgress = onProgress;
+  console.log('[BizAmpire LLM] Starting load...');
 
   try {
     const device = await _bestDevice();
+    console.log('[BizAmpire LLM] Device:', device);
     _notify(0, `Initialising AI Coach (${device.toUpperCase()})…`);
 
     env.allowLocalModels = false;  // always pull from HF Hub
 
+    console.log('[BizAmpire LLM] Loading pipeline...');
     _pipe = await pipeline('text-generation', MODEL_ID, {
       dtype:  MODEL_DTYPE,
       device,
       progress_callback: (p) => {
+        console.log('[BizAmpire LLM] Progress:', p);
         if (p.status === 'progress') {
           const pct = Math.round((p.loaded / p.total) * 100) || 0;
           _notify(pct, `Downloading AI Coach… ${pct}%`);
@@ -61,9 +68,11 @@ export async function load(onProgress) {
     });
 
     _status = 'ready';
+    console.log('[BizAmpire LLM] Pipeline loaded, status set to ready');
     _notify(100, 'AI Coach ready');
   } catch (err) {
     console.warn('[BizAmpire LLM] Load failed:', err.message);
+    console.warn('[BizAmpire LLM] Error details:', err);
     _status = 'error';
     _notify(0, 'AI Coach unavailable — using standard mode');
   }
