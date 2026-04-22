@@ -89,6 +89,22 @@ export class UIManager {
     if (this.el.hud) {
       this.el.hud.style.display = (name === 'map') ? 'block' : 'none';
     }
+    // iOS touch bridge: fire click on buttons when touchend fires without drag
+    // Prevents scroll containers on iOS from swallowing button taps
+    if (name === 'encounter' && !this._touchBridgeInstalled) {
+      this._touchBridgeInstalled = true;
+      const enc = this.el.encounter;
+      if (enc) {
+        let _touchStartY = 0;
+        enc.addEventListener('touchstart', e => { _touchStartY = e.touches[0]?.clientY ?? 0; }, { passive: true });
+        enc.addEventListener('touchend', e => {
+          const dy = Math.abs((e.changedTouches[0]?.clientY ?? 0) - _touchStartY);
+          if (dy > 8) return; // scrolled — not a tap
+          const btn = e.target.closest('button:not([disabled])');
+          if (btn) { e.preventDefault(); btn.click(); }
+        }, { passive: false });
+      }
+    }
   }
 
   // ── Loading ────────────────────────────────────────────────
@@ -859,11 +875,18 @@ export class UIManager {
       { text: `"I work with ${pluralize(biz.type)} specifically on ${painSnippet}. I've helped a few businesses in this district with exactly that — mind if I ask one quick question?"`, rapport: 1, technique: 'Pattern Interrupt', badge: 'Targeted', requiresSkill: 'pattern_interrupt' },
       { text: `"Quick question — when it comes to ${serviceLabels[_indId] || 'what we do'}, what's your biggest frustration right now with how you're handling it?"`, rapport: biz.warmth >= 1 ? 2 : 0, technique: 'Direct Discovery', badge: warmthLabel !== 'cold' ? 'Relationship Capital' : null, requiresSkill: null },
     ];
-    return choices.map((c, i) => {
+    // Shuffle display order so button position doesn't telegraph quality
+    const order = [0, 1, 2];
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    return order.map((ci, displayIdx) => {
+      const c = choices[ci];
       const locked = c.requiresSkill && !state.unlockedSkills.includes(c.requiresSkill);
       const badgeHtml = c.badge ? `<span class="choice-badge" style="color:var(--violet);background:rgba(155,114,248,0.1)">${c.badge}</span>` : '';
       const lockedHtml = locked ? `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">🔒 Needs ${c.requiresSkill.replace(/_/g,' ')}</span>` : '';
-      return `<button class="choice-btn ${c.badge ? 'technique' : ''} ${locked ? 'locked' : ''}" data-opener="${i}" data-choice='${JSON.stringify({rapport: c.rapport, technique: c.technique, text: c.text})}' ${locked ? 'disabled' : ''}><span class="choice-key">${i+1}</span><div class="choice-body"><span class="choice-text">${c.text}</span>${badgeHtml}${lockedHtml}</div></button>`;
+      return `<button class="choice-btn ${locked ? 'locked' : ''}" data-opener="${ci}" data-choice='${JSON.stringify({rapport: c.rapport, technique: c.technique, text: c.text})}' ${locked ? 'disabled' : ''}><span class="choice-key">${displayIdx+1}</span><div class="choice-body"><span class="choice-text">${c.text}</span>${badgeHtml}${lockedHtml}</div></button>`;
     }).join('');
   }
 
@@ -1345,13 +1368,21 @@ export class UIManager {
       </div>
       <div style="font-size:var(--text-xs);color:var(--text-muted);padding:var(--s2) 0 var(--s3);text-transform:uppercase;letter-spacing:.08em">How do you respond?</div>
       <div class="choices">
-        ${Object.entries(obj.counters).map(([key, c], i) => {
-          const locked = c.skillRequired && !state.unlockedSkills.includes(c.skillRequired);
-          const frameworkBadge = (c.framework && state.unlockedSkills.includes(c.skillRequired || ''))
-            ? `<span class="choice-badge" style="color:var(--violet);background:rgba(155,114,248,0.1)">${c.framework}</span>` : '';
-          const lockedBadge = locked ? `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">🔒 Requires ${c.skillRequired?.replace(/_/g,' ')}</span>` : '';
-          return `<button class="choice-btn ${c.rapport > 1 ? 'technique' : ''} ${locked ? 'locked' : ''}" data-objection="${objectionType}" data-response="${key}" ${locked ? 'disabled' : ''}><span class="choice-key">${i+1}</span><div class="choice-body"><span class="choice-text">${c.text.replace('{impliedCost}', '$'+Math.round(biz.budget[0]*0.5).toLocaleString()+'/month').replace('{impliedAnnual}', '$'+(biz.budget[0]*0.5*12).toLocaleString()).replace('{price}', enc.stateFlags?.price ? '$'+enc.stateFlags.price.toLocaleString()+'/mo' : 'our fee')}</span>${frameworkBadge}${lockedBadge}</div></button>`;
-        }).join('')}
+        ${(() => {
+          // Shuffle counter order so quality isn't telegraphed by position
+          const entries = Object.entries(obj.counters);
+          for (let i = entries.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [entries[i], entries[j]] = [entries[j], entries[i]];
+          }
+          return entries.map(([key, c], i) => {
+            const locked = c.skillRequired && !state.unlockedSkills.includes(c.skillRequired);
+            const frameworkBadge = (c.framework && state.unlockedSkills.includes(c.skillRequired || ''))
+              ? `<span class="choice-badge" style="color:var(--violet);background:rgba(155,114,248,0.1)">${c.framework}</span>` : '';
+            const lockedBadge = locked ? `<span class="choice-badge" style="color:var(--text-muted);background:var(--surface)">🔒 Requires ${c.skillRequired?.replace(/_/g,' ')}</span>` : '';
+            return `<button class="choice-btn ${locked ? 'locked' : ''}" data-objection="${objectionType}" data-response="${key}" ${locked ? 'disabled' : ''}><span class="choice-key">${i+1}</span><div class="choice-body"><span class="choice-text">${c.text.replace('{impliedCost}', '$'+Math.round(biz.budget[0]*0.5).toLocaleString()+'/month').replace('{impliedAnnual}', '$'+(biz.budget[0]*0.5*12).toLocaleString()).replace('{price}', enc.stateFlags?.price ? '$'+enc.stateFlags.price.toLocaleString()+'/mo' : 'our fee')}</span>${frameworkBadge}${lockedBadge}</div></button>`;
+          }).join('');
+        })()}
       </div>
     `;
     body.querySelectorAll('.choice-btn[data-objection]').forEach(btn => {

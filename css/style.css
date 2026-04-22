@@ -513,6 +513,7 @@ img, canvas { display: block; max-width: 100%; }
   justify-content: center;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   padding: var(--s6) var(--s4) var(--s10);
   background: rgba(28,18,8,0.85);
 }
@@ -652,6 +653,9 @@ img, canvas { display: block; max-width: 100%; }
   cursor: pointer;
   width: 100%;
   box-sizing: border-box;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 .choice-btn:hover {
   background: rgba(212,168,64,0.07);
