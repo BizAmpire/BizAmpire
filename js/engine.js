@@ -2646,7 +2646,7 @@ export class EncounterEngine {
       this.enc.phase = 'discovery';
       this.ui.showDiscoveryPhase(this.enc, this.state);
     };
-    this.ui.showOpenerReaction(this.enc, chosenText, openerQuality, finalRapport, proceed);
+    this.ui.showOpenerReaction(this.enc, chosenText, openerQuality, finalRapport, choice.technique || null, proceed);
   }
 
   handleDiscovery(questionId, responseType) {

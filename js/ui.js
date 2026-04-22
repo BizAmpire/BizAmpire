@@ -996,8 +996,12 @@ export class UIManager {
         <div style="font-size:var(--text-sm);font-weight:700;color:${rapportColor}">${rapportLabel}</div>
       </div>
       <button class="btn btn-primary" id="btn-proceed-discovery" style="width:100%">Start Discovery →</button>
+      <div style="margin-top:var(--s3);text-align:right">
+        <button class="btn btn-secondary btn-sm" id="btn-exit-opener" style="padding:var(--s2) var(--s4);font-size:var(--text-xs)">Leave</button>
+      </div>
     `;
     document.getElementById('btn-proceed-discovery')?.addEventListener('click', () => nextCallback(), { once: true });
+    document.getElementById('btn-exit-opener')?.addEventListener('click', () => this.closeEncounter(), { once: true });
   }
 
   showDiscoveryPhase(enc, state) {
